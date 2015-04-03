@@ -67,6 +67,10 @@
 #define CONFIG_KSZ9021_DATA_SKEW_ENV	"micrel-ksz9021-data-skew"
 #define CONFIG_KSZ9021_DATA_SKEW_VAL	0x0
 
+#define CONFIG_KSZ9031_CLK_SKEW_ENV    "micrel-ksz9031-clk-skew"
+#define CONFIG_KSZ9031_CLK_SKEW_VAL    0x3FF
+#define CONFIG_KSZ9031_DATA_SKEW_ENV   "micrel-ksz9031-data-skew"
+#define CONFIG_KSZ9031_DATA_SKEW_VAL   0x00
 #endif
 
 /* USB */
