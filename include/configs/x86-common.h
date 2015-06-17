@@ -16,11 +16,12 @@
  * (easy to change)
  */
 #define CONFIG_SHOW_BOOT_PROGRESS
-#define CONFIG_SYS_VSNPRINTF
 #define CONFIG_ZBOOT_32
 #define CONFIG_PHYSMEM
 #define CONFIG_DISPLAY_BOARDINFO_LATE
 #define CONFIG_DISPLAY_CPUINFO
+#define CONFIG_LAST_STAGE_INIT
+#define CONFIG_NR_DRAM_BANKS		8
 
 #define CONFIG_LMB
 #define CONFIG_OF_LIBFDT
@@ -36,6 +37,7 @@
 #define CONFIG_SCSI_AHCI
 #ifdef CONFIG_SCSI_AHCI
 #define CONFIG_LIBATA
+#define CONFIG_LBA48
 #define CONFIG_SYS_64BIT_LBA
 
 #define CONFIG_SYS_SCSI_MAX_SCSI_ID	2
@@ -75,10 +77,6 @@
 #define CONFIG_SYS_HUSH_PARSER
 
 #define CONFIG_SUPPORT_VFAT
-/************************************************************
- * ATAPI support (experimental)
- ************************************************************/
-#define CONFIG_ATAPI
 
 /************************************************************
  * DISK Partition support
@@ -122,7 +120,6 @@
 #define CONFIG_CMD_LOADS
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_MISC
-#define CONFIG_CMD_NET
 #undef CONFIG_CMD_NFS
 #define CONFIG_CMD_PCI
 #define CONFIG_CMD_PING
@@ -204,12 +201,11 @@
 #define CONFIG_CMD_SF_TEST
 #define CONFIG_CMD_SPI
 #define CONFIG_SPI
-#define CONFIG_OF_SPI_FLASH
 
 /*-----------------------------------------------------------------------
  * Environment configuration
  */
-#define CONFIG_ENV_IS_NOWHERE
+#define CONFIG_ENV_IS_IN_SPI_FLASH
 #define CONFIG_ENV_SIZE			0x01000
 
 /*-----------------------------------------------------------------------
@@ -238,9 +234,6 @@
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_HOSTNAME
 
-#define CONFIG_BOOTSTAGE
-#define CONFIG_CMD_BOOTSTAGE
-
 #define CONFIG_CMD_USB
 
 /* Default environment */
@@ -251,6 +244,7 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS			\
 	CONFIG_STD_DEVICES_SETTINGS			\
+	"pciconfighost=1\0"				\
 	"netdev=eth0\0"					\
 	"consoledev=ttyS0\0"				\
 	"othbootargs=acpi=off\0"			\

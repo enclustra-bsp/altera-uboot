@@ -14,7 +14,6 @@
 #define PLL_DIV_1024	1024
 #define PLL_DIV_65535	65535
 #define PLL_DIV_65536	65536
-
 /* *
  * This structure is to store the src bit, div bit and prediv bit
  * positions of the peripheral clocks of the src and div registers
@@ -423,8 +422,8 @@ static unsigned long exynos5_get_periph_rate(int peripheral)
 	case PERIPH_ID_I2C6:
 	case PERIPH_ID_I2C7:
 		src = EXYNOS_SRC_MPLL;
-		div = readl(&clk->div_top0);
-		sub_div = readl(&clk->div_top1);
+		div = readl(&clk->div_top1);
+		sub_div = readl(&clk->div_top0);
 		break;
 	default:
 		debug("%s: invalid peripheral %d", __func__, peripheral);
@@ -1028,6 +1027,40 @@ static unsigned long exynos5420_get_lcd_clk(void)
 	return pclk;
 }
 
+static unsigned long exynos5800_get_lcd_clk(void)
+{
+	struct exynos5420_clock *clk =
+		(struct exynos5420_clock *)samsung_get_base_clock();
+	unsigned long sclk;
+	unsigned int sel;
+	unsigned int ratio;
+
+	/*
+	 * CLK_SRC_DISP10
+	 * CLKMUX_FIMD1 [6:4]
+	 */
+	sel = (readl(&clk->src_disp10) >> 4) & 0x7;
+
+	if (sel) {
+		/*
+		 * Mapping of CLK_SRC_DISP10 CLKMUX_FIMD1 [6:4] values into
+		 * PLLs. The first element is a placeholder to bypass the
+		 * default settig.
+		 */
+		const int reg_map[] = {0, CPLL, DPLL, MPLL, SPLL, IPLL, EPLL,
+									RPLL};
+		sclk = get_pll_clk(reg_map[sel]);
+	} else
+		sclk = CONFIG_SYS_CLK_FREQ;
+	/*
+	 * CLK_DIV_DISP10
+	 * FIMD1_RATIO [3:0]
+	 */
+	ratio = readl(&clk->div_disp10) & 0xf;
+
+	return sclk / (ratio + 1);
+}
+
 void exynos4_set_lcd_clk(void)
 {
 	struct exynos4_clock *clk =
@@ -1157,6 +1190,28 @@ void exynos5420_set_lcd_clk(void)
 	cfg &= ~(0xf << 0);
 	cfg |= (0 << 0);
 	writel(cfg, &clk->div_disp10);
+}
+
+void exynos5800_set_lcd_clk(void)
+{
+	struct exynos5420_clock *clk =
+		(struct exynos5420_clock *)samsung_get_base_clock();
+	unsigned int cfg;
+
+	/*
+	 * Use RPLL for pixel clock
+	 * CLK_SRC_DISP10 CLKMUX_FIMD1 [6:4]
+	 * ==================
+	 * 111: SCLK_RPLL
+	 */
+	cfg = readl(&clk->src_disp10) | (0x7 << 4);
+	writel(cfg, &clk->src_disp10);
+
+	/*
+	 * CLK_DIV_DISP10
+	 * FIMD1_RATIO		[3:0]
+	 */
+	clrsetbits_le32(&clk->div_disp10, 0xf << 0, 0x0 << 0);
 }
 
 void exynos4_set_mipi_clk(void)
@@ -1307,7 +1362,7 @@ int exynos5_set_i2s_clk_prescaler(unsigned int src_frq,
 		}
 		clrsetbits_le32(&clk->div_mau, AUDIO_0_RATIO_MASK,
 				(div & AUDIO_0_RATIO_MASK));
-	} else if(i2s_id == 1) {
+	} else if (i2s_id == 1) {
 		if (div > AUDIO_1_RATIO_MASK) {
 			debug("%s: Frequency ratio is out of range\n",
 			      __func__);
@@ -1524,45 +1579,49 @@ unsigned long get_pll_clk(int pllreg)
 		if (proid_is_exynos5420() || proid_is_exynos5800())
 			return exynos542x_get_pll_clk(pllreg);
 		return exynos5_get_pll_clk(pllreg);
-	} else {
+	} else if (cpu_is_exynos4()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_pll_clk(pllreg);
 		return exynos4_get_pll_clk(pllreg);
 	}
+
+	return 0;
 }
 
 unsigned long get_arm_clk(void)
 {
-	if (cpu_is_exynos5())
+	if (cpu_is_exynos5()) {
 		return exynos5_get_arm_clk();
-	else {
+	} else if (cpu_is_exynos4()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_arm_clk();
 		return exynos4_get_arm_clk();
 	}
+
+	return 0;
 }
 
 unsigned long get_i2c_clk(void)
 {
-	if (cpu_is_exynos5()) {
+	if (cpu_is_exynos5())
 		return clock_get_periph_rate(PERIPH_ID_I2C0);
-	} else if (cpu_is_exynos4()) {
+	else if (cpu_is_exynos4())
 		return exynos4_get_i2c_clk();
-	} else {
-		debug("I2C clock is not set for this CPU\n");
-		return 0;
-	}
+
+	return 0;
 }
 
 unsigned long get_pwm_clk(void)
 {
 	if (cpu_is_exynos5()) {
 		return clock_get_periph_rate(PERIPH_ID_PWM0);
-	} else {
+	} else if (cpu_is_exynos4()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_pwm_clk();
 		return exynos4_get_pwm_clk();
 	}
+
+	return 0;
 }
 
 unsigned long get_uart_clk(int dev_index)
@@ -1589,11 +1648,13 @@ unsigned long get_uart_clk(int dev_index)
 
 	if (cpu_is_exynos5()) {
 		return clock_get_periph_rate(id);
-	} else {
+	} else if (cpu_is_exynos4()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_uart_clk(dev_index);
 		return exynos4_get_uart_clk(dev_index);
 	}
+
+	return 0;
 }
 
 unsigned long get_mmc_clk(int dev_index)
@@ -1618,11 +1679,12 @@ unsigned long get_mmc_clk(int dev_index)
 		return -1;
 	}
 
-	if (cpu_is_exynos5()) {
+	if (cpu_is_exynos5())
 		return clock_get_periph_rate(id);
-	} else {
+	else if (cpu_is_exynos4())
 		return exynos4_get_mmc_clk(dev_index);
-	}
+
+	return 0;
 }
 
 void set_mmc_clk(int dev_index, unsigned int div)
@@ -1636,32 +1698,38 @@ void set_mmc_clk(int dev_index, unsigned int div)
 			exynos5420_set_mmc_clk(dev_index, div);
 		else
 			exynos5_set_mmc_clk(dev_index, div);
-	} else {
+	} else if (cpu_is_exynos4()) {
 		exynos4_set_mmc_clk(dev_index, div);
 	}
 }
 
 unsigned long get_lcd_clk(void)
 {
-	if (cpu_is_exynos4())
+	if (cpu_is_exynos4()) {
 		return exynos4_get_lcd_clk();
-	else {
-		if (proid_is_exynos5420() || proid_is_exynos5800())
+	} else if (cpu_is_exynos5()) {
+		if (proid_is_exynos5420())
 			return exynos5420_get_lcd_clk();
+		else if (proid_is_exynos5800())
+			return exynos5800_get_lcd_clk();
 		else
 			return exynos5_get_lcd_clk();
 	}
+
+	return 0;
 }
 
 void set_lcd_clk(void)
 {
-	if (cpu_is_exynos4())
+	if (cpu_is_exynos4()) {
 		exynos4_set_lcd_clk();
-	else {
+	} else if (cpu_is_exynos5()) {
 		if (proid_is_exynos5250())
 			exynos5_set_lcd_clk();
-		else if (proid_is_exynos5420() || proid_is_exynos5800())
+		else if (proid_is_exynos5420())
 			exynos5420_set_lcd_clk();
+		else
+			exynos5800_set_lcd_clk();
 	}
 }
 
@@ -1677,9 +1745,9 @@ int set_spi_clk(int periph_id, unsigned int rate)
 		if (proid_is_exynos5420() || proid_is_exynos5800())
 			return exynos5420_set_spi_clk(periph_id, rate);
 		return exynos5_set_spi_clk(periph_id, rate);
-	} else {
-		return 0;
 	}
+
+	return 0;
 }
 
 int set_i2s_clk_prescaler(unsigned int src_frq, unsigned int dst_frq,
@@ -1687,22 +1755,22 @@ int set_i2s_clk_prescaler(unsigned int src_frq, unsigned int dst_frq,
 {
 	if (cpu_is_exynos5())
 		return exynos5_set_i2s_clk_prescaler(src_frq, dst_frq, i2s_id);
-	else
-		return 0;
+
+	return 0;
 }
 
 int set_i2s_clk_source(unsigned int i2s_id)
 {
 	if (cpu_is_exynos5())
 		return exynos5_set_i2s_clk_source(i2s_id);
-	else
-		return 0;
+
+	return 0;
 }
 
 int set_epll_clk(unsigned long rate)
 {
 	if (cpu_is_exynos5())
 		return exynos5_set_epll_clk(rate);
-	else
-		return 0;
+
+	return 0;
 }

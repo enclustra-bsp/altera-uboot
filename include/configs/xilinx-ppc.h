@@ -11,6 +11,9 @@
 
 #ifndef __CONFIG_XLX_H
 #define __CONFIG_XLX_H
+
+#define CONFIG_SYS_GENERIC_BOARD
+
 /*
 #define DEBUG
 #define ET_DEBUG
@@ -35,7 +38,6 @@
 #undef CONFIG_CMD_SPI
 #undef CONFIG_CMD_I2C
 #undef CONFIG_CMD_DTT
-#undef CONFIG_CMD_NET
 #undef CONFIG_CMD_PING
 #undef CONFIG_CMD_DHCP
 #undef CONFIG_CMD_EEPROM

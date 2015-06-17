@@ -49,7 +49,6 @@
 #define CONFIG_CMD_LOADS
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_MISC
-#undef CONFIG_CMD_NET
 #undef CONFIG_CMD_NFS
 #define CONFIG_CMD_REGINFO
 #undef CONFIG_CMD_USB
@@ -266,6 +265,10 @@
 #	define CONFIG_SYS_FLASH_CHECKSUM
 #	define CONFIG_SYS_FLASH_BANKS_LIST	{ CONFIG_SYS_CS0_BASE }
 #endif
+
+#define LDS_BOARD_TEXT \
+        arch/m68k/cpu/mcf5227x/built-in.o   (.text*) \
+	arch/m68k/lib/built-in.o            (.text*)
 
 /*
  * This is setting for JFFS2 support in u-boot.

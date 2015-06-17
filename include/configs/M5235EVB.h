@@ -46,7 +46,6 @@
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_MISC
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_PCI
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
@@ -95,12 +94,10 @@
 #define CONFIG_BOOTDELAY	1	/* autoboot after 5 seconds */
 #define CONFIG_BOOTFILE		"u-boot.bin"
 #ifdef CONFIG_MCFFEC
-#	define CONFIG_ETHADDR	00:e0:0c:bc:e5:60
 #	define CONFIG_IPADDR	192.162.1.2
 #	define CONFIG_NETMASK	255.255.255.0
 #	define CONFIG_SERVERIP	192.162.1.1
 #	define CONFIG_GATEWAYIP	192.162.1.1
-#	define CONFIG_OVERWRITE_ETHADDR_ONCE
 #endif				/* FEC_ENET */
 
 #define CONFIG_HOSTNAME		M5235EVB
@@ -199,6 +196,11 @@
  * Environment is embedded in u-boot in the second sector of the flash
  */
 #define CONFIG_ENV_IS_IN_FLASH	1
+
+#define LDS_BOARD_TEXT \
+	. = DEFINED(env_offset) ? env_offset : .; \
+	common/env_embedded.o (.text);
+
 #ifdef NORFLASH_PS32BIT
 #	define CONFIG_ENV_OFFSET		(0x8000)
 #	define CONFIG_ENV_SIZE		0x4000

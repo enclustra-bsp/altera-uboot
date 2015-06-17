@@ -77,7 +77,6 @@
 #define DM9000_IO		CONFIG_DM9000_BASE
 #define DM9000_DATA		(CONFIG_DM9000_BASE + 2)
 
-#define CONFIG_LIB_RAND
 
 /*
  * Flash Settings
@@ -131,14 +130,12 @@
  * Misc Settings
  */
 #define CONFIG_BAUDRATE		115200
-#define CONFIG_MISC_INIT_R	/* needed for MAC address */
 #define CONFIG_UART_CONSOLE	0
 
 #undef CONFIG_SHOW_BOOT_PROGRESS
 /* Enable this if bootretry required; currently it's disabled */
 #define CONFIG_BOOT_RETRY_TIME	-1
 #define CONFIG_BOOTCOMMAND	"run nandboot"
-#define CONFIG_AUTOBOOT_PROMPT	"autoboot in %d seconds\n"
 
 
 /*

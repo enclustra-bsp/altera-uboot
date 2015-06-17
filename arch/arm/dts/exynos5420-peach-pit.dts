@@ -67,6 +67,8 @@
 	        edp-lvds-bridge@48 {
 	                compatible = "parade,ps8625";
 	                reg = <0x48>;
+			sleep-gpio = <&gpx3 5 GPIO_ACTIVE_HIGH>;
+			reset-gpio = <&gpy7 7 GPIO_ACTIVE_HIGH>;
 	        };
 	};
 
@@ -77,7 +79,7 @@
 	i2c@12e10000 { /* i2c9 */
 		clock-frequency = <400000>;
                 tpm@20 {
-                        compatible = "infineon,slb9645-tpm";
+                        compatible = "infineon,slb9645tt";
                         reg = <0x20>;
 		};
 	};
@@ -102,12 +104,12 @@
 	spi@12d40000 { /* spi2 */
 		spi-max-frequency = <4000000>;
 		spi-deactivate-delay = <200>;
+
 		cros_ec: cros-ec@0 {
+			compatible = "google,cros-ec-spi";
 			reg = <0>;
-			compatible = "google,cros-ec";
 			spi-half-duplex;
 			spi-max-timeout-ms = <1100>;
-			spi-frame-header = <0xec>;
 			ec-interrupt = <&gpx1 5 GPIO_ACTIVE_LOW>;
 
 			/*

@@ -18,8 +18,6 @@
 
 /* Ethernet driver configuration */
 #define CONFIG_MII
-#define CONFIG_DESIGNWARE_ETH
-#define CONFIG_NET_MULTI
 #define CONFIG_PHYLIB
 #define CONFIG_PHY_RESET_DELAY			10000		/* in usec */
 #define CONFIG_PHY_GIGE			/* Include GbE speed/duplex detection */
@@ -110,7 +108,6 @@
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_RUN
 #define CONFIG_CMD_SAVES
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
@@ -203,10 +200,6 @@
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_MISC_INIT_R
 #define CONFIG_ZERO_BOOTDELAY_CHECK
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_STOP_STR		" "
-#define CONFIG_AUTOBOOT_PROMPT			\
-		"Hit SPACE in %d seconds to stop autoboot.\n", bootdelay
 
 #define CONFIG_SYS_MEMTEST_START		0x00800000
 #define CONFIG_SYS_MEMTEST_END			0x04000000

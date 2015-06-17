@@ -79,17 +79,7 @@
 #define CONFIG_BOOTCOMMAND						\
 	"fsload; bootm $(fileaddr)"
 
-/*
- * Only interrupt autoboot if <space> is pressed. Otherwise, garbage
- * data on the serial line may interrupt the boot sequence.
- */
 #define CONFIG_BOOTDELAY		1
-#define CONFIG_AUTOBOOT
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_PROMPT		\
-	"Press SPACE to abort autoboot in %d seconds\n", bootdelay
-#define CONFIG_AUTOBOOT_DELAY_STR	"d"
-#define CONFIG_AUTOBOOT_STOP_STR	" "
 
 /*
  * After booting the board for the first time, new ethernet addresses
@@ -105,7 +95,6 @@
 #define CONFIG_BOOTP_GATEWAY
 
 /* generic board */
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_EARLY_INIT_R
 

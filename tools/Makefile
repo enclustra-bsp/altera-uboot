@@ -83,6 +83,7 @@ dumpimage-mkimage-objs := aisimage.o \
 			imximage.o \
 			kwbimage.o \
 			lib/md5.o \
+			lpc32xximage.o \
 			mxsimage.o \
 			omapimage.o \
 			os_support.o \
@@ -121,7 +122,8 @@ endif
 
 # MXSImage needs LibSSL
 ifneq ($(CONFIG_MX23)$(CONFIG_MX28)$(CONFIG_FIT_SIGNATURE),)
-HOSTLOADLIBES_mkimage += -lssl -lcrypto
+HOSTLOADLIBES_mkimage += \
+	$(shell pkg-config --libs libssl libcrypto 2> /dev/null || echo "-lssl -lcrypto")
 endif
 
 HOSTLOADLIBES_dumpimage := $(HOSTLOADLIBES_mkimage)

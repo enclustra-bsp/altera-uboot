@@ -34,6 +34,12 @@
 #define CONFIG_SYS_LOAD_ADDR		0x82000000
 
 /*
+ * This board might be of different versions so handle it
+ */
+#define CONFIG_BOARD_TYPES
+#define CONFIG_BOARD_EARLY_INIT_F
+
+/*
  * NAND Flash configuration
  */
 #define CONFIG_SYS_NO_FLASH
@@ -110,9 +116,7 @@
 /*
  * Ethernet configuration
  */
-#define CONFIG_DESIGNWARE_ETH
 #define CONFIG_DW_AUTONEG
-#define CONFIG_NET_MULTI
 
 /*
  * Command line configuration

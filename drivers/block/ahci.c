@@ -39,7 +39,7 @@ u16 *ataid[AHCI_MAX_PORTS];
 
 /* Maximum timeouts for each event */
 #define WAIT_MS_SPINUP	20000
-#define WAIT_MS_DATAIO	5000
+#define WAIT_MS_DATAIO	10000
 #define WAIT_MS_FLUSH	5000
 #define WAIT_MS_LINKUP	200
 
@@ -137,10 +137,10 @@ static void sunxi_dma_init(volatile u8 *port_mmio)
 }
 #endif
 
-int ahci_reset(u32 base)
+int ahci_reset(void __iomem *base)
 {
 	int i = 1000;
-	u32 host_ctl_reg = base + HOST_CTL;
+	u32 __iomem *host_ctl_reg = base + HOST_CTL;
 	u32 tmp = readl(host_ctl_reg); /* global controller reset */
 
 	if ((tmp & HOST_RESET) == 0)
@@ -419,8 +419,9 @@ static int ahci_init_one(pci_dev_t pdev)
 	probe_ent->pio_mask = 0x1f;
 	probe_ent->udma_mask = 0x7f;	/*Fixme,assume to support UDMA6 */
 
-	pci_read_config_dword(pdev, PCI_BASE_ADDRESS_5, &probe_ent->mmio_base);
-	debug("ahci mmio_base=0x%08x\n", probe_ent->mmio_base);
+	probe_ent->mmio_base = pci_map_bar(pdev, PCI_BASE_ADDRESS_5,
+					   PCI_REGION_MEM);
+	debug("ahci mmio_base=0x%p\n", probe_ent->mmio_base);
 
 	/* Take from kernel:
 	 * JMicron-specific fixup:
@@ -725,18 +726,25 @@ static int ata_scsiop_inquiry(ccb *pccb)
  */
 static int ata_scsiop_read_write(ccb *pccb, u8 is_write)
 {
-	u32 lba = 0;
+	lbaint_t lba = 0;
 	u16 blocks = 0;
 	u8 fis[20];
 	u8 *user_buffer = pccb->pdata;
 	u32 user_buffer_size = pccb->datalen;
 
 	/* Retrieve the base LBA number from the ccb structure. */
-	memcpy(&lba, pccb->cmd + 2, sizeof(lba));
-	lba = be32_to_cpu(lba);
+	if (pccb->cmd[0] == SCSI_READ16) {
+		memcpy(&lba, pccb->cmd + 2, 8);
+		lba = be64_to_cpu(lba);
+	} else {
+		u32 temp;
+		memcpy(&temp, pccb->cmd + 2, 4);
+		lba = be32_to_cpu(temp);
+	}
 
 	/*
-	 * And the number of blocks.
+	 * Retrieve the base LBA number and the block count from
+	 * the ccb structure.
 	 *
 	 * For 10-byte and 16-byte SCSI R/W commands, transfer
 	 * length 0 means transfer 0 block of data.
@@ -745,10 +753,13 @@ static int ata_scsiop_read_write(ccb *pccb, u8 is_write)
 	 *
 	 * WARNING: one or two older ATA drives treat 0 as 0...
 	 */
-	blocks = (((u16)pccb->cmd[7]) << 8) | ((u16) pccb->cmd[8]);
+	if (pccb->cmd[0] == SCSI_READ16)
+		blocks = (((u16)pccb->cmd[13]) << 8) | ((u16) pccb->cmd[14]);
+	else
+		blocks = (((u16)pccb->cmd[7]) << 8) | ((u16) pccb->cmd[8]);
 
-	debug("scsi_ahci: %s %d blocks starting from lba 0x%x\n",
-	      is_write ?  "write" : "read", (unsigned)lba, blocks);
+	debug("scsi_ahci: %s %u blocks starting from lba 0x" LBAFU "\n",
+	      is_write ?  "write" : "read", blocks, lba);
 
 	/* Preset the FIS */
 	memset(fis, 0, sizeof(fis));
@@ -769,14 +780,23 @@ static int ata_scsiop_read_write(ccb *pccb, u8 is_write)
 			return -EIO;
 		}
 
-		/* LBA48 SATA command but only use 32bit address range within
-		 * that. The next smaller command range (28bit) is too small.
+		/*
+		 * LBA48 SATA command but only use 32bit address range within
+		 * that (unless we've enabled 64bit LBA support). The next
+		 * smaller command range (28bit) is too small.
 		 */
 		fis[4] = (lba >> 0) & 0xff;
 		fis[5] = (lba >> 8) & 0xff;
 		fis[6] = (lba >> 16) & 0xff;
 		fis[7] = 1 << 6; /* device reg: set LBA mode */
 		fis[8] = ((lba >> 24) & 0xff);
+#ifdef CONFIG_SYS_64BIT_LBA
+		if (pccb->cmd[0] == SCSI_READ16) {
+			fis[9] = ((lba >> 32) & 0xff);
+			fis[10] = ((lba >> 40) & 0xff);
+		}
+#endif
+
 		fis[3] = 0xe0; /* features */
 
 		/* Block (sector) count */
@@ -785,7 +805,7 @@ static int ata_scsiop_read_write(ccb *pccb, u8 is_write)
 
 		/* Read/Write from ahci */
 		if (ahci_device_data_io(pccb->target, (u8 *) &fis, sizeof(fis),
-					user_buffer, user_buffer_size,
+					user_buffer, transfer_size,
 					is_write)) {
 			debug("scsi_ahci: SCSI %s10 command failure.\n",
 			      is_write ? "WRITE" : "READ");
@@ -882,6 +902,7 @@ int scsi_exec(ccb *pccb)
 	int ret;
 
 	switch (pccb->cmd[0]) {
+	case SCSI_READ16:
 	case SCSI_READ10:
 		ret = ata_scsiop_read_write(pccb, 0);
 		break;
@@ -939,7 +960,7 @@ void scsi_low_level_init(int busdevfunc)
 }
 
 #ifdef CONFIG_SCSI_AHCI_PLAT
-int ahci_init(u32 base)
+int ahci_init(void __iomem *base)
 {
 	int i, rc = 0;
 	u32 linkmap;

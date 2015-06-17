@@ -52,6 +52,7 @@ obj-$(CONFIG_NAND_JZ4740) += jz4740_nand.o
 obj-$(CONFIG_NAND_KB9202) += kb9202_nand.o
 obj-$(CONFIG_NAND_KIRKWOOD) += kirkwood_nand.o
 obj-$(CONFIG_NAND_KMETER1) += kmeter1_nand.o
+obj-$(CONFIG_NAND_LPC32XX_MLC) += lpc32xx_nand_mlc.o
 obj-$(CONFIG_NAND_MPC5121_NFC) += mpc5121_nfc.o
 obj-$(CONFIG_NAND_VF610_NFC) += vf610_nfc.o
 obj-$(CONFIG_NAND_MXC) += mxc_nand.o
@@ -72,5 +73,6 @@ obj-$(CONFIG_NAND_FSL_ELBC) += fsl_elbc_spl.o
 obj-$(CONFIG_NAND_FSL_IFC) += fsl_ifc_spl.o
 obj-$(CONFIG_NAND_MXC) += mxc_nand_spl.o
 obj-$(CONFIG_NAND_MXS) += mxs_nand_spl.o mxs_nand.o
+obj-$(CONFIG_NAND_SUNXI) += sunxi_nand_spl.o
 
 endif # drivers

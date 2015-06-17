@@ -73,10 +73,14 @@
 #define CONFIG_RTL8169
 
 /* General networking support */
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_DHCP
 
 #include "tegra-common-usb-gadget.h"
 #include "tegra-common-post.h"
+
+#define CONFIG_ARMV7_PSCI			1
+/* Reserve top 1M for secure RAM */
+#define CONFIG_ARMV7_SECURE_BASE		0xfff00000
+#define CONFIG_ARMV7_SECURE_RESERVE_SIZE	0x00100000
 
 #endif /* __CONFIG_H */

@@ -14,6 +14,10 @@
 
 #define CONFIG_AM57XX
 
+#ifdef CONFIG_SPL_BUILD
+#define CONFIG_IODELAY_RECALIBRATION
+#endif
+
 #define CONFIG_NR_DRAM_BANKS		2
 
 #define CONFIG_ENV_SIZE			(64 << 10)
@@ -45,7 +49,6 @@
 
 /* CPSW Ethernet */
 #define CONFIG_CMD_NFS
-#define CONFIG_CMD_NET			/* 'bootp' and 'tftp' */
 #define CONFIG_CMD_DHCP
 #define CONFIG_BOOTP_DNS		/* Configurable parts of CMD_DHCP */
 #define CONFIG_BOOTP_DNS2

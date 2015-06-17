@@ -33,6 +33,11 @@
 #define CONFIG_ENV_IS_IN_FLASH	1
 #endif
 
+#define LDS_BOARD_TEXT \
+	. = DEFINED(env_offset) ? env_offset : .; \
+	common/env_embedded.o      (.text)
+
+
 /*
  * BOOTP options
  */
@@ -46,7 +51,6 @@
  */
 #include <config_cmd_default.h>
 #define CONFIG_CMD_CACHE
-#undef CONFIG_CMD_NET
 #define CONFIG_CMD_LOADB
 #define CONFIG_CMD_LOADS
 #define CONFIG_CMD_EXT2

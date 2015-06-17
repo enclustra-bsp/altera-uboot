@@ -2,6 +2,7 @@ if TEGRA
 
 choice
 	prompt "Tegra SoC select"
+	optional
 
 config TEGRA20
 	bool "Tegra20 family"
@@ -23,25 +24,13 @@ config SYS_MALLOC_F_LEN
 config USE_PRIVATE_LIBGCC
 	default y
 
-config DM
+config DM_USB
 	default y
 
 config SPL_DM
 	default y
 
-config DM_SERIAL
-	default y
-
-config DM_SPI
-	default y
-
-config DM_SPI_FLASH
-	default y
-
-config DM_I2C
-	default y
-
-config DM_GPIO
+config SPL_DISABLE_OF_CONTROL
 	default y
 
 source "arch/arm/mach-tegra/tegra20/Kconfig"

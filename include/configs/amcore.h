@@ -24,7 +24,6 @@
 #include <config_cmd_default.h>
 #undef CONFIG_CMD_AES
 #undef CONFIG_CMD_BOOTD
-#undef CONFIG_CMD_NET
 #undef CONFIG_CMD_NFS
 #undef CONFIG_CMD_FPGA
 #undef CONFIG_CMD_XIMG
@@ -97,6 +96,10 @@
 					 CONFIG_SYS_MONITOR_LEN)
 #define CONFIG_ENV_SIZE			0x1000
 #define CONFIG_ENV_SECT_SIZE		0x1000
+
+#define LDS_BOARD_TEXT \
+        . = DEFINED(env_offset) ? env_offset : .; \
+        common/env_embedded.o (.text*);
 
 /* memory map space for linux boot data */
 #define CONFIG_SYS_BOOTMAPSZ		(8 << 20)

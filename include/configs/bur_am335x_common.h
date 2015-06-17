@@ -3,7 +3,7 @@
  *
  * common parts used by B&R AM335x based boards
  *
- * Copyright (C) 2013 Hannes Petermaier <oe5hpm@oevsv.at> -
+ * Copyright (C) 2013 Hannes Schmelzer <oe5hpm@oevsv.at> -
  * Bernecker & Rainer Industrieelektronik GmbH - http://www.br-automation.com
  *
  * SPDX-License-Identifier:        GPL-2.0+
@@ -13,29 +13,20 @@
 #define __BUR_AM335X_COMMON_H__
 /* ------------------------------------------------------------------------- */
 #define BUR_COMMON_ENV \
+"usbscript=usb start && fatload usb 0 0x80000000 usbscript.img && source\0" \
 "defaultip=192.168.60.253\0" \
 "defaultsip=192.168.60.254\0" \
 "netconsole=echo switching to network console ...; " \
-"if dhcp; then " \
-"setenv ncip ${serverip}; else " \
-"setenv ncip 192.168.60.254; " \
-"setenv serverip 192.168.60.254; " \
-"setenv gatewayip 192.168.60.254; " \
-"setenv ipaddr 192.168.60.1; " \
-"fi;" \
-"setenv netdisplay0 '" \
-"setcurs 1 9; puts myip; setcurs 10 9; puts ${ipaddr};" \
-"setcurs 1 10;puts serverip; setcurs 10 10; puts ${serverip};" \
-"run netdisplay0; " \
+"if dhcp; then setenv ncip ${serverip}; " \
+"else " \
+"setenv ncip 192.168.60.254; setenv serverip 192.168.60.254; " \
+"setenv gatewayip 192.168.60.254; setenv ipaddr 192.168.60.1; " \
+"fi; " \
+"setcurs 1 9; lcdputs myip; setcurs 10 9; lcdputs ${ipaddr};" \
+"setcurs 1 10;lcdputs serverip; setcurs 10 10; lcdputs ${serverip};" \
 "setenv stdout nc;setenv stdin nc;setenv stderr nc\0"
 
 #define CONFIG_CMD_TIME
-#define CONFIG_VIDEO_BMP_GZIP
-#define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE	(1366*767*4)
-#define CONFIG_CMD_UNZIP
-#define CONFIG_CMD_BMP
-#define CONFIG_BMP_24BMP
-#define CONFIG_BMP_32BPP
 
 #define CONFIG_SYS_GENERIC_BOARD
 
@@ -66,7 +57,6 @@
 #define CONFIG_BAUDRATE			115200
 
 /* Network defines */
-#define CONFIG_CMD_NET			/* 'bootp' and 'tftp' */
 #define CONFIG_CMD_DHCP
 #define CONFIG_BOOTP_DNS		/* Configurable parts of CMD_DHCP */
 #define CONFIG_BOOTP_SEND_HOSTNAME

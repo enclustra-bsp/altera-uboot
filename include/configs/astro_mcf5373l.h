@@ -69,7 +69,6 @@
 #define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_MISC
 #define CONFIG_CMD_XIMG
-#undef CONFIG_CMD_NET
 #undef CONFIG_CMD_NFS
 #if ENABLE_JFFS
 #define CONFIG_CMD_JFFS2
@@ -342,6 +341,10 @@
 #define CONFIG_SYS_FLASH_PROTECTION	1
 #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE	1
 #define CONFIG_SYS_FLASH_CFI_NONBLOCK	1
+
+#define LDS_BOARD_TEXT \
+	. = DEFINED(env_offset) ? env_offset : .; \
+	common/env_embedded.o       (.text*)
 
 #if ENABLE_JFFS
 /* JFFS Partition offset set */

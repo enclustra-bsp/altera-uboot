@@ -42,6 +42,10 @@
 #define CONFIG_ENV_IS_IN_FLASH	1
 #endif
 
+#define LDS_BOARD_TEXT \
+        . = DEFINED(env_offset) ? env_offset : .; \
+        common/env_embedded.o (.text);
+
 /*
  * BOOTP options
  */
@@ -56,7 +60,6 @@
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_ELF
 #define CONFIG_CMD_FLASH
 #define CONFIG_CMD_I2C

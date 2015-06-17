@@ -290,7 +290,6 @@
 /* Unsupported features */
 #undef CONFIG_USE_IRQ
 
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_PING
 #define CONFIG_DRIVER_TI_CPSW
@@ -305,7 +304,6 @@
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_SUBNETMASK
 #define CONFIG_NET_RETRY_COUNT         10
-#define CONFIG_NET_MULTI
 
 #define CONFIG_NAND
 /* NAND support */
@@ -477,12 +475,6 @@
 
 /* Watchdog */
 #define CONFIG_HW_WATCHDOG
-
-/* Stop autoboot with ESC ESC key detected */
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_STOP_STR	"\x1b\x1b"
-#define CONFIG_AUTOBOOT_PROMPT	"Autobooting in %d seconds, "		\
-				"press \"<Esc><Esc>\" to stop\n", bootdelay
 
 /* Reboot after 60 sec if bootcmd fails */
 #define CONFIG_RESET_TO_RETRY

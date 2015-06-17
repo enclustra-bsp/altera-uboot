@@ -17,6 +17,11 @@
 #define CONFIG_USB_MAX_CONTROLLER_COUNT	1
 #endif
 
+#define CONFIG_SUNXI_USB_PHYS	2
+
+/* \todo A13 only defines port 19, whereas A10s requires each of these */
+#define CONFIG_NAND_SUNXI_GPC_PORTS	{16, 17, 18, 19}
+
 /*
  * Include common sunxi configuration where most the settings are
  */

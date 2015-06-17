@@ -27,9 +27,6 @@
 #define CONFIG_TEGRA_ENABLE_UARTD
 #define CONFIG_SYS_NS16550_COM1		NV_PA_APB_UARTD_BASE
 
-/* On Seaboard: GPIO_PI3 = Port I = 8, bit = 3 */
-#define CONFIG_UART_DISABLE_GPIO	GPIO_PI3
-
 #define CONFIG_MACH_TYPE		MACH_TYPE_SEABOARD
 
 /* I2C */
@@ -60,7 +57,6 @@
 #define CONFIG_USB_ETHER_ASIX
 
 /* General networking support */
-#define CONFIG_CMD_NET
 #define CONFIG_CMD_DHCP
 
 /* Enable keyboard */

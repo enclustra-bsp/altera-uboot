@@ -42,6 +42,7 @@
  */
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
 #define CONFIG_MXC_SPI
 #define CONFIG_MXC_GPIO
 
@@ -93,7 +94,6 @@
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_SPI
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 #define CONFIG_NET_RETRY_COUNT	100
 #define CONFIG_CMD_DATE
 

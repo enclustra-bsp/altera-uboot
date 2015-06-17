@@ -24,8 +24,6 @@
 
 #define CONFIG_SYS_GENERIC_BOARD
 
-#define CONFIG_DISPLAY_CPUINFO
-
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
 
@@ -59,7 +57,6 @@
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NET
 
 /* USB Configs */
 #define CONFIG_CMD_USB
@@ -78,6 +75,7 @@
 /* I2C Configs */
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
 
 /* PMIC Controller */
 #define CONFIG_POWER

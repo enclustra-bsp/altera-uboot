@@ -86,9 +86,6 @@
 
 #define CONFIG_SYS_AUTOLOAD	"no"
 #define CONFIG_ROOTPATH		"/romfs"
-/* Uncomment next line to use fixed MAC address */
-/* #define CONFIG_ETHADDR	02:80:ad:20:31:42 */
-#define CONFIG_LIB_RAND
 
 /*
  * Flash Settings
@@ -132,7 +129,6 @@
 #define CONFIG_SYS_LONGHELP		1
 #define CONFIG_CMDLINE_EDITING	1
 #define CONFIG_ENV_OVERWRITE	1
-#define CONFIG_MISC_INIT_R
 
 #define CONFIG_BAUDRATE		115200
 #define CONFIG_UART_CONSOLE	0
@@ -155,7 +151,6 @@
 # define CONFIG_CMD_DHCP
 # define CONFIG_CMD_PING
 #else
-# undef CONFIG_CMD_NET
 # undef CONFIG_CMD_NFS
 #endif
 

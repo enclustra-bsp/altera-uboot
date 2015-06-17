@@ -123,10 +123,6 @@
 
 #define CONFIG_SYS_AUTOLOAD	"n"
 
-#define CONFIG_AUTOBOOT_KEYED
-#define CONFIG_AUTOBOOT_PROMPT		"autoboot in %d seconds\n", bootdelay
-#define CONFIG_AUTOBOOT_DELAY_STR	"asdfg"
-
 #undef	CONFIG_BOOTARGS
 #define CONFIG_PREBOOT				"run try_update"
 
@@ -165,7 +161,6 @@
 			"setenv bootargs ${bootargs} no_ethaddr;"	\
 		"fi\0"							\
 	"hostname=CPUP0\0"						\
-	"ethaddr=00:00:00:00:00:00\0"					\
 	"netdev=eth0\0"							\
 	"bootcmd=run bootcmd_nor\0" 					\
 	""
