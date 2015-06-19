@@ -118,6 +118,8 @@
 	"qspi_bootimage_offset="  __stringify(QSPI_BOOT_OFFSET)        "\0"\
 						 \
 	"mmcargs=setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p2 rw rootwait\0"\
+	"usbargs=setenv bootargs console=ttyS0,115200 root=/dev/sda2 rw rootwait\0"\
+	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
 	"qspiboot=echo Bootinq on QSPI Flash ...; " \
 		"sf probe && "                          \
 		"sf read ${bootscript_loadaddr} ${qspi_bootscript_offset} ${bootscript_size} && "\
