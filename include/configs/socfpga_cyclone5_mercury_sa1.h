@@ -42,13 +42,6 @@
 
 /* Booting Linux */
 #define CONFIG_BOOTDELAY	3
-/*#define CONFIG_BOOTFILE		"zImage"*/
-/*#define CONFIG_BOOTARGS		"console=ttyS0," __stringify(CONFIG_BAUDRATE) */
-/*#ifdef CONFIG_SOCFPGA_VIRTUAL_TARGET
-#define CONFIG_BOOTCOMMAND	"run ramboot"
-#else
-#define CONFIG_BOOTCOMMAND	"run mmcload; run mmcboot"
-#endif*/
 #define CONFIG_LOADADDR		0x8000
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
 
