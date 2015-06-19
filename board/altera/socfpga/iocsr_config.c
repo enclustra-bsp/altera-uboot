@@ -8,7 +8,7 @@
 
 #include "iocsr_config.h"
 
-#ifdef CONFIG_TARGET_SOCFPGA_CYCLONE5
+#if defined(CONFIG_TARGET_SOCFPGA_CYCLONE5) || defined(CONFIG_TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1)
 const unsigned long iocsr_scan_chain0_table[((
 	CONFIG_HPS_IOCSR_SCANCHAIN0_LENGTH / 32) + 1)] = {
 	0x00000000,

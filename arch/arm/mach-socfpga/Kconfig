@@ -10,6 +10,9 @@ config TARGET_SOCFPGA_ARRIA5
 config TARGET_SOCFPGA_CYCLONE5
 	bool "Altera SOCFPGA Cyclone V"
 
+config TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
+	bool "Enclustra Mercury SA1"
+
 endchoice
 
 config SYS_BOARD
@@ -24,5 +27,6 @@ config SYS_SOC
 config SYS_CONFIG_NAME
 	default "socfpga_arria5" if TARGET_SOCFPGA_ARRIA5
 	default "socfpga_cyclone5" if TARGET_SOCFPGA_CYCLONE5
+	default "socfpga_cyclone5_mercury_sa1" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 
 endif
