@@ -52,7 +52,8 @@ dtb-$(CONFIG_AM33XX) += am335x-boneblack.dtb
 dtb-$(CONFIG_ARCH_SOCFPGA) +=				\
 	socfpga_arria5_socdk.dtb			\
 	socfpga_cyclone5_socdk.dtb			\
-	socfpga_cyclone5_socrates.dtb
+	socfpga_cyclone5_socrates.dtb			\
+	socfpga_cyclone5_mercury_sa1.dtb
 dtb-$(CONFIG_TARGET_STV0991) += stv0991.dtb
 
 dtb-$(CONFIG_LS102XA) += ls1021a-qds.dtb \
