@@ -312,6 +312,8 @@ static int qpsi_write_sram_fifo_push(struct cadence_spi_platdata *plat,
 		wr_bytes = (remaining > page_size) ?
 					page_size : remaining;
 
+		/* XXX: Workararound for too fast writes ending with corrupted data */
+		udelay(1000);
 		cadence_qspi_apb_write_fifo_data(dest_addr, src, wr_bytes);
 		src += wr_bytes;
 		remaining -= wr_bytes;
