@@ -72,18 +72,22 @@
 #define CONFIG_G_DNL_MANUFACTURER      "Altera"
 
 /* QSPI Flash Memory Map */
-#define QSPI_BOOT_OFFSET          0x00000000   // Storage for Bootimage
-#define QSPI_BOOT_SIZE            0x00600000   // size 6MB
-#define QSPI_LINUX_OFFSET         0x00600000   // Storage for Linux Kernel
-#define QSPI_LINUX_SIZE           0x00500000   // size 5MB
-#define QSPI_DTB_OFFSET           0x00B00000   // Storage for Linux Devicetree
-#define QSPI_DTB_SIZE             0x00080000   // size 512kB
-#define QSPI_ENV_OFFSET           0x00B80000   // Storage for Uboot Environment
-#define QSPI_ENV_SIZE             0x00080000   // size 512kB
-#define QSPI_BOOTSCRIPT_OFFSET    0x00C00000   // Storage for Uboot boot script
-#define QSPI_BOOTSCRIPT_SIZE      0x00040000   // size 256kB
-#define QSPI_ROOTFS_OFFSET        0x00C40000   // Storage for Linux Root FS
-#define QSPI_ROOTFS_SIZE          0x003C0000   // size 3.84MB
+#define QSPI_PRELOADER_OFFSET		0x00000000  // Storage for Preloader
+#define QSPI_PRELOADER_SIZE		0x00040000  // size 256 KiB
+#define QSPI_UBOOT_OFFSET		0x00060000  // Storage for U-Boot image
+#define QSPI_UBOOT_SIZE			0x00040000  // size 256 KiB
+#define QSPI_BITSTREAM_OFFSET		0x00100000  // Storage for FPGA bitstream
+#define QSPI_BITSTREAM_SIZE		0x00700000  // size 7MiB
+#define QSPI_ENV_OFFSET			0x00800000  // Storage for Uboot Environment
+#define QSPI_ENV_SIZE			0x00040000  // size 256 KiB
+#define QSPI_DTB_OFFSET			0x00840000  // Storage for Linux Devicetree
+#define QSPI_DTB_SIZE			0x00040000  // size 256 KiB
+#define QSPI_BOOTSCRIPT_OFFSET		0x00880000  // Storage for Uboot boot script
+#define QSPI_BOOTSCRIPT_SIZE		0x00040000  // size 256 KiB
+#define QSPI_LINUX_OFFSET		0x008C0000  // Storage for Linux Kernel
+#define QSPI_LINUX_SIZE			0x00740000  // size 7,6 MB
+#define QSPI_ROOTFS_OFFSET		0x01000000  // Storage for Linux Root FS (JFFS)
+#define QSPI_ROOTFS_SIZE		0x03000000  // size 48 MiB
 
 /* Extra Environment */
 #define CONFIG_HOSTNAME		socfpga_cyclone5
@@ -106,16 +110,17 @@
 	"ramdisk_loadaddr=0x2000000\0"              \
 	"bootscript_loadaddr=0x1000000\0"           \
 						\
-	"ramdisk_size="    __stringify(QSPI_ROOTFS_SIZE) "\0"   \
-	"kernel_size="     __stringify(QSPI_LINUX_SIZE)  "\0"   \
-	"devicetree_size=" __stringify(QSPI_DTB_SIZE)    "\0"   \
-	"bootscript_size=" __stringify(QSPI_BOOTSCRIPT_SIZE)   "\0"   \
+	"ramdisk_size="    __stringify(QSPI_ROOTFS_SIZE) "\0"\
+	"kernel_size="     __stringify(QSPI_LINUX_SIZE)  "\0"\
+	"devicetree_size=" __stringify(QSPI_DTB_SIZE)    "\0"\
+	"bootscript_size=" __stringify(QSPI_BOOTSCRIPT_SIZE)   "\0"\
 								\
 	"qspi_kernel_offset="     __stringify(QSPI_LINUX_OFFSET) "\0"\
 	"qspi_ramdisk_offset="    __stringify(QSPI_ROOTFS_OFFSET)"\0"\
 	"qspi_devicetree_offset=" __stringify(QSPI_DTB_OFFSET)   "\0"\
 	"qspi_bootscript_offset=" __stringify(QSPI_BOOTSCRIPT_OFFSET)  "\0"\
-	"qspi_bootimage_offset="  __stringify(QSPI_BOOT_OFFSET)        "\0"\
+	"qspi_preloader_offset="  __stringify(QSPI_PRELOADER_OFFSET)   "\0"\
+	"qspi_uboot_offset="      __stringify(QSPI_UBOOT_OFFSET)       "\0"\
 						 \
 	"mmcargs=setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p2 rw rootwait\0"\
 	"usbargs=setenv bootargs console=ttyS0,115200 root=/dev/sda2 rw rootwait\0"\
@@ -145,8 +150,6 @@
 		"run qspiboot;"\
 		"fi\0"
 
-#define CONFIG_SYS_FLASH_BASE		0xFFA00000
-#define CONFIG_SYS_FLASH_SIZE		(16 * 1024 * 1024)
 #define CONFIG_ENV_IS_IN_SPI_FLASH
 #define CONFIG_SPI_FLASH_BAR
 #define CONFIG_ENV_SIZE			QSPI_ENV_SIZE
