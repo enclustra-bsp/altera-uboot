@@ -100,17 +100,21 @@
 	"serverip=192.168.1.188\0"                  \
 	"netmask=255.255.255.0\0"                   \
 						\
+	"preloader_image=preloader-mkpimage.bin\0"  \
 	"kernel_image=uimage\0"                     \
 	"ramdisk_image=uramdisk\0"                  \
 	"devicetree_image=devicetree.dtb\0"         \
 	"bootscript_image=uboot.scr\0"              \
 						\
+	"preloader_loadadrr=0x2B00000\0"	\
+	"uboot_loadaddr=0x2C00000\0"		\
 	"kernel_loadaddr=0x3000000\0"               \
 	"devicetree_loadaddr=0x2A00000\0"           \
 	"ramdisk_loadaddr=0x2000000\0"              \
 	"bootscript_loadaddr=0x1000000\0"           \
 						\
 	"ramdisk_size="    __stringify(QSPI_ROOTFS_SIZE) "\0"\
+	"preloader_size"   __stringify(QSPI_PRELOADER_SIZE) "\0"\
 	"kernel_size="     __stringify(QSPI_LINUX_SIZE)  "\0"\
 	"devicetree_size=" __stringify(QSPI_DTB_SIZE)    "\0"\
 	"bootscript_size=" __stringify(QSPI_BOOTSCRIPT_SIZE)   "\0"\
