@@ -110,17 +110,17 @@
 	"uboot_loadaddr=0x2C00000\0"		\
 	"kernel_loadaddr=0x3000000\0"               \
 	"devicetree_loadaddr=0x2A00000\0"           \
-	"ramdisk_loadaddr=0x2000000\0"              \
+	"rootfs_loadaddr=0x2000000\0"              \
 	"bootscript_loadaddr=0x1000000\0"           \
 						\
-	"ramdisk_size="    __stringify(QSPI_ROOTFS_SIZE) "\0"\
 	"preloader_size"   __stringify(QSPI_PRELOADER_SIZE) "\0"\
+	"rootfs_size="    __stringify(QSPI_ROOTFS_SIZE) "\0"\
 	"kernel_size="     __stringify(QSPI_LINUX_SIZE)  "\0"\
 	"devicetree_size=" __stringify(QSPI_DTB_SIZE)    "\0"\
 	"bootscript_size=" __stringify(QSPI_BOOTSCRIPT_SIZE)   "\0"\
 								\
 	"qspi_kernel_offset="     __stringify(QSPI_LINUX_OFFSET) "\0"\
-	"qspi_ramdisk_offset="    __stringify(QSPI_ROOTFS_OFFSET)"\0"\
+	"qspi_rootfs_offset="    __stringify(QSPI_ROOTFS_OFFSET)"\0"\
 	"qspi_devicetree_offset=" __stringify(QSPI_DTB_OFFSET)   "\0"\
 	"qspi_bootscript_offset=" __stringify(QSPI_BOOTSCRIPT_OFFSET)  "\0"\
 	"qspi_preloader_offset="  __stringify(QSPI_PRELOADER_OFFSET)   "\0"\
