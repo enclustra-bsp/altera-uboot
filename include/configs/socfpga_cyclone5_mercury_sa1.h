@@ -74,6 +74,8 @@
 /* QSPI Flash Memory Map */
 #define QSPI_PRELOADER_OFFSET		0x00000000  // Storage for Preloader
 #define QSPI_PRELOADER_SIZE		0x00040000  // size 256 KiB
+#define QSPI_UBOOT_ERASE_ADDR		0x00040000  // We can erase only page aligned regions
+#define QSPI_UBOOT_ERASE_SIZE		0x00080000  // We can erase only page aligned regions
 #define QSPI_UBOOT_OFFSET		0x00060000  // Storage for U-Boot image
 #define QSPI_UBOOT_SIZE			0x00040000  // size 256 KiB
 #define QSPI_BITSTREAM_OFFSET		0x00100000  // Storage for FPGA bitstream
@@ -105,6 +107,7 @@
 	"ramdisk_image=uramdisk\0"                  \
 	"devicetree_image=devicetree.dtb\0"         \
 	"bootscript_image=uboot.scr\0"              \
+	"uboot_image=uboot.img\0"		    \
 						\
 	"preloader_loadadrr=0x2B00000\0"	\
 	"uboot_loadaddr=0x2C00000\0"		\
@@ -120,11 +123,13 @@
 	"bootscript_size=" __stringify(QSPI_BOOTSCRIPT_SIZE)   "\0"\
 								\
 	"qspi_kernel_offset="     __stringify(QSPI_LINUX_OFFSET) "\0"\
-	"qspi_rootfs_offset="    __stringify(QSPI_ROOTFS_OFFSET)"\0"\
+	"qspi_rootfs_offset="     __stringify(QSPI_ROOTFS_OFFSET)"\0"\
 	"qspi_devicetree_offset=" __stringify(QSPI_DTB_OFFSET)   "\0"\
 	"qspi_bootscript_offset=" __stringify(QSPI_BOOTSCRIPT_OFFSET)  "\0"\
 	"qspi_preloader_offset="  __stringify(QSPI_PRELOADER_OFFSET)   "\0"\
 	"qspi_uboot_offset="      __stringify(QSPI_UBOOT_OFFSET)       "\0"\
+	"qspi_uboot_erase_offset="  __stringify(QSPI_UBOOT_ERASE_ADDR)   "\0"\
+	"qspi_uboot_erase_size="  __stringify(QSPI_UBOOT_ERASE_SIZE)   "\0"\
 						 \
 	"mmcargs=setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p2 rw rootwait\0"\
 	"usbargs=setenv bootargs console=ttyS0,115200 root=/dev/sda2 rw rootwait\0"\
