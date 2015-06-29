@@ -108,10 +108,9 @@
 	"ramdisk_image=uramdisk\0"                  \
 	"devicetree_image=devicetree.dtb\0"         \
 	"bootscript_image=uboot.scr\0"              \
-	"uboot_image=uboot.img\0"		    \
-	"uboot_image=uboot.img\0"		    \
+	"uboot_image=u-boot.img\0"		    \
 						\
-	"preloader_loadadrr=0x2B00000\0"	\
+	"preloader_loadaddr=0x2B00000\0"	\
 	"bitstream_loadaddr=0x3600000\0"	\
 	"uboot_loadaddr=0x2C00000\0"		\
 	"kernel_loadaddr=0x3000000\0"               \
@@ -119,12 +118,12 @@
 	"rootfs_loadaddr=0x2000000\0"              \
 	"bootscript_loadaddr=0x1000000\0"           \
 						\
-	"preloader_size"   __stringify(QSPI_PRELOADER_SIZE) "\0"\
+	"preloader_size="   __stringify(QSPI_PRELOADER_SIZE) "\0"\
 	"rootfs_size="     __stringify(QSPI_ROOTFS_SIZE) "\0"\
 	"kernel_size="     __stringify(QSPI_LINUX_SIZE)  "\0"\
 	"devicetree_size=" __stringify(QSPI_DTB_SIZE)    "\0"\
 	"bootscript_size=" __stringify(QSPI_BOOTSCRIPT_SIZE)   "\0"\
-	"bitstream_size"   __stringify(QSPI_BITSTREAM_SIZE)    "\0"\
+	"bitstream_size="   __stringify(QSPI_BITSTREAM_SIZE)    "\0"\
 								\
 	"qspi_kernel_offset="     __stringify(QSPI_LINUX_OFFSET) "\0"\
 	"qspi_rootfs_offset="     __stringify(QSPI_ROOTFS_OFFSET)"\0"\
