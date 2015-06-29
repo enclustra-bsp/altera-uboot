@@ -38,7 +38,7 @@
 
 
 /* Memory configurations */
-#define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB on SoCDK */
+#define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB */
 
 /* Booting Linux */
 #define CONFIG_BOOTDELAY	3
