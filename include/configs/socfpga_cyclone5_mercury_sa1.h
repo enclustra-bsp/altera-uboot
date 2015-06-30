@@ -105,7 +105,7 @@
 	"preloader_image=preloader-mkpimage.bin\0"  \
 	"bitstream_image=fpga.rbf.img\0"	    \
 	"kernel_image=uimage\0"                     \
-	"ramdisk_image=uramdisk\0"                  \
+	"rootfs_image=rootfs.jffs2\0"               \
 	"devicetree_image=devicetree.dtb\0"         \
 	"bootscript_image=uboot.scr\0"              \
 	"uboot_image=u-boot.img\0"		    \
