@@ -135,7 +135,7 @@
 	"qspi_uboot_erase_size="  __stringify(QSPI_UBOOT_ERASE_SIZE)   "\0"\
 	"qspi_bitstream_offset="  __stringify(QSPI_BITSTREAM_OFFSET)   "\0"\
 						 \
-	"mmcargs=setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p2 rw rootwait\0"\
+	"mmcargs=setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p3 rw rootwait\0"\
 	"usbargs=setenv bootargs console=ttyS0,115200 root=/dev/sda2 rw rootwait\0"\
 	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
 	"qspiboot=echo Bootinq on QSPI Flash ...; " \
