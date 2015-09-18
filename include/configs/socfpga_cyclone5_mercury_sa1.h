@@ -100,6 +100,7 @@
 	"ethaddr=00:07:ED:00:01:23\0"               \
 	"ipaddr=192.168.1.113\0"                    \
 	"serverip=192.168.1.188\0"                  \
+	"serverpath=/srv/nfs/rootfs\0"               \
 	"netmask=255.255.255.0\0"                   \
 						\
 	"preloader_image=preloader-mkpimage.bin\0"  \
@@ -138,6 +139,7 @@
 	"mmcargs=setenv bootargs console=ttyS0,115200 root=/dev/mmcblk0p3 rw rootwait\0"\
 	"usbargs=setenv bootargs console=ttyS0,115200 root=/dev/sda2 rw rootwait\0"\
 	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
+	"nfsargs=setenv bootargs console=ttyS0,115200 root=/dev/nfs nfsroot=${serverip}:${serverpath},v3 rw rootwait ip=dhcp\0"\
 	"qspiboot=echo Bootinq on QSPI Flash ...; " \
 		"sf probe && "                          \
 		"sf read ${bootscript_loadaddr} ${qspi_bootscript_offset} ${bootscript_size} && "\
@@ -152,7 +154,11 @@
 		"usb start && "			\
 		"load usb 0 ${bootscript_loadaddr} ${bootscript_image} && " \
 		"source ${bootscript_loadaddr} \0"\
-						\
+                                                \
+    "netboot=echo Booting from TFTP/NFS ...; "  \
+        "tftpboot ${bootscript_loadaddr} ${bootscript_image} && "\
+        "source ${bootscript_loadaddr}\0"       \
+                                                \
 	"modeboot=setexpr.l bootsel *0xFFD08014 \\\\& 0x7;" \
 		"if test ${bootsel} -eq 4; || test ${bootsel} -eq 5;"\
 		"then;echo Booting from MMC ...;"\
