@@ -17,7 +17,6 @@
 #include <config_cmd_default.h>
 #define CONFIG_DOS_PARTITION
 #define CONFIG_FAT_WRITE
-#define CONFIG_HW_WATCHDOG
 
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_BOOTZ
