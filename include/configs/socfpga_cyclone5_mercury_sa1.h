@@ -115,7 +115,7 @@
 	"uboot_loadaddr=0x2C00000\0"		\
 	"kernel_loadaddr=0x3000000\0"               \
 	"devicetree_loadaddr=0x2A00000\0"           \
-	"rootfs_loadaddr=0x2000000\0"              \
+	"rootfs_loadaddr=0x4000000\0"               \
 	"bootscript_loadaddr=0x1000000\0"           \
 						\
 	"preloader_size="   __stringify(QSPI_PRELOADER_SIZE) "\0"\
