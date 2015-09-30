@@ -106,6 +106,7 @@
 	"bitstream_image=fpga.rbf.img\0"	    \
 	"kernel_image=uImage\0"                     \
 	"rootfs_image=rootfs.jffs2\0"               \
+	"uramdisk_image=uramdisk\0"                 \
 	"devicetree_image=devicetree.dtb\0"         \
 	"bootscript_image=uboot.scr\0"              \
 	"uboot_image=u-boot.img\0"		    \
@@ -117,6 +118,7 @@
 	"devicetree_loadaddr=0x2A00000\0"           \
 	"rootfs_loadaddr=0x4000000\0"               \
 	"bootscript_loadaddr=0x1000000\0"           \
+	"initrd_high=0x1000000\0" \
 						\
 	"preloader_size="   __stringify(QSPI_PRELOADER_SIZE) "\0"\
 	"rootfs_size="     __stringify(QSPI_ROOTFS_SIZE) "\0"\
@@ -139,6 +141,8 @@
 	"usbargs=setenv bootargs console=ttyS0,115200 root=/dev/sda2 rw rootwait\0"\
 	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
 	"nfsargs=setenv bootargs console=ttyS0,115200 root=/dev/nfs nfsroot=${serverip}:${serverpath},v3 rw rootwait ip=dhcp\0"\
+	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
+	"qspiramdiskargs=setenv bootargs consol=ttyS0,115200 earlyprintk rw root=/dev/ram\0"\
 	"qspiboot=echo Bootinq on QSPI Flash ...; " \
 		"sf probe && "                          \
 		"sf read ${bootscript_loadaddr} ${qspi_bootscript_offset} ${bootscript_size} && "\
