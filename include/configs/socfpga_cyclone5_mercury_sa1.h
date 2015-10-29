@@ -35,6 +35,11 @@
 #define CONFIG_CMD_USB
 #define CONFIG_CMD_USB_MASS_STORAGE
 
+#define CONFIG_BOARD_LATE_INIT
+
+#define ENCLUSTRA_EEPROM_ADDR_TAB   {0x5C,0x64}
+#define ENCLUSTRA_EEPROM_HWMAC_REG  0x10
+#define ENCLUSTRA_MAC               0xF7B020
 
 /* Memory configurations */
 #define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB */
@@ -96,7 +101,6 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"loadaddr=0x200000\0"                       \
-	"ethaddr=00:07:ED:00:01:23\0"               \
 	"ipaddr=192.168.1.113\0"                    \
 	"serverip=192.168.1.188\0"                  \
 	"serverpath=/srv/nfs/rootfs\0"               \
