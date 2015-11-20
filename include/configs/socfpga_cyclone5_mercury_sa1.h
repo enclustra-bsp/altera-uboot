@@ -37,9 +37,13 @@
 
 #define CONFIG_BOARD_LATE_INIT
 
+/* Array of all possible eeprom addresses */
 #define ENCLUSTRA_EEPROM_ADDR_TAB   {0x5C,0x64}
 #define ENCLUSTRA_EEPROM_HWMAC_REG  0x10
 #define ENCLUSTRA_MAC               0xF7B020
+
+/* Arrau of eeprom addresses that needs waking */
+#define ENCLUSTRA_EEPROM_ADDR_WAKEY_TAB {0x64}
 
 /* Default MAC address */
 #define ENCLUSTRA_ETHADDR_DEFAULT "00:07:ED:00:01:23"
