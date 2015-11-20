@@ -41,6 +41,9 @@
 #define ENCLUSTRA_EEPROM_HWMAC_REG  0x10
 #define ENCLUSTRA_MAC               0xF7B020
 
+/* Default MAC address */
+#define ENCLUSTRA_ETHADDR_DEFAULT "00:07:ED:00:01:23"
+
 /* Memory configurations */
 #define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB */
 
@@ -183,6 +186,7 @@
 #define CONFIG_ENV_OFFSET		QSPI_ENV_OFFSET
 #define CONFIG_CMD_SAVEENV
 #define CONFIG_CMD_ENV
+
 /* The rest of the configuration is shared */
 #include <configs/socfpga_common.h>
 
