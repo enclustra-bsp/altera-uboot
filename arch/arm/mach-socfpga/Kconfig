@@ -41,6 +41,7 @@ config SYS_BOARD
 	default "de0-nano-soc" if TARGET_SOCFPGA_TERASIC_DE0_NANO
 	default "mcvevk" if TARGET_SOCFPGA_DENX_MCVEVK
 	default "sockit" if TARGET_SOCFPGA_TERASIC_SOCKIT
+	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 
 config SYS_VENDOR
 	default "altera" if TARGET_SOCFPGA_ARRIA5_SOCDK
@@ -48,6 +49,7 @@ config SYS_VENDOR
 	default "denx" if TARGET_SOCFPGA_DENX_MCVEVK
 	default "terasic" if TARGET_SOCFPGA_TERASIC_DE0_NANO
 	default "terasic" if TARGET_SOCFPGA_TERASIC_SOCKIT
+	default "enclustra" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 
 config SYS_SOC
 	default "socfpga"

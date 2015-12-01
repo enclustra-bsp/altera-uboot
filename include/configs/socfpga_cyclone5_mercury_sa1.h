@@ -8,13 +8,9 @@
 #define __CONFIG_SOCFPGA_CYCLONE5_H__
 
 #include <asm/arch/socfpga_base_addrs.h>
-#include "../../board/altera/socfpga/pinmux_config.h"
-#include "../../board/altera/socfpga/iocsr_config.h"
-#include "../../board/altera/socfpga/pll_config.h"
 
 /* U-Boot Commands */
 #define CONFIG_SYS_NO_FLASH
-#include <config_cmd_default.h>
 #define CONFIG_DOS_PARTITION
 #define CONFIG_FAT_WRITE
 
@@ -26,7 +22,6 @@
 #define CONFIG_CMD_EXT4
 #define CONFIG_CMD_EXT4_WRITE
 #define CONFIG_CMD_FAT
-#define CONFIG_CMD_FPGA
 #define CONFIG_CMD_FS_GENERIC
 #define CONFIG_CMD_GREPENV
 #define CONFIG_CMD_MII
@@ -188,7 +183,6 @@
 #define CONFIG_ENV_SIZE			QSPI_ENV_SIZE
 #define CONFIG_ENV_SECT_SIZE		CONFIG_ENV_SIZE
 #define CONFIG_ENV_OFFSET		QSPI_ENV_OFFSET
-#define CONFIG_CMD_SAVEENV
 #define CONFIG_CMD_ENV
 
 /* The rest of the configuration is shared */
