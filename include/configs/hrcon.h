@@ -22,7 +22,6 @@
 
 #define CONFIG_IDENT_STRING	" hrcon 0.01"
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_EARLY_INIT_R
@@ -471,8 +470,6 @@ int fpga_gpio_get(unsigned int bus, int pin);
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PCI
@@ -486,7 +483,6 @@ int fpga_gpio_get(unsigned int bus, int pin);
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_LOAD_ADDR		0x2000000 /* default load address */
-#define CONFIG_SYS_PROMPT		"=> "	/* Monitor Command Prompt */
 #define CONFIG_SYS_HZ		1000	/* decrementer freq: 1ms ticks */
 
 #undef CONFIG_ZERO_BOOTDELAY_CHECK	/* ignore keypress on bootdelay==0 */

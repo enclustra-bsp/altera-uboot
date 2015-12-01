@@ -13,14 +13,13 @@
 #define __CONFIG_H
 
 #include <asm/arch/imx-regs.h>
-#include <config_cmd_default.h>
 
 #define CONFIG_VF610
 #define CONFIG_SYS_THUMB_BUILD
 #define CONFIG_USE_ARCH_MEMCPY
 #define CONFIG_USE_ARCH_MEMSET
+#define CONFIG_SYS_FSL_CLK
 
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_ARCH_MISC_INIT
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
@@ -69,8 +68,6 @@
 				"1408k(u-boot)ro,"		\
 				"512k(u-boot-env),"		\
 				"-(ubi)"
-
-#undef CONFIG_CMD_IMLS
 
 #define CONFIG_MMC
 #define CONFIG_FSL_ESDHC
@@ -179,9 +176,8 @@
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser */
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
-#define CONFIG_SYS_PROMPT		"Colibri VFxx # "
 #undef CONFIG_AUTO_COMPLETE
-#define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
+#define CONFIG_SYS_CBSIZE		1024	/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE		\
 			(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
 #define CONFIG_SYS_MAXARGS		16	/* max number of command args */
@@ -259,16 +255,16 @@
 #define CONFIG_G_DNL_PRODUCT_NUM         CONFIG_TRDX_PID_COLIBRI_VF50
 
 /* USB DFU */
-#define CONFIG_USBDOWNLOAD_GADGET
+#define CONFIG_USB_GADGET_DOWNLOAD
 #define CONFIG_CMD_DFU
-#define CONFIG_DFU_FUNCTION
+#define CONFIG_USB_FUNCTION_DFU
 #define CONFIG_DFU_NAND
 #define CONFIG_DFU_MMC
 #define CONFIG_SYS_DFU_DATA_BUF_SIZE (1024 * 1024)
 
 /* USB Storage */
 #define CONFIG_USB_STORAGE
-#define CONFIG_USB_GADGET_MASS_STORAGE
+#define CONFIG_USB_FUNCTION_MASS_STORAGE
 #define CONFIG_CMD_USB_MASS_STORAGE
 
 /* Enable SPI support */

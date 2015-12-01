@@ -162,7 +162,7 @@ BUR_COMMON_ENV \
 "kernel=zImage\0" \
 "ramdisk=rootfs.cpio.uboot\0" \
 "console=ttyO0,115200n8\0" \
-"optargs=consoleblank=0 quiet lpj=1191936 panic=2\0" \
+"optargs=consoleblank=0 quiet panic=2\0" \
 "nfsroot=/tftpboot/tseries/rootfs-small\0" \
 "nfsopts=nolock\0" \
 "ramargs=setenv bootargs ${optargs} console=${console} root=/dev/ram0\0" \
@@ -245,20 +245,20 @@ MMCARGS
 /* USB configuration */
 #define CONFIG_USB_MUSB_DSPS
 #define CONFIG_ARCH_MISC_INIT
-#define CONFIG_MUSB_PIO_ONLY
-#define CONFIG_MUSB_DISABLE_BULK_COMBINE_SPLIT
+#define CONFIG_USB_MUSB_PIO_ONLY
+#define CONFIG_USB_MUSB_DISABLE_BULK_COMBINE_SPLIT
 /* attention! not only for gadget, enables also highspeed in hostmode */
 #define CONFIG_USB_GADGET_DUALSPEED
-#define CONFIG_MUSB_HOST
+#define CONFIG_USB_MUSB_HOST
 #define CONFIG_AM335X_USB0
 #define CONFIG_AM335X_USB0_MODE	MUSB_HOST
 #define CONFIG_AM335X_USB1
 #define CONFIG_AM335X_USB1_MODE MUSB_HOST
 
-#ifdef CONFIG_MUSB_HOST
+#ifdef CONFIG_USB_MUSB_HOST
 #define CONFIG_CMD_USB
 #define CONFIG_USB_STORAGE
-#endif /* CONFIG_MUSB_HOST */
+#endif /* CONFIG_USB_MUSB_HOST */
 
 #if defined(CONFIG_SPI_BOOT)
 /* McSPI IP block */
@@ -266,7 +266,6 @@ MMCARGS
 #define CONFIG_OMAP3_SPI
 #define CONFIG_CMD_SPI
 #define CONFIG_CMD_SF
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_STMICRO
 #define CONFIG_SF_DEFAULT_SPEED		24000000
 

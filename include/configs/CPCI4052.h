@@ -23,7 +23,6 @@
 #undef  CONFIG_CPCI405_6U               /* enable this for 6U boards    */
 
 #define	CONFIG_SYS_TEXT_BASE	0xFFFC0000
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_DISPLAY_BOARDINFO
 
 #define CONFIG_BOARD_EARLY_INIT_F 1	/* call board_early_init_f()	*/
@@ -67,14 +66,11 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_PCI
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_IDE
 #define CONFIG_CMD_FAT
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_MII
@@ -94,7 +90,7 @@
 /*
  * Miscellaneous configurable options
  */
-#define CONFIG_SYS_LONGHELP			/* undef to save memory		*/
+#undef CONFIG_SYS_LONGHELP			/* undef to save memory		*/
 
 #undef	CONFIG_SYS_HUSH_PARSER			/* use "hush" command parser	*/
 

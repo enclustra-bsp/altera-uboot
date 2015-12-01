@@ -26,10 +26,7 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_IMMAP
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO

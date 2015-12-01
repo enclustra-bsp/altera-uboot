@@ -86,6 +86,7 @@
 #include <environment.h>
 #include <errno.h>
 #include <net.h>
+#include <net/tftp.h>
 #if defined(CONFIG_STATUS_LED)
 #include <miiphy.h>
 #include <status_led.h>
@@ -105,7 +106,6 @@
 #if defined(CONFIG_CMD_SNTP)
 #include "sntp.h"
 #endif
-#include "tftp.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -164,7 +164,7 @@ ushort		net_our_vlan = 0xFFFF;
 ushort		net_native_vlan = 0xFFFF;
 
 /* Boot File name */
-char net_boot_file_name[128];
+char net_boot_file_name[1024];
 /* The actual transferred size of the bootfile (in bytes) */
 u32 net_boot_file_size;
 /* Boot file size in blocks as reported by the DHCP server */
@@ -565,10 +565,13 @@ restart:
 			/* include a debug print as well incase the debug
 			   messages are directed to stderr */
 			debug_cond(DEBUG_INT_STATE, "--- net_loop Abort!\n");
+			ret = -EINTR;
 			goto done;
 		}
 
-		arp_timeout_check();
+		if (arp_timeout_check() > 0) {
+		    time_start = get_timer(0);
+		}
 
 		/*
 		 *	Check for a timeout, and run the timeout handler

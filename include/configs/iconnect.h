@@ -9,7 +9,6 @@
 #ifndef _CONFIG_ICONNECT_H
 #define _CONFIG_ICONNECT_H
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 /*
  * Version number information
@@ -40,7 +39,6 @@
  */
 #define CONFIG_SYS_NO_FLASH		/* declare no flash (NOR/SPI) */
 #define CONFIG_SYS_MVFS
-#include <config_cmd_default.h>
 #define CONFIG_CMD_ENV
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_NAND
@@ -52,9 +50,6 @@
  * to enable certain macros
  */
 #include "mv-common.h"
-
-#undef CONFIG_SYS_PROMPT
-#define CONFIG_SYS_PROMPT	"iconnect => "
 
 /*
  * Environment variables configuration

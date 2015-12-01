@@ -11,7 +11,6 @@
 
 #include "../board/freescale/common/ics307_clk.h"
 
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_DISPLAY_BOARDINFO
 
 #ifdef CONFIG_36BIT
@@ -479,7 +478,6 @@
 /*
  * eSPI - Enhanced SPI
  */
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_SPANSION
 
 #define CONFIG_HARD_SPI
@@ -555,7 +553,6 @@
 #define CONFIG_PCI_INDIRECT_BRIDGE
 #define CONFIG_PCI_PNP			/* do pci plug-and-play */
 #define CONFIG_PCI_SCAN_SHOW		/* show pci devices on startup */
-#define CONFIG_E1000			/* Define e1000 pci Ethernet card */
 #endif
 
 /* SATA */
@@ -680,9 +677,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_ERRATA
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_I2C

@@ -58,9 +58,6 @@
 /* commands to include */
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_USB
-#undef CONFIG_CMD_FPGA		/* FPGA configuration Support	*/
-#undef CONFIG_CMD_IMI		/* iminfo			*/
-#undef CONFIG_CMD_NFS		/* NFS support			*/
 
 #ifdef CONFIG_NAND
 #define CONFIG_CMD_UBI		/* UBI-formated MTD partition support */
@@ -91,7 +88,6 @@
 #endif /* CONFIG_NAND */
 
 /* Board NAND Info. */
-#define CONFIG_SYS_NAND_QUIET_TEST
 #define CONFIG_SYS_NAND_ADDR		NAND_BASE	/* physical address */
 							/* to access nand */
 /* Environment information */
@@ -108,7 +104,7 @@
 	"defaultdisplay=dvi\0" \
 	"mmcdev=0\0" \
 	"mmcroot=/dev/mmcblk0p2 rw\0" \
-	"mmcrootfstype=ext3 rootwait\0" \
+	"mmcrootfstype=ext4 rootwait\0" \
 	"nandroot=ubi0:rootfs ubi.mtd=4\0" \
 	"nandrootfstype=ubifs\0" \
 	"mtdparts=" MTDPARTS_DEFAULT "\0" \
@@ -189,12 +185,6 @@
 	"fi;" \
 	"run nanddtsboot; " \
 
-/*
- * Miscellaneous configurable options
- */
-#undef CONFIG_SYS_PROMPT
-#define CONFIG_SYS_PROMPT		"Overo # "
-
 /* memtest works on */
 #define CONFIG_SYS_MEMTEST_START	(OMAP34XX_SDRC_CS0)
 #define CONFIG_SYS_MEMTEST_END		(OMAP34XX_SDRC_CS0 + \
@@ -230,7 +220,7 @@
 #define CONFIG_SYS_CACHELINE_SIZE	64
 
 /* NAND boot config */
-#define CONFIG_SYS_NAND_BUSWIDTH_16BIT	16
+#define CONFIG_SYS_NAND_BUSWIDTH_16BIT
 #define CONFIG_SYS_NAND_MAX_ECCPOS  56
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
 #define CONFIG_SYS_NAND_PAGE_COUNT	64

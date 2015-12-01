@@ -24,7 +24,6 @@
  */
 #define CONFIG_FEROCEON_88FR131		/* #define CPU Core subversion */
 #define CONFIG_KW88F6192		/* SOC Name */
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
 
 /* power-on led, regulator, sata0, sata1 */
@@ -45,11 +44,9 @@
  * Commands configuration
  */
 #define CONFIG_SYS_NO_FLASH		/* Declare no flash (NOR/SPI) */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_NAND
-#define CONFIG_CMD_SAVEENV
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_USB
 #define CONFIG_CMD_DATE
@@ -65,10 +62,6 @@
  * to enable certain macros
  */
 #include "mv-common.h"
-
-/* Remove or override few declarations from mv-common.h */
-#undef CONFIG_SYS_PROMPT	/* previously defined in mv-common.h */
-#define CONFIG_SYS_PROMPT "nas220> "
 
 /*
  *  Environment variables configurations

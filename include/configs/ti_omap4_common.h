@@ -52,17 +52,21 @@
 #define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
 #endif
 
-#include <configs/ti_armv7_common.h>
+#include <configs/ti_armv7_omap.h>
 
 /*
  * Hardware drivers
  */
 #define CONFIG_SYS_NS16550
+#if defined(CONFIG_SPL_BUILD) || !defined(CONFIG_DM_SERIAL)
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	(-4)
 #define CONFIG_SYS_NS16550_CLK		48000000
-#define CONFIG_CONS_INDEX		3
 #define CONFIG_SYS_NS16550_COM3		UART3_BASE
+#else
+#define CONFIG_OMAP_SERIAL
+#endif
+#define CONFIG_CONS_INDEX		3
 
 /* TWL6030 */
 #ifndef CONFIG_SPL_BUILD
@@ -70,7 +74,7 @@
 #endif
 
 /* USB */
-#define CONFIG_MUSB_UDC			1
+#define CONFIG_USB_MUSB_UDC			1
 #define CONFIG_USB_OMAP3		1
 
 /* USB device configuration */
@@ -78,14 +82,12 @@
 #define CONFIG_USB_TTY			1
 #define CONFIG_SYS_CONSOLE_IS_IN_ENV	1
 
-/* Per-Soc commands */
-#undef CONFIG_CMD_NFS
-
 /*
  * Environment setup
  */
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	DEFAULT_LINUX_BOOT_ENV \
+	DEFAULT_MMC_TI_ARGS \
 	"console=ttyO2,115200n8\0" \
 	"fdtfile=undefined\0" \
 	"bootpart=0:2\0" \
@@ -93,13 +95,6 @@
 	"bootfile=zImage\0" \
 	"usbtty=cdc_acm\0" \
 	"vram=16M\0" \
-	"mmcdev=0\0" \
-	"mmcroot=/dev/mmcblk0p2 rw\0" \
-	"mmcrootfstype=ext3 rootwait\0" \
-	"mmcargs=setenv bootargs console=${console} " \
-		"vram=${vram} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype}\0" \
 	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
 	"bootscript=echo Running bootscript from mmc${mmcdev} ...; " \
 		"source ${loadaddr}\0" \
@@ -109,10 +104,10 @@
 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
 	"loaduimage=load mmc ${mmcdev} ${loadaddr} uImage\0" \
 	"mmcboot=echo Booting from mmc${mmcdev} ...; " \
-		"run mmcargs; " \
+		"run args_mmc; " \
 		"bootz ${loadaddr} - ${fdtaddr}\0" \
 	"uimageboot=echo Booting from mmc${mmcdev} ...; " \
-		"run mmcargs; " \
+		"run args_mmc; " \
 		"bootm ${loadaddr}\0" \
 	"findfdt="\
 		"if test $board_name = sdp4430; then " \
@@ -166,9 +161,6 @@
 #define CONFIG_SYS_SPL_ARGS_ADDR	(CONFIG_SYS_SDRAM_BASE + \
 					 (128 << 20))
 
-/* SPL: Allow to use an EXT partition */
-#define CONFIG_SPL_EXT_SUPPORT
-
 #ifdef CONFIG_NAND
 #define CONFIG_SPL_NAND_AM33XX_BCH	/* ELM support */
 #endif
@@ -177,6 +169,7 @@
 /* No need for i2c in SPL mode as we will use SRI2C for PMIC access on OMAP4 */
 #undef CONFIG_SYS_I2C
 #undef CONFIG_SYS_I2C_OMAP24XX
+#undef CONFIG_SPL_I2C_SUPPORT
 #endif
 
 #endif /* __CONFIG_TI_OMAP4_COMMON_H */

@@ -8,7 +8,6 @@
 #ifndef _CONFIG_LSXL_H
 #define _CONFIG_LSXL_H
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 /*
  * Version number information
@@ -53,10 +52,8 @@
 /*
  * Commands configuration
  */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_BOOTZ
 #define CONFIG_CMD_DHCP
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_ENV
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT
@@ -89,7 +86,6 @@
 #define CONFIG_SF_DEFAULT_SPEED		25000000
 
 
-#undef CONFIG_SYS_PROMPT
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 
 /*

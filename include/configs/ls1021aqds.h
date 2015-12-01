@@ -7,11 +7,11 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#include <config_cmd_default.h>
-
 #define CONFIG_LS102XA
 
-#define CONFIG_SYS_GENERIC_BOARD
+#define CONFIG_ARMV7_PSCI
+
+#define CONFIG_SYS_FSL_CLK
 
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
@@ -69,7 +69,7 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_SPL_DRIVERS_MISC_SUPPORT
 #define CONFIG_SPL_MMC_SUPPORT
 #define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR		0xe8
-#define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS		0x400
+#define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS		0x600
 
 #define CONFIG_SPL_TEXT_BASE		0x10000000
 #define CONFIG_SPL_MAX_SIZE		0x1a000
@@ -82,7 +82,7 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000
 #define CONFIG_SPL_BSS_START_ADDR	0x80100000
 #define CONFIG_SPL_BSS_MAX_SIZE		0x80000
-#define CONFIG_SYS_MONITOR_LEN		0x80000
+#define CONFIG_SYS_MONITOR_LEN		0xc0000
 #endif
 
 #ifdef CONFIG_QSPI_BOOT
@@ -389,6 +389,8 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
 #define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
 
 /*
@@ -409,33 +411,53 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_CMD_FAT
 #define CONFIG_DOS_PARTITION
 
-/* QSPI */
+/* SPI */
 #ifdef CONFIG_QSPI_BOOT
+/* QSPI */
 #define CONFIG_FSL_QSPI
 #define QSPI0_AMBA_BASE			0x40000000
 #define FSL_QSPI_FLASH_SIZE		(1 << 24)
 #define FSL_QSPI_FLASH_NUM		2
-
-#define CONFIG_CMD_SF
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_SPANSION
+
+/* DSPI */
+#define CONFIG_FSL_DSPI
+
+/* DM SPI */
+#if defined(CONFIG_FSL_DSPI) || defined(CONFIG_FSL_QSPI)
+#define CONFIG_CMD_SF
+#define CONFIG_DM_SPI_FLASH
+#define CONFIG_SPI_FLASH_DATAFLASH
+#endif
 #endif
 
 /*
  * USB
  */
-#define CONFIG_HAS_FSL_DR_USB
+/* EHCI Support - disbaled by default */
+/*#define CONFIG_HAS_FSL_DR_USB*/
 
 #ifdef CONFIG_HAS_FSL_DR_USB
 #define CONFIG_USB_EHCI
-
-#ifdef CONFIG_USB_EHCI
-#define CONFIG_CMD_USB
-#define CONFIG_USB_STORAGE
 #define CONFIG_USB_EHCI_FSL
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET
-#define CONFIG_CMD_EXT2
 #endif
+
+/*XHCI Support - enabled by default*/
+#define CONFIG_HAS_FSL_XHCI_USB
+
+#ifdef CONFIG_HAS_FSL_XHCI_USB
+#define CONFIG_USB_XHCI_FSL
+#define CONFIG_USB_XHCI_DWC3
+#define CONFIG_USB_XHCI
+#define CONFIG_USB_MAX_CONTROLLER_COUNT		1
+#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS	2
+#endif
+
+#if defined(CONFIG_HAS_FSL_DR_USB) || defined(CONFIG_HAS_FSL_XHCI_USB)
+#define CONFIG_CMD_USB
+#define CONFIG_USB_STORAGE
+#define CONFIG_CMD_EXT2
 #endif
 
 /*
@@ -527,7 +549,6 @@ unsigned long get_board_ddr_clk(void);
 
 #ifdef CONFIG_PCI
 #define CONFIG_PCI_PNP
-#define CONFIG_E1000
 #define CONFIG_PCI_SCAN_SHOW
 #define CONFIG_CMD_PCI
 #endif
@@ -539,26 +560,21 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_CMDLINE_TAG
 #define CONFIG_CMDLINE_EDITING
 
-#ifdef CONFIG_QSPI_BOOT
-#undef CONFIG_CMD_IMLS
-#else
-#define CONFIG_CMD_IMLS
-#endif
-
 #define CONFIG_ARMV7_NONSEC
 #define CONFIG_ARMV7_VIRT
 #define CONFIG_PEN_ADDR_BIG_ENDIAN
-#define CONFIG_LS102XA_NS_ACCESS
+#define CONFIG_LAYERSCAPE_NS_ACCESS
 #define CONFIG_SMP_PEN_ADDR		0x01ee0200
 #define CONFIG_TIMER_CLK_FREQ		12500000
-#define CONFIG_ARMV7_SECURE_BASE	OCRAM_BASE_S_ADDR
 
 #define CONFIG_HWCONFIG
-#define HWCONFIG_BUFFER_SIZE		128
+#define HWCONFIG_BUFFER_SIZE		256
+
+#define CONFIG_FSL_DEVICE_DISABLE
 
 #define CONFIG_BOOTDELAY		3
 
-#define CONFIG_SYS_QE_FW_ADDR     0x67f40000
+#define CONFIG_SYS_QE_FW_ADDR     0x600c0000
 
 #ifdef CONFIG_LPUART
 #define CONFIG_EXTRA_ENV_SETTINGS       \
@@ -587,7 +603,6 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_SYS_MAXARGS		16	/* max number of command args */
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 
-#define CONFIG_CMD_ENV_EXISTS
 #define CONFIG_CMD_GREPENV
 #define CONFIG_CMD_MEMINFO
 #define CONFIG_CMD_MEMTEST
@@ -643,6 +658,7 @@ unsigned long get_board_ddr_clk(void);
 
 #define CONFIG_OF_LIBFDT
 #define CONFIG_OF_BOARD_SETUP
+#define CONFIG_OF_STDOUT_VIA_ALIAS
 #define CONFIG_CMD_BOOTZ
 
 #define CONFIG_MISC_INIT_R

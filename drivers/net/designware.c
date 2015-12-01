@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <miiphy.h>
 #include <malloc.h>
+#include <pci.h>
 #include <linux/compiler.h>
 #include <linux/err.h>
 #include <asm/io.h>
@@ -243,8 +244,10 @@ static int _dw_eth_init(struct dw_eth_dev *priv, u8 *enetaddr)
 		mdelay(100);
 	};
 
-	/* Soft reset above clears HW address registers.
-	 * So we have to set it here once again */
+	/*
+	 * Soft reset above clears HW address registers.
+	 * So we have to set it here once again.
+	 */
 	_dw_write_hwaddr(priv, enetaddr);
 
 	rx_descs_init(priv);
@@ -526,7 +529,7 @@ static int designware_eth_send(struct udevice *dev, void *packet, int length)
 	return _dw_eth_send(priv, packet, length);
 }
 
-static int designware_eth_recv(struct udevice *dev, uchar **packetp)
+static int designware_eth_recv(struct udevice *dev, int flags, uchar **packetp)
 {
 	struct dw_eth_dev *priv = dev_get_priv(dev);
 
@@ -556,16 +559,49 @@ static int designware_eth_write_hwaddr(struct udevice *dev)
 	return _dw_write_hwaddr(priv, pdata->enetaddr);
 }
 
+static int designware_eth_bind(struct udevice *dev)
+{
+#ifdef CONFIG_DM_PCI
+	static int num_cards;
+	char name[20];
+
+	/* Create a unique device name for PCI type devices */
+	if (device_is_on_pci_bus(dev)) {
+		sprintf(name, "eth_designware#%u", num_cards++);
+		device_set_name(dev, name);
+	}
+#endif
+
+	return 0;
+}
+
 static int designware_eth_probe(struct udevice *dev)
 {
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 	struct dw_eth_dev *priv = dev_get_priv(dev);
+	u32 iobase = pdata->iobase;
 	int ret;
 
-	debug("%s, iobase=%lx, priv=%p\n", __func__, pdata->iobase, priv);
-	priv->mac_regs_p = (struct eth_mac_regs *)pdata->iobase;
-	priv->dma_regs_p = (struct eth_dma_regs *)(pdata->iobase +
-			DW_DMA_BASE_OFFSET);
+#ifdef CONFIG_DM_PCI
+	/*
+	 * If we are on PCI bus, either directly attached to a PCI root port,
+	 * or via a PCI bridge, fill in platdata before we probe the hardware.
+	 */
+	if (device_is_on_pci_bus(dev)) {
+		pci_dev_t bdf = pci_get_bdf(dev);
+
+		dm_pci_read_config32(dev, PCI_BASE_ADDRESS_0, &iobase);
+		iobase &= PCI_BASE_ADDRESS_MEM_MASK;
+		iobase = pci_mem_to_phys(bdf, iobase);
+
+		pdata->iobase = iobase;
+		pdata->phy_interface = PHY_INTERFACE_MODE_RMII;
+	}
+#endif
+
+	debug("%s, iobase=%x, priv=%p\n", __func__, iobase, priv);
+	priv->mac_regs_p = (struct eth_mac_regs *)iobase;
+	priv->dma_regs_p = (struct eth_dma_regs *)(iobase + DW_DMA_BASE_OFFSET);
 	priv->interface = pdata->phy_interface;
 
 	dw_mdio_init(dev->name, priv->mac_regs_p);
@@ -575,6 +611,17 @@ static int designware_eth_probe(struct udevice *dev)
 	debug("%s, ret=%d\n", __func__, ret);
 
 	return ret;
+}
+
+static int designware_eth_remove(struct udevice *dev)
+{
+	struct dw_eth_dev *priv = dev_get_priv(dev);
+
+	free(priv->phydev);
+	mdio_unregister(priv->bus);
+	mdio_free(priv->bus);
+
+	return 0;
 }
 
 static const struct eth_ops designware_eth_ops = {
@@ -606,18 +653,28 @@ static int designware_eth_ofdata_to_platdata(struct udevice *dev)
 
 static const struct udevice_id designware_eth_ids[] = {
 	{ .compatible = "allwinner,sun7i-a20-gmac" },
+	{ .compatible = "altr,socfpga-stmmac" },
 	{ }
 };
 
-U_BOOT_DRIVER(eth_sandbox) = {
+U_BOOT_DRIVER(eth_designware) = {
 	.name	= "eth_designware",
 	.id	= UCLASS_ETH,
 	.of_match = designware_eth_ids,
 	.ofdata_to_platdata = designware_eth_ofdata_to_platdata,
+	.bind	= designware_eth_bind,
 	.probe	= designware_eth_probe,
+	.remove	= designware_eth_remove,
 	.ops	= &designware_eth_ops,
 	.priv_auto_alloc_size = sizeof(struct dw_eth_dev),
 	.platdata_auto_alloc_size = sizeof(struct eth_pdata),
 	.flags = DM_FLAG_ALLOC_PRIV_DMA,
 };
+
+static struct pci_device_id supported[] = {
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_QRK_EMAC) },
+	{ }
+};
+
+U_BOOT_PCI_DEVICE(eth_designware, supported);
 #endif

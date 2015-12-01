@@ -47,13 +47,9 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_MII
-
-#undef CONFIG_CMD_LOADS
-#undef CONFIG_CMD_LOADB
 
 #define CONFIG_MCFFEC
 #ifdef CONFIG_MCFFEC
@@ -98,7 +94,6 @@
 	"save\0"				\
 	""
 
-#define CONFIG_SYS_PROMPT		"-> "
 #define	CONFIG_SYS_LONGHELP		/* undef to save memory         */
 
 #if defined(CONFIG_CMD_KGDB)

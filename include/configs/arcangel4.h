@@ -41,9 +41,6 @@
 /*
  * Command line configuration
  */
-#include <config_cmd_default.h>
-
-#define CONFIG_CMD_ELF
 
 #define CONFIG_OF_LIBFDT
 
@@ -69,7 +66,6 @@
  * Console configuration
  */
 #define CONFIG_SYS_LONGHELP
-#define CONFIG_SYS_PROMPT		"arcangel4# "
 #define CONFIG_SYS_CBSIZE		256
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \

@@ -10,7 +10,6 @@
 #ifndef __AMCC_COMMON_H
 #define __AMCC_COMMON_H
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_SYS_SDRAM_BASE		0x00000000	/* _must_ be 0		*/
 #define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_TEXT_BASE	/* Start of U-Boot	*/
@@ -53,8 +52,6 @@
 /*
  * Commands
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #if defined(CONFIG_440)
 #define CONFIG_CMD_CACHE
@@ -62,12 +59,10 @@
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_DIAG
 #define CONFIG_CMD_EEPROM
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_GREPENV
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NFS
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
 

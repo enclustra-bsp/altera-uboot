@@ -47,8 +47,6 @@
 #endif
 
 /* Generic TPM interfaced through LPC bus */
-#define CONFIG_TPM
-#define CONFIG_TPM_TIS_LPC
 #define CONFIG_TPM_TIS_BASE_ADDRESS        0xfed40000
 
 /*-----------------------------------------------------------------------
@@ -87,7 +85,9 @@
 #define CONFIG_ISO_PARTITION		/* Experimental */
 
 #define CONFIG_CMD_PART
+#ifdef CONFIG_SYS_COREBOOT
 #define CONFIG_CMD_CBFS
+#endif
 #define CONFIG_CMD_EXT4
 #define CONFIG_CMD_EXT4_WRITE
 #define CONFIG_PARTITION_UUIDS
@@ -100,43 +100,21 @@
 /*-----------------------------------------------------------------------
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
-#define CONFIG_CMD_BDI
-#define CONFIG_CMD_BOOTD
-#define CONFIG_CMD_CONSOLE
 #define CONFIG_CMD_DATE
-#define CONFIG_CMD_ECHO
-#undef CONFIG_CMD_FLASH
-#define CONFIG_CMD_FPGA
 #define CONFIG_CMD_FPGA_LOADMK
 #define CONFIG_CMD_GPIO
-#define CONFIG_CMD_IMI
-#undef CONFIG_CMD_IMLS
 #define CONFIG_CMD_IO
 #define CONFIG_CMD_IRQ
-#define CONFIG_CMD_ITEST
-#define CONFIG_CMD_LOADB
-#define CONFIG_CMD_LOADS
-#define CONFIG_CMD_MEMORY
-#define CONFIG_CMD_MISC
-#undef CONFIG_CMD_NFS
 #define CONFIG_CMD_PCI
 #define CONFIG_CMD_PING
-#define CONFIG_CMD_RUN
-#define CONFIG_CMD_SAVEENV
-#define CONFIG_CMD_SETGETDCR
-#define CONFIG_CMD_SOURCE
 #define CONFIG_CMD_TIME
 #define CONFIG_CMD_GETTIME
-#define CONFIG_CMD_XIMG
 #define CONFIG_CMD_SCSI
 
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_EXT2
 
 #define CONFIG_CMD_ZBOOT
-#define CONFIG_CMD_ELF
 
 #define CONFIG_BOOTARGS		\
 	"root=/dev/sdb3 init=/sbin/init rootwait ro"
@@ -192,7 +170,6 @@
  * FLASH configuration
  */
 #define CONFIG_ICH_SPI
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_MACRONIX
 #define CONFIG_SPI_FLASH_WINBOND
 #define CONFIG_SPI_FLASH_GIGADEVICE
@@ -212,6 +189,7 @@
  * PCI configuration
  */
 #define CONFIG_PCI
+#define CONFIG_PCI_CONFIG_HOST_BRIDGE
 
 /*-----------------------------------------------------------------------
  * USB configuration
@@ -238,7 +216,7 @@
 
 /* Default environment */
 #define CONFIG_ROOTPATH		"/opt/nfsroot"
-#define CONFIG_HOSTNAME		"x86"
+#define CONFIG_HOSTNAME		x86
 #define CONFIG_BOOTFILE		"bzImage"
 #define CONFIG_LOADADDR		0x1000000
 

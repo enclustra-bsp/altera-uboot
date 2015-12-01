@@ -8,10 +8,6 @@
 #define __LS2_QDS_H
 
 #include "ls2085a_common.h"
-#include <config_cmd_default.h>
-
-#define CONFIG_IDENT_STRING		" LS2085A-QDS"
-#define CONFIG_BOOTP_VCI_STRING		"U-boot.LS2085A-QDS"
 
 #define CONFIG_DISPLAY_BOARDINFO
 
@@ -20,6 +16,7 @@ unsigned long get_board_sys_clk(void);
 unsigned long get_board_ddr_clk(void);
 #endif
 
+#define CONFIG_SYS_FSL_CLK
 #define CONFIG_SYS_CLK_FREQ		get_board_sys_clk()
 #define CONFIG_DDR_CLK_FREQ		get_board_ddr_clk()
 #define COUNTER_FREQUENCY_REAL		(CONFIG_SYS_CLK_FREQ/4)
@@ -264,6 +261,8 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_SYS_LS_MC_DPC_ADDR	0x580800000ULL
 
 #define CONFIG_SYS_LS_MC_BOOT_TIMEOUT_MS 5000
+#define CONFIG_SYS_LS_MC_AIOP_IMG_IN_NOR
+#define CONFIG_SYS_LS_MC_AIOP_IMG_ADDR	0x580900000ULL
 
 /*
  * I2C
@@ -273,6 +272,15 @@ unsigned long get_board_ddr_clk(void);
 
 /* I2C bus multiplexer */
 #define I2C_MUX_CH_DEFAULT      0x8
+
+/* SPI */
+#ifdef CONFIG_FSL_DSPI
+#define CONFIG_CMD_SF
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_STMICRO
+#define CONFIG_SPI_FLASH_SST
+#define CONFIG_SPI_FLASH_EON
+#endif
 
 /*
  * MMC
@@ -288,6 +296,7 @@ unsigned long get_board_ddr_clk(void);
 #define RTC
 #define CONFIG_RTC_DS3231               1
 #define CONFIG_SYS_I2C_RTC_ADDR         0x68
+#define CONFIG_CMD_DATE
 
 /* EEPROM */
 #define CONFIG_ID_EEPROM
@@ -305,7 +314,6 @@ unsigned long get_board_ddr_clk(void);
 
 #ifdef CONFIG_PCI
 #define CONFIG_PCI_PNP
-#define CONFIG_E1000
 #define CONFIG_PCI_SCAN_SHOW
 #define CONFIG_CMD_PCI
 #endif
@@ -333,7 +341,7 @@ unsigned long get_board_ddr_clk(void);
 	"initrd_high=0xffffffffffffffff\0"	\
 	"kernel_start=0x581100000\0"		\
 	"kernel_load=0xa0000000\0"		\
-	"kernel_size=0x1000000\0"
+	"kernel_size=0x28000000\0"
 
 #ifdef CONFIG_FSL_MC_ENET
 #define CONFIG_FSL_MEMAC
@@ -348,10 +356,40 @@ unsigned long get_board_ddr_clk(void);
 #define SGMII_CARD_PORT3_PHY_ADDR 0x1E
 #define SGMII_CARD_PORT4_PHY_ADDR 0x1F
 
+#define XQSGMII_CARD_PHY1_PORT0_ADDR 0x0
+#define XQSGMII_CARD_PHY1_PORT1_ADDR 0x1
+#define XQSGMII_CARD_PHY1_PORT2_ADDR 0x2
+#define XQSGMII_CARD_PHY1_PORT3_ADDR 0x3
+#define XQSGMII_CARD_PHY2_PORT0_ADDR 0x4
+#define XQSGMII_CARD_PHY2_PORT1_ADDR 0x5
+#define XQSGMII_CARD_PHY2_PORT2_ADDR 0x6
+#define XQSGMII_CARD_PHY2_PORT3_ADDR 0x7
+#define XQSGMII_CARD_PHY3_PORT0_ADDR 0x8
+#define XQSGMII_CARD_PHY3_PORT1_ADDR 0x9
+#define XQSGMII_CARD_PHY3_PORT2_ADDR 0xa
+#define XQSGMII_CARD_PHY3_PORT3_ADDR 0xb
+#define XQSGMII_CARD_PHY4_PORT0_ADDR 0xc
+#define XQSGMII_CARD_PHY4_PORT1_ADDR 0xd
+#define XQSGMII_CARD_PHY4_PORT2_ADDR 0xe
+#define XQSGMII_CARD_PHY4_PORT3_ADDR 0xf
+
 #define CONFIG_MII		/* MII PHY management */
 #define CONFIG_ETHPRIME		"DPNI1"
 #define CONFIG_PHY_GIGE		/* Include GbE speed/duplex detection */
 
 #endif
+
+/*
+ * USB
+ */
+#define CONFIG_HAS_FSL_XHCI_USB
+#define CONFIG_USB_XHCI
+#define CONFIG_USB_XHCI_FSL
+#define CONFIG_USB_XHCI_DWC3
+#define CONFIG_USB_MAX_CONTROLLER_COUNT		2
+#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS	2
+#define CONFIG_CMD_USB
+#define CONFIG_USB_STORAGE
+#define CONFIG_CMD_EXT2
 
 #endif /* __LS2_QDS_H */

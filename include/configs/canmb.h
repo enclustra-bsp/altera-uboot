@@ -15,6 +15,7 @@
 
 #define CONFIG_MPC5200		1	/* This is a MPC5200 CPU */
 #define CONFIG_CANMB		1	/* ... on canmb board - we need this for FEC.C */
+#define CONFIG_DISPLAY_BOARDINFO
 
 /*
  * allowed and functional CONFIG_SYS_TEXT_BASE values:
@@ -49,14 +50,11 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_IMMAP
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NFS
 #define CONFIG_CMD_REGINFO
 #define CONFIG_CMD_SNTP
 

@@ -14,7 +14,6 @@
 
 #define CONFIG_AC14XX 1
 #define CONFIG_DISPLAY_BOARDINFO
-#define CONFIG_SYS_GENERIC_BOARD
 
 /*
  * Memory map for the ifm AC14xx board:
@@ -394,8 +393,6 @@
 #define CONFIG_LOADS_ECHO		1
 #define CONFIG_SYS_LOADS_BAUD_CHANGE	1
 
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_EEPROM
@@ -405,7 +402,6 @@
 #undef CONFIG_CMD_EXT2
 #define CONFIG_CMD_JFFS2
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NFS
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
 
@@ -424,7 +420,6 @@
  */
 #define CONFIG_SYS_LONGHELP			/* undef to save memory */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
-#define CONFIG_SYS_PROMPT	"ac14xx> "	/* Monitor Command Prompt */
 
 #ifdef CONFIG_CMD_KGDB
 # define CONFIG_SYS_CBSIZE	1024		/* Console I/O Buffer Size */

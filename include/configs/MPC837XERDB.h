@@ -16,7 +16,6 @@
 #define CONFIG_MPC837x		1 /* MPC837x CPU specific */
 #define CONFIG_MPC837XERDB	1
 #define CONFIG_DISPLAY_BOARDINFO
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define	CONFIG_SYS_TEXT_BASE	0xFE000000
 
@@ -500,8 +499,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_MII
@@ -509,11 +506,6 @@
 
 #if defined(CONFIG_PCI)
 #define CONFIG_CMD_PCI
-#endif
-
-#if defined(CONFIG_SYS_RAMBOOT)
-#undef CONFIG_CMD_SAVEENV
-#undef CONFIG_CMD_LOADS
 #endif
 
 #define CONFIG_CMDLINE_EDITING	1	/* add command line history */

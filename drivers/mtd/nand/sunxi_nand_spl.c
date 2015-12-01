@@ -1,93 +1,106 @@
 /*
- * Copyright (c) 2014, Antmicro Ltd <www.antmicro.com>
- * Copyright (c) 2015, Turtle Solutions <www.turtle-solutions.eu>
- * Copyright (c) 2015, Roy Spliet <rspliet@ultimaker.com>
+ * Copyright (c) 2014-2015, Antmicro Ltd <www.antmicro.com>
+ * Copyright (c) 2015, AW-SOM Technologies <www.aw-som.com>
  *
- * SPDX-License-Identifier:	GPL-2.0+
- *
- * \todo Detect chip parameters (page size, ECC mode, randomisation...)
+ * SPDX-License-Identifier:     GPL-2.0+
  */
 
+#include <asm/arch/clock.h>
+#include <asm/io.h>
 #include <common.h>
 #include <config.h>
-#include <asm/io.h>
 #include <nand.h>
-#include <asm/arch/cpu.h>
-#include <asm/arch/clock.h>
-#include <asm/arch/dma.h>
-#include <asm/arch/nand.h>
 
-void
-nand_init(void)
-{
-	struct sunxi_ccm_reg * const ccm =
-			(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
-	struct sunxi_nand * const nand = (struct sunxi_nand *)SUNXI_NFC_BASE;
-	u32 val;
+/* registers */
+#define NFC_CTL                    0x00000000
+#define NFC_ST                     0x00000004
+#define NFC_INT                    0x00000008
+#define NFC_TIMING_CTL             0x0000000C
+#define NFC_TIMING_CFG             0x00000010
+#define NFC_ADDR_LOW               0x00000014
+#define NFC_ADDR_HIGH              0x00000018
+#define NFC_SECTOR_NUM             0x0000001C
+#define NFC_CNT                    0x00000020
+#define NFC_CMD                    0x00000024
+#define NFC_RCMD_SET               0x00000028
+#define NFC_WCMD_SET               0x0000002C
+#define NFC_IO_DATA                0x00000030
+#define NFC_ECC_CTL                0x00000034
+#define NFC_ECC_ST                 0x00000038
+#define NFC_DEBUG                  0x0000003C
+#define NFC_ECC_CNT0               0x00000040
+#define NFC_ECC_CNT1               0x00000044
+#define NFC_ECC_CNT2               0x00000048
+#define NFC_ECC_CNT3               0x0000004C
+#define NFC_USER_DATA_BASE         0x00000050
+#define NFC_EFNAND_STATUS          0x00000090
+#define NFC_SPARE_AREA             0x000000A0
+#define NFC_PATTERN_ID             0x000000A4
+#define NFC_RAM0_BASE              0x00000400
+#define NFC_RAM1_BASE              0x00000800
 
-	board_nand_init();
+#define NFC_CTL_EN                 (1 << 0)
+#define NFC_CTL_RESET              (1 << 1)
+#define NFC_CTL_RAM_METHOD         (1 << 14)
+#define NFC_CTL_PAGE_SIZE_MASK     (0xf << 8)
+#define NFC_CTL_PAGE_SIZE(a)       ((fls(a) - 11) << 8)
 
-	/* "un-gate" NAND clock and clock source
-	 * This assumes that the clock was already correctly configured by
-	 * BootROM */
-	setbits_le32(&ccm->ahb_gate0, (1 << AHB_GATE_OFFSET_NAND0));
-#ifdef CONFIG_MACH_SUN9I
-	setbits_le32(&ccm->ahb_gate1, (1 << AHB_GATE_OFFSET_DMA));
-#else
-	setbits_le32(&ccm->ahb_gate0, (1 << AHB_GATE_OFFSET_DMA));
-#endif
-	setbits_le32(&ccm->nand0_clk_cfg, 0x80000000);
 
-	val = readl(&nand->ctl);
-	val |= SUNXI_NAND_CTL_RST;
-	writel(val, &nand->ctl);
+#define NFC_ECC_EN                 (1 << 0)
+#define NFC_ECC_PIPELINE           (1 << 3)
+#define NFC_ECC_EXCEPTION          (1 << 4)
+#define NFC_ECC_BLOCK_SIZE         (1 << 5)
+#define NFC_ECC_RANDOM_EN          (1 << 9)
+#define NFC_ECC_RANDOM_DIRECTION   (1 << 10)
 
-	/* Wait until reset pin is deasserted */
-	do {
-		val = readl(&nand->ctl);
-		if (!(val & SUNXI_NAND_CTL_RST))
-			break;
-	} while (1);
 
-	/** \todo Chip select, currently kind of static */
-	val = readl(&nand->ctl);
-	val &= 0xf0fff0f2;
-	val |= SUNXI_NAND_CTL_EN;
-	val |= SUNXI_NAND_CTL_PAGE_SIZE(CONFIG_NAND_SUNXI_PAGE_SIZE);
-	writel(val, &nand->ctl);
+#define NFC_ADDR_NUM_OFFSET        16
+#define NFC_SEND_ADR               (1 << 19)
+#define NFC_ACCESS_DIR             (1 << 20)
+#define NFC_DATA_TRANS             (1 << 21)
+#define NFC_SEND_CMD1              (1 << 22)
+#define NFC_WAIT_FLAG              (1 << 23)
+#define NFC_SEND_CMD2              (1 << 24)
+#define NFC_SEQ                    (1 << 25)
+#define NFC_DATA_SWAP_METHOD       (1 << 26)
+#define NFC_ROW_AUTO_INC           (1 << 27)
+#define NFC_SEND_CMD3              (1 << 28)
+#define NFC_SEND_CMD4              (1 << 29)
 
-	writel(0x100, &nand->timing_ctl);
-	writel(0x7ff, &nand->timing_cfg);
+#define NFC_ST_CMD_INT_FLAG        (1 << 1)
+#define NFC_ST_DMA_INT_FLAG        (1 << 2)
 
-	/* reset CMD  */
-	val = SUNXI_NAND_CMD_SEND_CMD1 | SUNXI_NAND_CMD_WAIT_FLAG |
-			NAND_CMD_RESET;
-	writel(val, &nand->cmd);
-	do {
-		val = readl(&nand->st);
-		if (val & (1<<1))
-			break;
-		udelay(1000);
-	} while (1);
+#define NFC_READ_CMD_OFFSET         0
+#define NFC_RANDOM_READ_CMD0_OFFSET 8
+#define NFC_RANDOM_READ_CMD1_OFFSET 16
 
-	printf("Nand initialised\n");
-}
+#define NFC_CMD_RNDOUTSTART        0xE0
+#define NFC_CMD_RNDOUT             0x05
+#define NFC_CMD_READSTART          0x30
 
-int
-nand_wait_timeout(u32 *reg, u32 mask, u32 val)
-{
-	unsigned long tmo = timer_get_us() + 1000000; /* 1s */
 
-	while ((readl(reg) & mask) != val) {
-		if (timer_get_us() > tmo)
-			return -ETIMEDOUT;
-	}
+#define NFC_PAGE_CMD               (2 << 30)
 
-	return 0;
-}
+#define SUNXI_DMA_CFG_REG0              0x300
+#define SUNXI_DMA_SRC_START_ADDR_REG0   0x304
+#define SUNXI_DMA_DEST_START_ADDRR_REG0 0x308
+#define SUNXI_DMA_DDMA_BC_REG0          0x30C
+#define SUNXI_DMA_DDMA_PARA_REG0        0x318
 
-/* random seed */
-static const uint16_t random_seed[128] = {
+#define SUNXI_DMA_DDMA_CFG_REG_LOADING  (1 << 31)
+#define SUNXI_DMA_DDMA_CFG_REG_DMA_DEST_DATA_WIDTH_32 (2 << 25)
+#define SUNXI_DMA_DDMA_CFG_REG_DDMA_DST_DRQ_TYPE_DRAM (1 << 16)
+#define SUNXI_DMA_DDMA_CFG_REG_DMA_SRC_DATA_WIDTH_32 (2 << 9)
+#define SUNXI_DMA_DDMA_CFG_REG_DMA_SRC_ADDR_MODE_IO (1 << 5)
+#define SUNXI_DMA_DDMA_CFG_REG_DDMA_SRC_DRQ_TYPE_NFC (3 << 0)
+
+#define SUNXI_DMA_DDMA_PARA_REG_SRC_WAIT_CYC (0x0F << 0)
+#define SUNXI_DMA_DDMA_PARA_REG_SRC_BLK_SIZE (0x7F << 8)
+
+/* minimal "boot0" style NAND support for Allwinner A20 */
+
+/* random seed used by linux */
+const uint16_t random_seed[128] = {
 	0x2b75, 0x0bd0, 0x5ca3, 0x62d1, 0x1c93, 0x07e9, 0x2162, 0x3a72,
 	0x0d67, 0x67f9, 0x1be7, 0x077d, 0x032f, 0x0dac, 0x2716, 0x2436,
 	0x7922, 0x1510, 0x3860, 0x5287, 0x480f, 0x4252, 0x1789, 0x5a2d,
@@ -106,168 +119,292 @@ static const uint16_t random_seed[128] = {
 	0x7c57, 0x0fbe, 0x46ce, 0x4939, 0x6b17, 0x37bb, 0x3e91, 0x76db,
 };
 
-uint32_t ecc_errors = 0;
+/* random seed used for syndrome calls */
+const uint16_t random_seed_syndrome = 0x4a80;
 
-static void
-nand_config_ecc(struct sunxi_nand *nand, uint32_t page, int syndrome)
+#define MAX_RETRIES 10
+
+static int check_value_inner(int offset, int expected_bits,
+				int max_number_of_retries, int negation)
 {
-	static u8 strength[] = {16, 24, 28, 32, 40, 48, 56, 60, 64};
-	int i;
-	uint32_t ecc_mode;
-	u32 ecc;
-	u16 seed = 0;
+	int retries = 0;
+	do {
+		int val = readl(offset) & expected_bits;
+		if (negation ? !val : val)
+			return 1;
+		mdelay(1);
+		retries++;
+	} while (retries < max_number_of_retries);
 
-	for (i = 0; i < ARRAY_SIZE(strength); i++) {
-		if (CONFIG_NAND_SUNXI_ECC_STRENGTH == strength[i]) {
+	return 0;
+}
+
+static inline int check_value(int offset, int expected_bits,
+				int max_number_of_retries)
+{
+	return check_value_inner(offset, expected_bits,
+					max_number_of_retries, 0);
+}
+
+static inline int check_value_negated(int offset, int unexpected_bits,
+					int max_number_of_retries)
+{
+	return check_value_inner(offset, unexpected_bits,
+					max_number_of_retries, 1);
+}
+
+void nand_init(void)
+{
+	uint32_t val;
+
+	board_nand_init();
+
+	val = readl(SUNXI_NFC_BASE + NFC_CTL);
+	/* enable and reset CTL */
+	writel(val | NFC_CTL_EN | NFC_CTL_RESET,
+	       SUNXI_NFC_BASE + NFC_CTL);
+
+	if (!check_value_negated(SUNXI_NFC_BASE + NFC_CTL,
+				 NFC_CTL_RESET, MAX_RETRIES)) {
+		printf("Couldn't initialize nand\n");
+	}
+
+	/* reset NAND */
+	writel(NFC_ST_CMD_INT_FLAG, SUNXI_NFC_BASE + NFC_ST);
+	writel(NFC_SEND_CMD1 | NFC_WAIT_FLAG | NAND_CMD_RESET,
+	       SUNXI_NFC_BASE + NFC_CMD);
+
+	if (!check_value(SUNXI_NFC_BASE + NFC_ST, NFC_ST_CMD_INT_FLAG,
+			 MAX_RETRIES)) {
+		printf("Error timeout waiting for nand reset\n");
+		return;
+	}
+	writel(NFC_ST_CMD_INT_FLAG, SUNXI_NFC_BASE + NFC_ST);
+}
+
+static int nand_read_page(int page_size, int ecc_strength, int ecc_page_size,
+	int addr_cycles, uint32_t real_addr, dma_addr_t dst, int syndrome)
+{
+	uint32_t val;
+	int i, ecc_off = 0;
+	uint16_t ecc_mode = 0;
+	uint16_t rand_seed;
+	uint32_t page;
+	uint16_t column;
+	static const u8 strengths[] = { 16, 24, 28, 32, 40, 48, 56, 60, 64 };
+
+	for (i = 0; i < ARRAY_SIZE(strengths); i++) {
+		if (ecc_strength == strengths[i]) {
 			ecc_mode = i;
 			break;
 		}
 	}
 
-	if (i == ARRAY_SIZE(strength)) {
-		printf("ECC strength unsupported\n");
-		return;
-	}
+	/* HW ECC always request ECC bytes for 1024 bytes blocks */
+	ecc_off = DIV_ROUND_UP(ecc_strength * fls(8 * 1024), 8);
+	/* HW ECC always work with even numbers of ECC bytes */
+	ecc_off += (ecc_off & 1);
+	ecc_off += 4; /* prepad */
 
-	ecc = 	SUNXI_NAND_ECC_CTL_ECC_EN |
-		SUNXI_NAND_ECC_CTL_PIPELINE |
-		SUNXI_NAND_ECC_CTL_RND_EN |
-		SUNXI_NAND_ECC_CTL_MODE(ecc_mode);
-
-	if (CONFIG_NAND_SUNXI_ECC_STEP == 512)
-		ecc |= SUNXI_NAND_ECC_CTL_BS_512B;
+	page = real_addr / page_size;
+	column = real_addr % page_size;
 
 	if (syndrome)
-		seed = 0x4A80;
+		column += (column / ecc_page_size) * ecc_off;
+
+	/* clear ecc status */
+	writel(0, SUNXI_NFC_BASE + NFC_ECC_ST);
+
+	/* Choose correct seed */
+	if (syndrome)
+		rand_seed = random_seed_syndrome;
 	else
-		seed = random_seed[page % ARRAY_SIZE(random_seed)];
+		rand_seed = random_seed[page % 128];
 
-	ecc |= SUNXI_NAND_ECC_CTL_RND_SEED(seed);
+	writel((rand_seed << 16) | NFC_ECC_RANDOM_EN | NFC_ECC_EN
+		| NFC_ECC_PIPELINE | (ecc_mode << 12),
+		SUNXI_NFC_BASE + NFC_ECC_CTL);
 
-	writel(ecc, &nand->ecc_ctl);
+	val = readl(SUNXI_NFC_BASE + NFC_CTL);
+	writel(val | NFC_CTL_RAM_METHOD, SUNXI_NFC_BASE + NFC_CTL);
+
+	if (!syndrome)
+		writel(page_size + (column / ecc_page_size) * ecc_off,
+		       SUNXI_NFC_BASE + NFC_SPARE_AREA);
+
+	flush_dcache_range(dst, ALIGN(dst + ecc_page_size, ARCH_DMA_MINALIGN));
+
+	/* SUNXI_DMA */
+	writel(0x0, SUNXI_DMA_BASE + SUNXI_DMA_CFG_REG0); /* clr dma cmd */
+	/* read from REG_IO_DATA */
+	writel(SUNXI_NFC_BASE + NFC_IO_DATA,
+	       SUNXI_DMA_BASE + SUNXI_DMA_SRC_START_ADDR_REG0);
+	/* read to RAM */
+	writel(dst, SUNXI_DMA_BASE + SUNXI_DMA_DEST_START_ADDRR_REG0);
+	writel(SUNXI_DMA_DDMA_PARA_REG_SRC_WAIT_CYC
+			| SUNXI_DMA_DDMA_PARA_REG_SRC_BLK_SIZE,
+			SUNXI_DMA_BASE + SUNXI_DMA_DDMA_PARA_REG0);
+	writel(ecc_page_size,
+	       SUNXI_DMA_BASE + SUNXI_DMA_DDMA_BC_REG0); /* 1kB */
+	writel(SUNXI_DMA_DDMA_CFG_REG_LOADING
+		| SUNXI_DMA_DDMA_CFG_REG_DMA_DEST_DATA_WIDTH_32
+		| SUNXI_DMA_DDMA_CFG_REG_DDMA_DST_DRQ_TYPE_DRAM
+		| SUNXI_DMA_DDMA_CFG_REG_DMA_SRC_DATA_WIDTH_32
+		| SUNXI_DMA_DDMA_CFG_REG_DMA_SRC_ADDR_MODE_IO
+		| SUNXI_DMA_DDMA_CFG_REG_DDMA_SRC_DRQ_TYPE_NFC,
+		SUNXI_DMA_BASE + SUNXI_DMA_CFG_REG0);
+
+	writel((NFC_CMD_RNDOUTSTART << NFC_RANDOM_READ_CMD1_OFFSET)
+		| (NFC_CMD_RNDOUT << NFC_RANDOM_READ_CMD0_OFFSET)
+		| (NFC_CMD_READSTART | NFC_READ_CMD_OFFSET), SUNXI_NFC_BASE
+			+ NFC_RCMD_SET);
+	writel(1, SUNXI_NFC_BASE + NFC_SECTOR_NUM);
+	writel(((page & 0xFFFF) << 16) | column,
+	       SUNXI_NFC_BASE + NFC_ADDR_LOW);
+	writel((page >> 16) & 0xFF, SUNXI_NFC_BASE + NFC_ADDR_HIGH);
+	writel(NFC_ST_DMA_INT_FLAG, SUNXI_NFC_BASE + NFC_ST);
+	writel(NFC_SEND_CMD1 | NFC_SEND_CMD2 | NFC_DATA_TRANS |
+		NFC_PAGE_CMD | NFC_WAIT_FLAG |
+		((addr_cycles - 1) << NFC_ADDR_NUM_OFFSET) |
+		NFC_SEND_ADR | NFC_DATA_SWAP_METHOD | (syndrome ? NFC_SEQ : 0),
+		SUNXI_NFC_BASE + NFC_CMD);
+
+	if (!check_value(SUNXI_NFC_BASE + NFC_ST, NFC_ST_DMA_INT_FLAG,
+			 MAX_RETRIES)) {
+		printf("Error while initializing dma interrupt\n");
+		return -1;
+	}
+	writel(NFC_ST_DMA_INT_FLAG, SUNXI_NFC_BASE + NFC_ST);
+
+	if (!check_value_negated(SUNXI_DMA_BASE + SUNXI_DMA_CFG_REG0,
+				 SUNXI_DMA_DDMA_CFG_REG_LOADING, MAX_RETRIES)) {
+		printf("Error while waiting for dma transfer to finish\n");
+		return -1;
+	}
+
+	invalidate_dcache_range(dst,
+			        ALIGN(dst + ecc_page_size, ARCH_DMA_MINALIGN));
+
+	if (readl(SUNXI_NFC_BASE + NFC_ECC_ST))
+		return -1;
+
+	return 0;
 }
 
-/* read CONFIG_NAND_SUNXI_ECC_STEP bytes from real_addr to temp_buf */
-void
-nand_read_block(struct sunxi_nand *nand, phys_addr_t src, dma_addr_t dst,
-		int syndrome)
+static int nand_read_ecc(int page_size, int ecc_strength, int ecc_page_size,
+	int addr_cycles, uint32_t offs, uint32_t size, void *dest, int syndrome)
 {
-	struct sunxi_dma * const dma = (struct sunxi_dma *)SUNXI_DMA_BASE;
-	struct sunxi_dma_cfg * const dma_cfg = &dma->ddma[0];
+	void *end = dest + size;
 
-	uint32_t shift;
-	uint32_t page;
-	uint32_t addr;
-	uint32_t oob_offset;
-	uint32_t ecc_bytes;
-	u32 val;
-	u32 cmd;
+	clrsetbits_le32(SUNXI_NFC_BASE + NFC_CTL, NFC_CTL_PAGE_SIZE_MASK,
+			NFC_CTL_PAGE_SIZE(page_size));
 
-	page = src / CONFIG_NAND_SUNXI_PAGE_SIZE;
-	if (page > 0xFFFF) {
-		/* TODO: currently this is not supported */
-		printf("Reading from address >= %08X is not allowed.\n",
-		       0xFFFF * CONFIG_NAND_SUNXI_PAGE_SIZE);
-		return;
+	for ( ;dest < end; dest += ecc_page_size, offs += ecc_page_size) {
+		if (nand_read_page(page_size, ecc_strength, ecc_page_size,
+				   addr_cycles, offs, (dma_addr_t)dest,
+				   syndrome))
+			return -1;
 	}
 
-	shift = src % CONFIG_NAND_SUNXI_PAGE_SIZE;
-	writel(0, &nand->ecc_st);
-
-	/* ECC_CTL, randomization */
-	ecc_bytes = CONFIG_NAND_SUNXI_ECC_STRENGTH *
-			fls(CONFIG_NAND_SUNXI_ECC_STEP * 8);
-	ecc_bytes = DIV_ROUND_UP(ecc_bytes, 8);
-	ecc_bytes += (ecc_bytes & 1); /* Align to 2-bytes */
-	ecc_bytes += 4;
-
-	nand_config_ecc(nand, page, syndrome);
-	if (syndrome) {
-		/* shift every 1kB in syndrome */
-		shift += (shift / CONFIG_NAND_SUNXI_ECC_STEP) * ecc_bytes;
-		oob_offset = CONFIG_NAND_SUNXI_ECC_STEP + shift;
-	} else {
-		oob_offset = CONFIG_NAND_SUNXI_PAGE_SIZE  +
-			(shift / CONFIG_NAND_SUNXI_ECC_STEP) * ecc_bytes;
-	}
-
-	addr = (page << 16) | shift;
-
-	/* DMA */
-	val = readl(&nand->ctl);
-	writel(val | SUNXI_NAND_CTL_RAM_METHOD_DMA, &nand->ctl);
-
-	writel(oob_offset, &nand->spare_area);
-
-	/* DMAC
-	 * \todo Separate this into a tidy driver */
-	writel(0x0, &dma->irq_en); /* clear dma interrupts */
-	writel((uint32_t) &nand->io_data , &dma_cfg->src_addr);
-	writel(dst            , &dma_cfg->dst_addr);
-	writel(0x00007F0F     , &dma_cfg->ddma_para);
-	writel(CONFIG_NAND_SUNXI_ECC_STEP, &dma_cfg->bc);
-
-	val = 	SUNXI_DMA_CTL_SRC_DRQ(DDMA_SRC_DRQ_NAND) |
-		SUNXI_DMA_CTL_MODE_IO |
-		SUNXI_DMA_CTL_SRC_DATA_WIDTH_32 |
-		SUNXI_DMA_CTL_DST_DRQ(DDMA_DST_DRQ_SDRAM) |
-		SUNXI_DMA_CTL_DST_DATA_WIDTH_32 |
-		SUNXI_DMA_CTL_TRIGGER;
-	writel(val, &dma_cfg->ctl);
-
-	writel(0x00E00530, &nand->rcmd_set);
-	nand_wait_timeout(&nand->st, SUNXI_NAND_ST_FIFO_FULL, 0);
-
-	writel(1   , &nand->block_num);
-	writel(addr, &nand->addr_low);
-	writel(0   , &nand->addr_high);
-
-	/* CMD (PAGE READ) */
-	cmd = 0x85E80000;
-	cmd |= SUNXI_NAND_CMD_ADDR_CYCLES(CONFIG_NAND_SUNXI_ADDR_CYCLES);
-	cmd |= (syndrome ? SUNXI_NAND_CMD_ORDER_SEQ :
-			SUNXI_NAND_CMD_ORDER_INTERLEAVE);
-	writel(cmd, &nand->cmd);
-
-	if(nand_wait_timeout(&nand->st, SUNXI_NAND_ST_DMA_INT,
-			SUNXI_NAND_ST_DMA_INT)) {
-		printf("NAND timeout reading data\n");
-		return;
-	}
-
-	if(nand_wait_timeout(&dma_cfg->ctl, SUNXI_DMA_CTL_TRIGGER, 0)) {
-		printf("NAND timeout reading data\n");
-		return;
-	}
-
-	if (readl(&nand->ecc_st))
-		ecc_errors++;
+	return 0;
 }
 
-int
-nand_spl_load_image(uint32_t offs, unsigned int size, void *dest)
+static int nand_read_buffer(uint32_t offs, unsigned int size, void *dest,
+			    int syndrome)
 {
-	struct sunxi_nand * const nand = (struct sunxi_nand *)SUNXI_NFC_BASE;
-	dma_addr_t dst_block;
-	dma_addr_t dst_end;
-	phys_addr_t addr = offs;
+	const struct {
+		int page_size;
+		int ecc_strength;
+		int ecc_page_size;
+		int addr_cycles;
+	} nand_configs[] = {
+		{  8192, 40, 1024, 5 },
+		{ 16384, 56, 1024, 5 },
+		{  8192, 24, 1024, 5 },
+		{  4096, 24, 1024, 5 },
+	};
+	static int nand_config = -1;
+	int i;
 
-	dst_end = ((dma_addr_t) dest) + size;
-
-	memset((void *)dest, 0x0, size);
-	ecc_errors = 0;
-	for (dst_block = (dma_addr_t) dest; dst_block < dst_end;
-			dst_block += CONFIG_NAND_SUNXI_ECC_STEP,
-			addr += CONFIG_NAND_SUNXI_ECC_STEP) {
-		/* syndrome read first 4MiB to match Allwinner BootROM */
-		nand_read_block(nand, addr, dst_block, addr < 0x400000);
+	if (nand_config == -1) {
+		for (i = 0; i < ARRAY_SIZE(nand_configs); i++) {
+			debug("nand: trying page %d ecc %d / %d addr %d: ",
+			      nand_configs[i].page_size,
+			      nand_configs[i].ecc_strength,
+			      nand_configs[i].ecc_page_size,
+			      nand_configs[i].addr_cycles);
+			if (nand_read_ecc(nand_configs[i].page_size,
+					  nand_configs[i].ecc_strength,
+					  nand_configs[i].ecc_page_size,
+					  nand_configs[i].addr_cycles,
+					  offs, size, dest, syndrome) == 0) {
+				debug("success\n");
+				nand_config = i;
+				return 0;
+			}
+			debug("failed\n");
+		}
+		return -1;
 	}
 
-	if (ecc_errors)
-		printf("Error: %d ECC failures detected\n", ecc_errors);
-	return ecc_errors == 0;
+	return nand_read_ecc(nand_configs[nand_config].page_size,
+			     nand_configs[nand_config].ecc_strength,
+			     nand_configs[nand_config].ecc_page_size,
+			     nand_configs[nand_config].addr_cycles,
+			     offs, size, dest, syndrome);
 }
 
-void
-nand_deselect(void)
-{}
+int nand_spl_load_image(uint32_t offs, unsigned int size, void *dest)
+{
+#if CONFIG_SYS_NAND_U_BOOT_OFFS == CONFIG_SPL_PAD_TO
+	/*
+	 * u-boot-dtb.bin appended to SPL, use syndrome (like the BROM does)
+	 * and try different erase block sizes to find the backup.
+	 */
+	const uint32_t boot_offsets[] = {
+		0 * 1024 * 1024 + CONFIG_SYS_NAND_U_BOOT_OFFS,
+		1 * 1024 * 1024 + CONFIG_SYS_NAND_U_BOOT_OFFS,
+		2 * 1024 * 1024 + CONFIG_SYS_NAND_U_BOOT_OFFS,
+		4 * 1024 * 1024 + CONFIG_SYS_NAND_U_BOOT_OFFS,
+	};
+	const int syndrome = 1;
+#else
+	/*
+	 * u-boot-dtb.bin on its own partition, do not use syndrome, u-boot
+	 * partition sits after 2 eraseblocks (spl, spl-backup), look for
+	 * backup u-boot 1 erase block further.
+	 */
+	const uint32_t eraseblock_size = CONFIG_SYS_NAND_U_BOOT_OFFS / 2;
+	const uint32_t boot_offsets[] = {
+		CONFIG_SYS_NAND_U_BOOT_OFFS,
+		CONFIG_SYS_NAND_U_BOOT_OFFS + eraseblock_size,
+	};
+	const int syndrome = 0;
+#endif
+	int i;
+
+	if (offs == CONFIG_SYS_NAND_U_BOOT_OFFS) {
+		for (i = 0; i < ARRAY_SIZE(boot_offsets); i++) {
+			if (nand_read_buffer(boot_offsets[i], size,
+					     dest, syndrome) == 0)
+				return 0;
+		}
+		return -1;
+	}
+
+	return nand_read_buffer(offs, size, dest, syndrome);
+}
+
+void nand_deselect(void)
+{
+	struct sunxi_ccm_reg *const ccm =
+		(struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+
+	clrbits_le32(&ccm->ahb_gate0, (CLK_GATE_OPEN << AHB_GATE_OFFSET_NAND0));
+#ifdef CONFIG_MACH_SUN9I
+	clrbits_le32(&ccm->ahb_gate1, (1 << AHB_GATE_OFFSET_DMA));
+#else
+	clrbits_le32(&ccm->ahb_gate0, (1 << AHB_GATE_OFFSET_DMA));
+#endif
+	clrbits_le32(&ccm->nand0_clk_cfg, CCM_NAND_CTRL_ENABLE | AHB_DIV_1);
+}

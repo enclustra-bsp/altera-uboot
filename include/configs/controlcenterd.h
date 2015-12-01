@@ -45,7 +45,6 @@
 #define CONFIG_CONTROLCENTERD
 #define CONFIG_MP			/* support multiple processors */
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENABLE_36BIT_PHYS
@@ -219,7 +218,6 @@
 #define CONFIG_HARD_SPI
 #define CONFIG_FSL_ESPI
 
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_STMICRO
 
 #define CONFIG_CMD_SF
@@ -227,14 +225,7 @@
 #define CONFIG_SF_DEFAULT_MODE		0
 #endif
 
-/*
- * TPM
- */
-#define CONFIG_TPM_ATMEL_TWI
-#define CONFIG_TPM
-#define CONFIG_TPM_AUTH_SESSIONS
 #define CONFIG_SHA1
-#define CONFIG_CMD_TPM
 
 /*
  * MMC
@@ -353,7 +344,6 @@
 #if defined(CONFIG_TRAILBLAZER)
 #define CONFIG_ENV_IS_NOWHERE
 #define CONFIG_ENV_SIZE		0x2000		/* 8KB */
-#undef CONFIG_CMD_SAVEENV
 #elif defined(CONFIG_RAMBOOT_SPIFLASH)
 #define CONFIG_ENV_IS_IN_SPI_FLASH
 #define CONFIG_ENV_SPI_BUS	0
@@ -395,11 +385,8 @@
 #define CONFIG_SYS_MAXARGS	16
 #define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE
 
-#include <config_cmd_default.h>
-
 #ifndef CONFIG_TRAILBLAZER
 
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_ERRATA
 #define CONFIG_CMD_EXT2
 #define CONFIG_CMD_FAT

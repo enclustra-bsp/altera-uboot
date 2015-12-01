@@ -13,7 +13,11 @@
 #include <mmc.h>
 #include <sdhci.h>
 
+#if defined(CONFIG_FIXED_SDHCI_ALIGNED_BUFFER)
+void *aligned_buffer = (void *)CONFIG_FIXED_SDHCI_ALIGNED_BUFFER;
+#else
 void *aligned_buffer;
+#endif
 
 static void sdhci_reset(struct sdhci_host *host, u8 mask)
 {
@@ -133,8 +137,8 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 	int trans_bytes = 0, is_aligned = 1;
 	u32 mask, flags, mode;
 	unsigned int time = 0, start_addr = 0;
-	unsigned int retry = 10000;
 	int mmc_dev = mmc->block_dev.dev;
+	unsigned start = get_timer(0);
 
 	/* Timeout unit - ms */
 	static unsigned int cmd_timeout = CONFIG_SDHCI_CMD_DEFAULT_TIMEOUT;
@@ -205,6 +209,17 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 				memcpy(aligned_buffer, data->src, trans_bytes);
 		}
 
+#if defined(CONFIG_FIXED_SDHCI_ALIGNED_BUFFER)
+		/*
+		 * Always use this bounce-buffer when
+		 * CONFIG_FIXED_SDHCI_ALIGNED_BUFFER is defined
+		 */
+		is_aligned = 0;
+		start_addr = (unsigned long)aligned_buffer;
+		if (data->flags != MMC_DATA_READ)
+			memcpy(aligned_buffer, data->src, trans_bytes);
+#endif
+
 		sdhci_writel(host, start_addr, SDHCI_DMA_ADDRESS);
 		mode |= SDHCI_TRNS_DMA;
 #endif
@@ -222,15 +237,15 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 	flush_cache(start_addr, trans_bytes);
 #endif
 	sdhci_writew(host, SDHCI_MAKE_CMD(cmd->cmdidx, flags), SDHCI_COMMAND);
+	start = get_timer(0);
 	do {
 		stat = sdhci_readl(host, SDHCI_INT_STATUS);
 		if (stat & SDHCI_INT_ERROR)
 			break;
-		if (--retry == 0)
-			break;
-	} while ((stat & mask) != mask);
+	} while (((stat & mask) != mask) &&
+		 (get_timer(start) < CONFIG_SDHCI_CMD_DEFAULT_TIMEOUT));
 
-	if (retry == 0) {
+	if (get_timer(start) >= CONFIG_SDHCI_CMD_DEFAULT_TIMEOUT) {
 		if (host->quirks & SDHCI_QUIRK_BROKEN_R1B)
 			return 0;
 		else {
@@ -271,9 +286,25 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 static int sdhci_set_clock(struct mmc *mmc, unsigned int clock)
 {
 	struct sdhci_host *host = mmc->priv;
-	unsigned int div, clk, timeout;
+	unsigned int div, clk, timeout, reg;
 
-	sdhci_writew(host, 0, SDHCI_CLOCK_CONTROL);
+	/* Wait max 20 ms */
+	timeout = 200;
+	while (sdhci_readl(host, SDHCI_PRESENT_STATE) &
+			   (SDHCI_CMD_INHIBIT | SDHCI_DATA_INHIBIT)) {
+		if (timeout == 0) {
+			printf("%s: Timeout to wait cmd & data inhibit\n",
+			       __func__);
+			return -1;
+		}
+
+		timeout--;
+		udelay(100);
+	}
+
+	reg = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
+	reg &= ~SDHCI_CLOCK_CARD_EN;
+	sdhci_writew(host, reg, SDHCI_CLOCK_CONTROL);
 
 	if (clock == 0)
 		return 0;

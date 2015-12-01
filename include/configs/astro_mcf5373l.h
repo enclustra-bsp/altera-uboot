@@ -42,8 +42,6 @@
 #define CONFIG_ASTRO5373L		/* define board type */
 
 /* Command line configuration */
-#include <config_cmd_default.h>
-
 /*
  * CONFIG_RAM defines if u-boot is loaded via BDM (or started from
  * a different bootloader that has already performed RAM setup) or
@@ -63,20 +61,11 @@
 
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DATE
-#define CONFIG_CMD_ELF
-#define CONFIG_CMD_FLASH
 #define CONFIG_CMD_I2C
-#define CONFIG_CMD_MEMORY
-#define CONFIG_CMD_MISC
-#define CONFIG_CMD_XIMG
-#undef CONFIG_CMD_NFS
 #if ENABLE_JFFS
 #define CONFIG_CMD_JFFS2
 #endif
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_LOADS
-#define CONFIG_CMD_LOADB
-#define CONFIG_CMD_FPGA
 #define CONFIG_CMD_FPGA_LOADMK
 #define CONFIG_CMDLINE_EDITING
 
@@ -216,8 +205,6 @@
 /* default bootargs that are considered during boot */
 #define CONFIG_BOOTARGS		" console=ttyS2,115200 rootfstype=romfs"\
 				" loaderversion=$loaderversion"
-
-#define CONFIG_SYS_PROMPT	"URMEL > "
 
 /* default RAM address for user programs */
 #define CONFIG_SYS_LOAD_ADDR	0x20000

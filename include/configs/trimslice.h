@@ -12,7 +12,6 @@
 #include "tegra20-common.h"
 
 /* High-level configuration options */
-#define V_PROMPT		"Tegra20 (TrimSlice) # "
 #define CONFIG_TEGRA_BOARD_STRING	"Compulab Trimslice"
 
 /* Board-specific serial config */
@@ -24,7 +23,6 @@
 
 /* SPI */
 #define CONFIG_TEGRA20_SFLASH
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_WINBOND
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
 #define CONFIG_CMD_SPI

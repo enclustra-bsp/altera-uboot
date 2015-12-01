@@ -11,6 +11,7 @@
  */
 
 #include <common.h>
+#include <mmc.h>
 #include <i2c.h>
 #include <serial.h>
 #ifdef CONFIG_SPL_BUILD
@@ -20,8 +21,11 @@
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/gpio.h>
+#include <asm/arch/spl.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/timer.h>
+#include <asm/arch/tzpc.h>
+#include <asm/arch/mmc.h>
 
 #include <linux/compiler.h>
 
@@ -45,11 +49,11 @@ static int gpio_init(void)
 	sunxi_gpio_set_cfgpin(SUNXI_GPB(23), SUNXI_GPIO_INPUT);
 #endif
 #if defined(CONFIG_MACH_SUN8I)
-	sunxi_gpio_set_cfgpin(SUNXI_GPF(2), SUN8I_GPF_UART0_TX);
-	sunxi_gpio_set_cfgpin(SUNXI_GPF(4), SUN8I_GPF_UART0_RX);
+	sunxi_gpio_set_cfgpin(SUNXI_GPF(2), SUN8I_GPF_UART0);
+	sunxi_gpio_set_cfgpin(SUNXI_GPF(4), SUN8I_GPF_UART0);
 #else
-	sunxi_gpio_set_cfgpin(SUNXI_GPF(2), SUNXI_GPF_UART0_TX);
-	sunxi_gpio_set_cfgpin(SUNXI_GPF(4), SUNXI_GPF_UART0_RX);
+	sunxi_gpio_set_cfgpin(SUNXI_GPF(2), SUNXI_GPF_UART0);
+	sunxi_gpio_set_cfgpin(SUNXI_GPF(4), SUNXI_GPF_UART0);
 #endif
 	sunxi_gpio_set_pull(SUNXI_GPF(4), 1);
 #elif CONFIG_CONS_INDEX == 1 && (defined(CONFIG_MACH_SUN4I) || defined(CONFIG_MACH_SUN7I))
@@ -64,6 +68,10 @@ static int gpio_init(void)
 	sunxi_gpio_set_cfgpin(SUNXI_GPH(20), SUN6I_GPH_UART0);
 	sunxi_gpio_set_cfgpin(SUNXI_GPH(21), SUN6I_GPH_UART0);
 	sunxi_gpio_set_pull(SUNXI_GPH(21), SUNXI_GPIO_PULL_UP);
+#elif CONFIG_CONS_INDEX == 1 && defined(CONFIG_MACH_SUN8I_A33)
+	sunxi_gpio_set_cfgpin(SUNXI_GPB(0), SUN8I_A33_GPB_UART0);
+	sunxi_gpio_set_cfgpin(SUNXI_GPB(1), SUN8I_A33_GPB_UART0);
+	sunxi_gpio_set_pull(SUNXI_GPB(1), SUNXI_GPIO_PULL_UP);
 #elif CONFIG_CONS_INDEX == 1 && defined(CONFIG_MACH_SUN9I)
 	sunxi_gpio_set_cfgpin(SUNXI_GPH(12), SUN9I_GPH_UART0);
 	sunxi_gpio_set_cfgpin(SUNXI_GPH(13), SUN9I_GPH_UART0);
@@ -109,6 +117,10 @@ void s_init(void)
 		"orr r0, r0, #1 << 6\n"
 		"mcr p15, 0, r0, c1, c0, 1\n");
 #endif
+#if defined CONFIG_MACH_SUN6I
+	/* Enable non-secure access to the RTC */
+	tzpc_init();
+#endif
 
 	clock_init();
 	timer_init();
@@ -117,26 +129,18 @@ void s_init(void)
 }
 
 #ifdef CONFIG_SPL_BUILD
+DECLARE_GLOBAL_DATA_PTR;
+
 /* The sunxi internal brom will try to loader external bootloader
  * from mmc0, nand flash, mmc2.
- *
- * Unfortunately we can't check how SPL was loaded so assume it's
- * always the first SD/MMC controller, unless it was explicitly
- * stated that SPL is on nand flash.
  */
 u32 spl_boot_device(void)
 {
-#if defined(CONFIG_SPL_NAND_SUPPORT)
+	__maybe_unused struct mmc *mmc0, *mmc1;
 	/*
-	 * This is compile time configuration informing SPL, that it
-	 * was loaded from nand flash.
-	 */
-	return BOOT_DEVICE_NAND;
-#else
-	/*
-	 * When booting from the SD card, the "eGON.BT0" signature is expected
-	 * to be found in memory at the address 0x0004 (see the "mksunxiboot"
-	 * tool, which generates this header).
+	 * When booting from the SD card or NAND memory, the "eGON.BT0"
+	 * signature is expected to be found in memory at the address 0x0004
+	 * (see the "mksunxiboot" tool, which generates this header).
 	 *
 	 * When booting in the FEL mode over USB, this signature is patched in
 	 * memory and replaced with something else by the 'fel' tool. This other
@@ -144,16 +148,44 @@ u32 spl_boot_device(void)
 	 * valid bootable SD card image (because the BROM would refuse to
 	 * execute the SPL in this case).
 	 *
-	 * This branch is just making a decision at runtime whether to load
-	 * the main u-boot binary from the SD card (if the "eGON.BT0" signature
-	 * is found) or return to the FEL code in the BROM to wait and receive
-	 * the main u-boot binary over USB.
+	 * This checks for the signature and if it is not found returns to
+	 * the FEL code in the BROM to wait and receive the main u-boot
+	 * binary over USB. If it is found, it determines where SPL was
+	 * read from.
 	 */
-	if (readl(4) == 0x4E4F4765 && readl(8) == 0x3054422E) /* eGON.BT0 */
-		return BOOT_DEVICE_MMC1;
-	else
+	if (!is_boot0_magic(SPL_ADDR + 4)) /* eGON.BT0 */
 		return BOOT_DEVICE_BOARD;
+
+	/* The BROM will try to boot from mmc0 first, so try that first. */
+#ifdef CONFIG_MMC
+	mmc_initialize(gd->bd);
+	mmc0 = find_mmc_device(0);
+	if (sunxi_mmc_has_egon_boot_signature(mmc0))
+		return BOOT_DEVICE_MMC1;
 #endif
+
+	/* Fallback to booting NAND if enabled. */
+	if (IS_ENABLED(CONFIG_SPL_NAND_SUPPORT))
+		return BOOT_DEVICE_NAND;
+
+#ifdef CONFIG_MMC
+	if (CONFIG_MMC_SUNXI_SLOT_EXTRA == 2) {
+		mmc1 = find_mmc_device(1);
+		if (sunxi_mmc_has_egon_boot_signature(mmc1)) {
+			/*
+			 * spl_mmc.c: spl_mmc_load_image() is hard-coded to
+			 * use find_mmc_device(0), no matter what we
+			 * return. Swap mmc0 and mmc2 to make this work.
+			 */
+			mmc0->block_dev.dev = 1;
+			mmc1->block_dev.dev = 0;
+			return BOOT_DEVICE_MMC2;
+		}
+	}
+#endif
+
+	panic("Could not determine boot source\n");
+	return -1;		/* Never reached */
 }
 
 /* No confirmation data available in SPL yet. Hardcode bootmode */
@@ -164,6 +196,7 @@ u32 spl_boot_mode(void)
 
 void board_init_f(ulong dummy)
 {
+	spl_init();
 	preloader_console_init();
 
 #ifdef CONFIG_SPL_I2C_SUPPORT
@@ -171,11 +204,6 @@ void board_init_f(ulong dummy)
 	i2c_init(CONFIG_SYS_I2C_SPEED, CONFIG_SYS_I2C_SLAVE);
 #endif
 	sunxi_board_init();
-
-	/* Clear the BSS. */
-	memset(__bss_start, 0, __bss_end - __bss_start);
-
-	board_init_r(NULL, 0);
 }
 #endif
 
@@ -202,6 +230,7 @@ void reset_cpu(ulong addr)
 	writel(WDT_CFG_RESET, &wdog->cfg);
 	writel(WDT_MODE_EN, &wdog->mode);
 	writel(WDT_CTRL_KEY | WDT_CTRL_RESTART, &wdog->ctl);
+	while (1) { }
 #endif
 }
 

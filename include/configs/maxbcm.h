@@ -11,18 +11,23 @@
  * High Level Configuration Options (easy to change)
  */
 #define CONFIG_ARMADA_XP		/* SOC Family Name */
+#ifdef CONFIG_SPL_BUILD
 #define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
-#define CONFIG_SYS_GENERIC_BOARD
+#endif
 #define CONFIG_DISPLAY_BOARDINFO_LATE
 
-#define	CONFIG_SYS_TEXT_BASE	0x04000000
+/*
+ * TEXT_BASE needs to be below 16MiB, since this area is scrubbed
+ * for DDR ECC byte filling in the SPL before loading the main
+ * U-Boot into it.
+ */
+#define	CONFIG_SYS_TEXT_BASE	0x00800000
 #define CONFIG_SYS_TCLK		250000000	/* 250MHz */
 
 /*
  * Commands configuration
  */
 #define CONFIG_SYS_NO_FLASH		/* Declare no flash (NOR/SPI) */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_ENV
 #define CONFIG_CMD_I2C
@@ -44,7 +49,6 @@
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_3
 #define CONFIG_SPI_FLASH_STMICRO
 #define CONFIG_SPI_FLASH_SPANSION
-#define CONFIG_SPI_FLASH_BAR
 
 /* Environment in SPI NOR flash */
 #define CONFIG_ENV_IS_IN_SPI_FLASH
@@ -110,7 +114,7 @@
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
 
 /* Enable DDR support in SPL (DDR3 training from Marvell bin_hdr) */
-#define CONFIG_SYS_MVEBU_DDR
+#define CONFIG_SYS_MVEBU_DDR_AXP
 #define CONFIG_DDR_FIXED_SIZE		(1 << 20)	/* 1GiB */
 
 #endif /* _CONFIG_DB_MV7846MP_GP_H */

@@ -12,7 +12,6 @@
 #define __CONFIG_H
 
 #define CONFIG_PHYS_64BIT
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_DISPLAY_BOARDINFO
 
 #ifdef CONFIG_C29XPCIE
@@ -101,7 +100,6 @@
 
 #define CONFIG_CMD_PCI
 
-#define CONFIG_E1000
 
 /*
  * PCI Windows
@@ -388,7 +386,6 @@
 #define CONFIG_NS16550_MIN_FUNCTIONS
 #endif
 
-#define CONFIG_SERIAL_MULTI		/* Enable both serial ports */
 #define CONFIG_SYS_CONSOLE_IS_IN_ENV
 
 #define CONFIG_SYS_BAUDRATE_TABLE	\
@@ -432,7 +429,6 @@
 
 /* eSPI - Enhanced SPI */
 #define CONFIG_FSL_ESPI
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_SPANSION
 #define CONFIG_SPI_FLASH_EON
 #define CONFIG_CMD_SF
@@ -496,10 +492,7 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ERRATA
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING

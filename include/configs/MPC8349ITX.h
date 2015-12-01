@@ -40,7 +40,6 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_DISPLAY_BOARDINFO
 
 #if (CONFIG_SYS_TEXT_BASE == 0xFE000000)
@@ -496,8 +495,6 @@ boards, we say we have two, but don't display a message if we find only one. */
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_IRQ
@@ -545,12 +542,6 @@ boards, we say we have two, but don't display a message if we find only one. */
 
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
 #define CONFIG_LOADADDR	800000	/* default location for tftp and bootm */
-
-#ifdef CONFIG_MPC8349ITX
-#define CONFIG_SYS_PROMPT "MPC8349E-mITX> "	/* Monitor Command Prompt */
-#else
-#define CONFIG_SYS_PROMPT "MPC8349E-mITX-GP> "	/* Monitor Command Prompt */
-#endif
 
 #if defined(CONFIG_CMD_KGDB)
 	#define CONFIG_SYS_CBSIZE	1024	/* Console I/O Buffer Size */

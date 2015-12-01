@@ -19,7 +19,6 @@
 /* High Level Configuration Options */
 #define CONFIG_MX31			/* This is a mx31 */
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
@@ -35,6 +34,7 @@
 #define CONFIG_SPL_MAX_SIZE	2048
 #define CONFIG_SPL_NAND_SUPPORT
 #define CONFIG_SPL_LIBGENERIC_SUPPORT
+#define CONFIG_SPL_SERIAL_SUPPORT
 
 #define CONFIG_SPL_TEXT_BASE	0x87dc0000
 #define CONFIG_SYS_TEXT_BASE	0x87e00000
@@ -80,9 +80,6 @@
 /***********************************************************
  * Command definition
  ***********************************************************/
-
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
@@ -90,12 +87,6 @@
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_NAND
 #define CONFIG_CMD_BOOTZ
-
-/*
- * Disabled due to compilation errors in cmd_bootm.c (IMLS seems to require
- * that CFG_NO_FLASH is undefined).
- */
-#undef CONFIG_CMD_IMLS
 
 #define CONFIG_BOARD_LATE_INIT
 

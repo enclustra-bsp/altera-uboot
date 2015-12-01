@@ -11,17 +11,11 @@
 
 #include <asm/arch/rmobile.h>
 
-#define CONFIG_CMD_EDITENV
-#define CONFIG_CMD_SAVEENV
-#define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_DFL
 #define CONFIG_CMD_SDRAM
-#define CONFIG_CMD_RUN
-#define CONFIG_CMD_LOADS
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
-#define CONFIG_CMD_NFS
 #define CONFIG_CMD_BOOTZ
 #define CONFIG_CMD_USB
 #define CONFIG_CMD_FAT
@@ -32,7 +26,6 @@
 #define CONFIG_CMD_EXT4_WRITE
 
 #define CONFIG_SYS_THUMB_BUILD
-#define CONFIG_SYS_GENERIC_BOARD
 
 /* Support File sytems */
 #define CONFIG_FAT_WRITE

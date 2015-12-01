@@ -25,11 +25,9 @@
 #define CONFIG_TEGRA_VDD_CORE_TPS62366A_SET1
 
 /* High-level configuration options */
-#define V_PROMPT		"Tegra30 (Beaver) # "
 #define CONFIG_TEGRA_BOARD_STRING	"NVIDIA Beaver"
 
 /* Board-specific serial config */
-#define CONFIG_SERIAL_MULTI
 #define CONFIG_TEGRA_ENABLE_UARTA
 #define CONFIG_SYS_NS16550_COM1		NV_PA_APB_UARTA_BASE
 
@@ -55,7 +53,6 @@
 /* SPI */
 #define CONFIG_TEGRA20_SLINK
 #define CONFIG_TEGRA_SLINK_CTRLS       6
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_WINBOND
 #define CONFIG_SF_DEFAULT_MODE         SPI_MODE_0
 #define CONFIG_SF_DEFAULT_SPEED        24000000

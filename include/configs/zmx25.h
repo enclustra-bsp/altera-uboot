@@ -15,7 +15,6 @@
 #define CONFIG_MX25
 #define CONFIG_SYS_TEXT_BASE		0xA0000000
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_SYS_TIMER_RATE		32768
 #define CONFIG_SYS_TIMER_COUNTER	\
@@ -77,7 +76,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_CACHE
 
 /*
@@ -85,7 +83,6 @@
  */
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_PING
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_USB
 
@@ -139,7 +136,6 @@
 #define CONFIG_SYS_MEMTEST_START	(PHYS_SDRAM + (512*1024))
 #define CONFIG_SYS_MEMTEST_END		(PHYS_SDRAM + PHYS_SDRAM_SIZE)
 
-#define CONFIG_SYS_PROMPT	"zmx25> "
 #define CONFIG_SYS_CBSIZE	256
 #define CONFIG_SYS_MAXARGS	16
 #define CONFIG_SYS_PBSIZE	(CONFIG_SYS_CBSIZE + \

@@ -18,7 +18,6 @@
 #define CONFIG_DRIVER_TI_EMAC
 #define MACH_TYPE_CALIMAIN	3528
 #define CONFIG_MACH_TYPE	MACH_TYPE_CALIMAIN
-#define CONFIG_SYS_GENERIC_BOARD
 
 /*
  * SoC Configuration
@@ -194,7 +193,6 @@
  * U-Boot general configuration
  */
 #define CONFIG_BOOTFILE        "uImage" /* Boot file name */
-#define CONFIG_SYS_PROMPT      "Calimain > " /* Command Prompt */
 #define CONFIG_SYS_CBSIZE      1024 /* Console I/O Buffer Size	*/
 #define CONFIG_SYS_PBSIZE      (CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)
 #define CONFIG_SYS_MAXARGS     16 /* max number of command args */
@@ -311,7 +309,6 @@
 /*
  * U-Boot commands
  */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_ENV
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DHCP
@@ -319,7 +316,6 @@
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_SAVES
-#define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_GPIO
 
 #ifndef CONFIG_DRIVER_TI_EMAC

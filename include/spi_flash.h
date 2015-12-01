@@ -37,22 +37,23 @@ struct spi_slave;
  * struct spi_flash - SPI flash structure
  *
  * @spi:		SPI slave
+ * @dev:		SPI flash device
  * @name:		Name of SPI flash
- * @dual_flash:	Indicates dual flash memories - dual stacked, parallel
+ * @dual_flash:		Indicates dual flash memories - dual stacked, parallel
  * @shift:		Flash shift useful in dual parallel
+ * @flags:		Indication of spi flash flags
  * @size:		Total flash size
  * @page_size:		Write (page) size
  * @sector_size:	Sector size
- * @erase_size:	Erase size
+ * @erase_size:		Erase size
  * @bank_read_cmd:	Bank read cmd
  * @bank_write_cmd:	Bank write cmd
  * @bank_curr:		Current flash bank
- * @poll_cmd:		Poll cmd - for flash erase/program
  * @erase_cmd:		Erase cmd 4K, 32K, 64K
  * @read_cmd:		Read cmd - Array Fast, Extn read and quad read.
  * @write_cmd:		Write cmd - page and quad program.
- * @dummy_byte:	Dummy cycles for read operation.
- * @memory_map:	Address of read-only SPI flash access
+ * @dummy_byte:		Dummy cycles for read operation.
+ * @memory_map:		Address of read-only SPI flash access
  * @read:		Flash read ops: Read len bytes at offset into buf
  *			Supported cmds: Fast Array Read
  * @write:		Flash write ops: Write len bytes from buf into offset
@@ -65,11 +66,11 @@ struct spi_flash {
 	struct spi_slave *spi;
 #ifdef CONFIG_DM_SPI_FLASH
 	struct udevice *dev;
-	u16 flags;
 #endif
 	const char *name;
 	u8 dual_flash;
 	u8 shift;
+	u16 flags;
 
 	u32 size;
 	u32 page_size;
@@ -80,7 +81,6 @@ struct spi_flash {
 	u8 bank_write_cmd;
 	u8 bank_curr;
 #endif
-	u8 poll_cmd;
 	u8 erase_cmd;
 	u8 read_cmd;
 	u8 write_cmd;

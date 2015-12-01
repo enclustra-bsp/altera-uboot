@@ -28,7 +28,6 @@
 #define CONFIG_SYS_MALLOC_LEN		(1024 << 10)
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER		/* Use HUSH for command parsing */
-#define CONFIG_SYS_PROMPT		"U-Boot# "
 #define CONFIG_SYS_NO_FLASH
 #define CONFIG_MACH_TYPE		MACH_TYPE_TI8148EVM
 
@@ -38,8 +37,6 @@
 #define CONFIG_INITRD_TAG		/* for ramdisk support */
 
 /* commands to include */
-# include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #define CONFIG_VERSION_VARIABLE
 
@@ -101,8 +98,6 @@
 /* Clock Defines */
 #define V_OSCK			24000000	/* Clock output from T2 */
 #define V_SCLK			(V_OSCK >> 1)
-
-#define CONFIG_CMD_ECHO
 
 /* max number of command args */
 #define CONFIG_SYS_MAXARGS		16

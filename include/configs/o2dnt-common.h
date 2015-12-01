@@ -18,7 +18,6 @@
  */
 #define CONFIG_MPC5200
 #define CONFIG_DISPLAY_BOARDINFO
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_SYS_MPC5XXX_CLKIN	33000000 /* running at 33.000000MHz */
 
@@ -76,8 +75,6 @@
 /*
  * Supported commands
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_EEPROM
 #define CONFIG_CMD_FAT
 #define CONFIG_CMD_I2C

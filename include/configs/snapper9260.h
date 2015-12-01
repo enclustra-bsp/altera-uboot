@@ -20,7 +20,6 @@
 /* ARM asynchronous clock */
 #define CONFIG_SYS_AT91_MAIN_CLOCK	18432000 /* External Crystal, in Hz */
 #define CONFIG_SYS_AT91_SLOW_CLOCK	32768
-#define CONFIG_SYS_GENERIC_BOARD
 
 /* CPU */
 #define CONFIG_ARCH_CPU_INIT
@@ -89,7 +88,6 @@
 #define CONFIG_USART_ID			ATMEL_ID_SYS
 #endif
 #define CONFIG_BAUDRATE			115200
-#define CONFIG_SYS_PROMPT		"Snapper> "
 
 /* I2C - Bit-bashed */
 #define CONFIG_SYS_I2C
@@ -149,14 +147,6 @@
 #define CONFIG_SYS_MALLOC_LEN		(1 << 20)
 
 /* Command line configuration */
-#include <config_cmd_default.h>
-#undef CONFIG_CMD_BDI
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_IMI
-#undef CONFIG_CMD_IMLS
-#undef CONFIG_CMD_LOADS
-#undef CONFIG_CMD_SOURCE
-
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_FAT

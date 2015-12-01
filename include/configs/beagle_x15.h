@@ -18,6 +18,8 @@
 #define CONFIG_IODELAY_RECALIBRATION
 #endif
 
+#define CONFIG_BOARD_EARLY_INIT_F
+
 #define CONFIG_NR_DRAM_BANKS		2
 
 #define CONFIG_ENV_SIZE			(64 << 10)
@@ -25,8 +27,6 @@
 #define FAT_ENV_INTERFACE		"mmc"
 #define FAT_ENV_DEVICE_AND_PART		"0:1"
 #define FAT_ENV_FILE			"uboot.env"
-
-#define CONFIG_CMD_SAVEENV
 
 #define CONSOLEDEV			"ttyO2"
 #define CONFIG_SYS_NS16550_COM1		UART1_BASE	/* Base EVM has UART0 */
@@ -48,7 +48,6 @@
 #define CONFIG_EFI_PARTITION
 
 /* CPSW Ethernet */
-#define CONFIG_CMD_NFS
 #define CONFIG_CMD_DHCP
 #define CONFIG_BOOTP_DNS		/* Configurable parts of CMD_DHCP */
 #define CONFIG_BOOTP_DNS2
@@ -69,6 +68,7 @@
 /* USB xHCI HOST */
 #define CONFIG_CMD_USB
 #define CONFIG_USB_HOST
+#define CONFIG_USB_XHCI_DWC3
 #define CONFIG_USB_XHCI
 #define CONFIG_USB_XHCI_OMAP
 #define CONFIG_USB_STORAGE

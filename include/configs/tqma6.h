@@ -9,6 +9,7 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
+#include <linux/kconfig.h>
 /* SPL */
 /* #if defined(CONFIG_SPL_BUILD) */
 
@@ -47,7 +48,6 @@
 #define CONFIG_MXC_SPI
 
 /* SPI Flash */
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_STMICRO
 
 #define TQMA6_SPI_FLASH_SECTOR_SIZE	SZ_64K
@@ -62,6 +62,8 @@
 #define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
 #define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
 #define CONFIG_I2C_MULTI_BUS
 #define CONFIG_SYS_I2C_SPEED		100000
@@ -100,10 +102,6 @@
 #define CONFIG_USB_MAX_CONTROLLER_COUNT	2
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET	/* For OTG port */
 
-/* Fuses */
-#define CONFIG_MXC_OCOTP
-#define CONFIG_CMD_FUSE
-
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
@@ -121,7 +119,6 @@
 
 /* Command definition */
 #define CONFIG_CMD_BMODE
-#define CONFIG_CMD_ITEST
 
 #define CONFIG_ENV_SIZE			(SZ_8K)
 /* Size of malloc() pool */
@@ -394,6 +391,8 @@
  */
 #ifdef CONFIG_MBA6
 #include "tqma6_mba6.h"
+#elif CONFIG_WRU4
+#include "tqma6_wru4.h"
 #else
 #error "No baseboard for the TQMa6 defined!"
 #endif

@@ -27,6 +27,7 @@
 #define CONFIG_E500		1	/* BOOKE e500 family		*/
 #define CONFIG_MPC8544		1
 #define CONFIG_SOCRATES		1
+#define CONFIG_DISPLAY_BOARDINFO
 
 #define	CONFIG_SYS_TEXT_BASE	0xfff80000
 
@@ -314,8 +315,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_BMP
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DHCP
@@ -325,7 +324,6 @@
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_SDRAM
 #define CONFIG_CMD_MII
-#undef CONFIG_CMD_NFS
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_SNTP
 #define CONFIG_CMD_USB

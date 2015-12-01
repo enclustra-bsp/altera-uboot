@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <mapmem.h>
+#include <memalign.h>
 #include <asm/byteorder.h>
 #include <asm/processor.h>
 #include <dm/device-internal.h>
@@ -1407,7 +1408,7 @@ int usb_stor_get_info(struct usb_device *dev, struct us_data *ss,
 
 static int usb_mass_storage_probe(struct udevice *dev)
 {
-	struct usb_device *udev = dev_get_parentdata(dev);
+	struct usb_device *udev = dev_get_parent_priv(dev);
 	int ret;
 
 	usb_disable_asynch(1); /* asynch transfer not allowed */
@@ -1442,6 +1443,6 @@ static const struct usb_device_id mass_storage_id_table[] = {
 	{ }		/* Terminating entry */
 };
 
-USB_DEVICE(usb_mass_storage, mass_storage_id_table);
+U_BOOT_USB_DEVICE(usb_mass_storage, mass_storage_id_table);
 
 #endif

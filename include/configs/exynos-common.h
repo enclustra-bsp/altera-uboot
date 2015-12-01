@@ -16,7 +16,6 @@
 #include <asm/arch/cpu.h>		/* get chip and board defs */
 #include <linux/sizes.h>
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_ARCH_CPU_INIT
 #define CONFIG_DISPLAY_CPUINFO
@@ -59,8 +58,6 @@
 #define CONFIG_PWM
 
 /* Command definition*/
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_MMC
 #define CONFIG_CMD_EXT4_WRITE
 #define CONFIG_FAT_WRITE
@@ -79,7 +76,6 @@
 
 /* FLASH and environment organization */
 #define CONFIG_SYS_NO_FLASH
-#undef CONFIG_CMD_IMLS
 
 #include <config_distro_defaults.h>
 

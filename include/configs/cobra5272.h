@@ -120,12 +120,8 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_PING
 
-#undef CONFIG_CMD_LOADS
-#undef CONFIG_CMD_LOADB
 #undef CONFIG_CMD_MII
 
 #ifdef CONFIG_MCFFEC
@@ -181,8 +177,6 @@ considered during boot */
 #define CONFIG_SERVERIP 192.168.100.1	/* default tftp server IP address */
 
 #endif
-
-#define CONFIG_SYS_PROMPT		"COBRA > "	/* Layout of u-boot prompt*/
 
 #define CONFIG_SYS_LOAD_ADDR		0x20000		/*Defines default RAM address
 from which user programs will be started */

@@ -21,7 +21,6 @@
 
 #define	CONFIG_SYS_TEXT_BASE	0xFFF00000
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 /* Serial Console Configuration */
 #define	CONFIG_5xx_CONS_SCI1
@@ -42,21 +41,11 @@
 /*
  * Command line configuration.
  */
-#define CONFIG_CMD_MEMORY
-#define CONFIG_CMD_LOADB
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_FLASH
-#define CONFIG_CMD_LOADS
-#define CONFIG_CMD_SAVEENV
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_BDI
-#define CONFIG_CMD_CONSOLE
-#define CONFIG_CMD_RUN
 #define CONFIG_CMD_BSP
-#define CONFIG_CMD_IMI
 #define CONFIG_CMD_EEPROM
 #define CONFIG_CMD_IRQ
-#define CONFIG_CMD_MISC
 
 
 #if 0
@@ -81,7 +70,6 @@
 #define CONFIG_PREBOOT
 
 #define	CONFIG_SYS_LONGHELP				/* undef to save memory		*/
-#define	CONFIG_SYS_PROMPT		"pati=> "		/* Monitor Command Prompt	*/
 #if defined(CONFIG_CMD_KGDB)
 #define	CONFIG_SYS_CBSIZE		1024		/* Console I/O Buffer Size	*/
 #else

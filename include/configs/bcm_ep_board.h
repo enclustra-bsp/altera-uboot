@@ -11,7 +11,6 @@
 
 #define CONFIG_SKIP_LOWLEVEL_INIT
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 /*
  * Memory configuration
@@ -34,9 +33,6 @@
 
 /* Some commands use this as the default load address */
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_SYS_SDRAM_BASE
-
-/* No mtest functions as recommended */
-#undef CONFIG_CMD_MEMORY
 
 /*
  * This is the initial SP which is used only briefly for relocating the u-boot
@@ -85,8 +81,6 @@
 #define CONFIG_MX_CYCLIC
 
 /* Commands */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_FAT

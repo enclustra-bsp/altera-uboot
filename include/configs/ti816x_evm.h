@@ -24,15 +24,12 @@
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (32 * 1024))
 #define CONFIG_SYS_LONGHELP		/* undef save memory */
 #define CONFIG_SYS_HUSH_PARSER
-#define CONFIG_SYS_PROMPT		"u-boot/ti816x# "
 #define CONFIG_MACH_TYPE		MACH_TYPE_TI8168EVM
 
 #define CONFIG_OF_LIBFDT
 #define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_INITRD_TAG		/* required for ramdisk support */
-
-#include <config_cmd_default.h>		/* u-boot default commands */
 
 #define CONFIG_VERSION_VARIABLE
 #define CONFIG_DISPLAY_CPUINFO
@@ -61,7 +58,6 @@
 #define CONFIG_SYS_LOAD_ADDR		0x81000000 /* Default load address */
 
 #define CONFIG_CMD_ASKEN
-#define CONFIG_CMD_ECHO
 #define CONFIG_OMAP_GPIO
 #define CONFIG_MMC
 #define CONFIG_GENERIC_MMC

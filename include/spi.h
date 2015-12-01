@@ -54,7 +54,7 @@
 /* Header byte that marks the start of the message */
 #define SPI_PREAMBLE_END_BYTE	0xec
 
-#define SPI_DEFAULT_WORDLEN 8
+#define SPI_DEFAULT_WORDLEN	8
 
 #ifdef CONFIG_DM_SPI
 /* TODO(sjg@chromium.org): Remove this and use max_hz from struct spi_slave */
@@ -88,7 +88,7 @@ struct dm_spi_slave_platdata {
  * struct spi_slave - Representation of a SPI slave
  *
  * For driver model this is the per-child data used by the SPI bus. It can
- * be accessed using dev_get_parentdata() on the slave device. The SPI uclass
+ * be accessed using dev_get_parent_priv() on the slave device. The SPI uclass
  * sets uip per_child_auto_alloc_size to sizeof(struct spi_slave), and the
  * driver should not override it. Two platform data fields (max_hz and mode)
  * are copied into this structure to provide an initial value. This allows
@@ -271,6 +271,9 @@ int spi_set_wordlen(struct spi_slave *slave, unsigned int wordlen);
  */
 int  spi_xfer(struct spi_slave *slave, unsigned int bitlen, const void *dout,
 		void *din, unsigned long flags);
+
+/* Copy memory mapped data */
+void spi_flash_copy_mmap(void *data, void *offset, size_t len);
 
 /**
  * Determine if a SPI chipselect is valid.

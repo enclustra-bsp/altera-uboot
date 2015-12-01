@@ -28,7 +28,6 @@
 #define CONFIG_OMAP3_RX51		/* working with RX51 */
 #define CONFIG_SYS_L2CACHE_OFF		/* pretend there is no L2 CACHE */
 #define CONFIG_OMAP_COMMON
-#define CONFIG_SYS_GENERIC_BOARD
 /* Common ARM Erratas */
 #define CONFIG_ARM_ERRATA_454179
 #define CONFIG_ARM_ERRATA_430973
@@ -108,8 +107,8 @@
 #define CONFIG_DOS_PARTITION
 
 /* USB */
-#define CONFIG_MUSB_UDC
-#define CONFIG_MUSB_HDC
+#define CONFIG_USB_MUSB_UDC
+#define CONFIG_USB_MUSB_HCD
 #define CONFIG_USB_OMAP3
 #define CONFIG_TWL4030_USB
 
@@ -124,8 +123,6 @@
 #define CONFIG_SYS_NO_FLASH
 
 /* commands to include */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_EXT2			/* EXT2 Support */
 #define CONFIG_CMD_EXT4			/* EXT4 Support */
 #define CONFIG_CMD_FAT			/* FAT support */
@@ -151,13 +148,6 @@
 #endif
 
 #endif
-
-/* commands not needed from config_cmd_default.h */
-#undef CONFIG_CMD_FPGA			/* FPGA configuration Support */
-#undef CONFIG_CMD_IMI			/* iminfo */
-#undef CONFIG_CMD_NFS			/* NFS support */
-#undef CONFIG_CMD_SAVEENV		/* saveenv */
-#undef CONFIG_CMD_SETGETDCR		/* DCR support on 4xx */
 
 #define CONFIG_OMAP3_SPI
 #define CONFIG_SYS_I2C
@@ -405,7 +395,6 @@ int rx51_kp_getc(struct stdio_dev *sdev);
 #define CONFIG_SYS_LONGHELP			/* undef to save memory */
 #define CONFIG_SYS_HUSH_PARSER			/* use "hush" command parser */
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
-#define CONFIG_SYS_PROMPT		"Nokia RX-51 # "
 #define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
 /* Print Buffer Size */
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \

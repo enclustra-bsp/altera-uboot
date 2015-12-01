@@ -13,7 +13,6 @@
 /* CPU, chip, mach, etc */
 #define CONFIG_KONA
 #define CONFIG_SKIP_LOWLEVEL_INIT
-#define CONFIG_SYS_GENERIC_BOARD
 
 /*
  * Memory configuration
@@ -71,7 +70,6 @@
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_SYS_SDRAM_BASE
 
 /* No mtest functions as recommended */
-#undef CONFIG_CMD_MEMORY
 
 /*
  * This is the initial SP which is used only briefly for relocating the u-boot
@@ -109,6 +107,7 @@
  * for example.
  */
 #define CONFIG_DOS_PARTITION
+#define CONFIG_EFI_PARTITION
 
 /* version string, parser, etc */
 #define CONFIG_VERSION_VARIABLE
@@ -124,7 +123,6 @@
 #define CONFIG_BOOTCOMMAND		""
 
 /* Commands */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_CACHE
 #define CONFIG_CMD_FAT
@@ -134,6 +132,43 @@
 #define CONFIG_CMD_BOOTZ
 #define CONFIG_FAT_WRITE
 
-#undef CONFIG_CMD_NFS
+
+/* Fastboot and USB OTG */
+#define CONFIG_USB_FUNCTION_FASTBOOT
+#define CONFIG_CMD_FASTBOOT
+#define CONFIG_FASTBOOT_FLASH
+#define CONFIG_FASTBOOT_FLASH_MMC_DEV	0
+#define CONFIG_SYS_CACHELINE_SIZE	64
+#define CONFIG_FASTBOOT_BUF_SIZE	(CONFIG_SYS_SDRAM_SIZE - SZ_1M)
+#define CONFIG_FASTBOOT_BUF_ADDR	CONFIG_SYS_SDRAM_BASE
+#define CONFIG_USB_GADGET
+#define CONFIG_USB_GADGET_DUALSPEED
+#define CONFIG_USB_GADGET_VBUS_DRAW	0
+#define CONFIG_USB_GADGET_S3C_UDC_OTG
+#define CONFIG_USB_GADGET_BCM_UDC_OTG_PHY
+#define CONFIG_USB_GADGET_DOWNLOAD
+#define CONFIG_USBID_ADDR		0x34052c46
+#define CONFIG_G_DNL_VENDOR_NUM		0x18d1	/* google */
+#define CONFIG_G_DNL_PRODUCT_NUM	0x0d02	/* nexus one */
+#define CONFIG_G_DNL_MANUFACTURER	"Broadcom Corporation"
+
+/* Fastboot and USB OTG */
+#define CONFIG_USB_FUNCTION_FASTBOOT
+#define CONFIG_CMD_FASTBOOT
+#define CONFIG_FASTBOOT_FLASH
+#define CONFIG_FASTBOOT_FLASH_MMC_DEV	0
+#define CONFIG_SYS_CACHELINE_SIZE	64
+#define CONFIG_USB_FASTBOOT_BUF_SIZE	(CONFIG_SYS_SDRAM_SIZE - SZ_1M)
+#define CONFIG_USB_FASTBOOT_BUF_ADDR	CONFIG_SYS_SDRAM_BASE
+#define CONFIG_USB_GADGET
+#define CONFIG_USB_GADGET_DUALSPEED
+#define CONFIG_USB_GADGET_VBUS_DRAW	0
+#define CONFIG_USB_GADGET_S3C_UDC_OTG
+#define CONFIG_USB_GADGET_BCM_UDC_OTG_PHY
+#define CONFIG_USB_GADGET_DOWNLOAD
+#define CONFIG_USBID_ADDR		0x34052c46
+#define CONFIG_G_DNL_VENDOR_NUM		0x18d1	/* google */
+#define CONFIG_G_DNL_PRODUCT_NUM	0x0d02	/* nexus one */
+#define CONFIG_G_DNL_MANUFACTURER	"Broadcom Corporation"
 
 #endif /* __BCM28155_AP_H */

@@ -21,7 +21,6 @@
 #define CONFIG_PLU405		1	/* ...on a PLU405 board		*/
 
 #define	CONFIG_SYS_TEXT_BASE	0xFFF80000
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_DISPLAY_BOARDINFO
 
 #define CONFIG_BOARD_EARLY_INIT_F 1	/* call board_early_init_f()	*/
@@ -61,14 +60,11 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_PCI
 #define CONFIG_CMD_IRQ
 #define CONFIG_CMD_IDE
 #define CONFIG_CMD_FAT
-#define CONFIG_CMD_ELF
 #define CONFIG_CMD_NAND
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_I2C

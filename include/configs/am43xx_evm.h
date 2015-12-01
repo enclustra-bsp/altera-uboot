@@ -12,7 +12,6 @@
 #define CONFIG_AM43XX
 
 #define CONFIG_CMD_FAT
-#define CONFIG_CMD_SAVEENV
 
 #define CONFIG_BOARD_LATE_INIT
 #define CONFIG_ARCH_CPU_INIT
@@ -24,9 +23,13 @@
 
 /* NS16550 Configuration */
 #define CONFIG_SYS_NS16550
+#if defined(CONFIG_SPL_BUILD) || !defined(CONFIG_DM_SERIAL)
 #define CONFIG_SYS_NS16550_SERIAL
-#define CONFIG_SYS_NS16550_REG_SIZE	(-4)
 #define CONFIG_SYS_NS16550_CLK		48000000
+#define CONFIG_SYS_NS16550_REG_SIZE	(-4)
+#else
+#define CONFIG_OMAP_SERIAL
+#endif
 
 /* I2C Configuration */
 #define CONFIG_CMD_EEPROM
@@ -42,7 +45,16 @@
 #define CONFIG_POWER_TPS62362
 
 /* SPL defines. */
+#ifdef CONFIG_SPL_USB_HOST_SUPPORT
+/*
+ * For USB host boot, ROM uses DMA for copying MLO from USB storage
+ * and ARM internal ram is not accessible for DMA, so SPL text base
+ * should be in OCMC ram
+ */
 #define CONFIG_SPL_TEXT_BASE		0x40300350
+#else
+#define CONFIG_SPL_TEXT_BASE		0x402F4000
+#endif
 #define CONFIG_SPL_MAX_SIZE		(220 << 10)	/* 220KB */
 #define CONFIG_SYS_SPL_ARGS_ADDR	(CONFIG_SYS_SDRAM_BASE + \
 					 (128 << 20))
@@ -72,7 +84,7 @@
 #endif
 
 /* Now bring in the rest of the common code. */
-#include <configs/ti_armv7_common.h>
+#include <configs/ti_armv7_omap.h>
 
 /* Always 64 KiB env size */
 #define CONFIG_ENV_SIZE			(64 << 10)
@@ -95,19 +107,21 @@
 #define CONFIG_SPL_LDSCRIPT		"$(CPUDIR)/omap-common/u-boot-spl.lds"
 
 /* SPL USB Support */
+#ifdef CONFIG_SPL_USB_HOST_SUPPORT
 #define CONFIG_SPL_USB_SUPPORT
-#define CONFIG_SPL_USB_HOST_SUPPORT
 #define CONFIG_SYS_USB_FAT_BOOT_PARTITION		1
 
 #define CONFIG_CMD_USB
 #define CONFIG_USB_HOST
 #define CONFIG_USB_XHCI
+#define CONFIG_USB_XHCI_DWC3
 #define CONFIG_USB_XHCI_OMAP
 #define CONFIG_USB_STORAGE
 #define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS 2
 
 #define CONFIG_OMAP_USB_PHY
 #define CONFIG_AM437X_USB2PHY2_HOST
+#endif
 
 /* USB GADGET */
 #if !defined(CONFIG_SPL_BUILD) || \
@@ -118,7 +132,7 @@
 #define CONFIG_USB_DWC3_GADGET
 
 #define CONFIG_USB_GADGET
-#define CONFIG_USBDOWNLOAD_GADGET
+#define CONFIG_USB_GADGET_DOWNLOAD
 #define CONFIG_USB_GADGET_VBUS_DRAW 2
 #define CONFIG_G_DNL_MANUFACTURER "Texas Instruments"
 #define CONFIG_G_DNL_VENDOR_NUM 0x0403
@@ -126,9 +140,17 @@
 #define CONFIG_USB_GADGET_DUALSPEED
 #endif
 
+/*
+ * Disable MMC DM for SPL build and can be re-enabled after adding
+ * DM support in SPL
+ */
+#ifdef CONFIG_SPL_BUILD
+#undef CONFIG_DM_MMC
+#endif
+
 #ifndef CONFIG_SPL_BUILD
 /* USB Device Firmware Update support */
-#define CONFIG_DFU_FUNCTION
+#define CONFIG_USB_FUNCTION_DFU
 #define CONFIG_DFU_RAM
 #define CONFIG_CMD_DFU
 
@@ -191,12 +213,10 @@
 /* SPI */
 #undef CONFIG_OMAP3_SPI
 #define CONFIG_TI_QSPI
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_MACRONIX
 #define CONFIG_CMD_SF
 #define CONFIG_CMD_SPI
 #define CONFIG_TI_SPI_MMAP
-#define CONFIG_SPI_FLASH_BAR
 #define CONFIG_QSPI_SEL_GPIO                   48
 #define CONFIG_SF_DEFAULT_SPEED                48000000
 #define CONFIG_DEFAULT_SPI_MODE                SPI_MODE_3
@@ -208,6 +228,7 @@
 #ifndef CONFIG_SPL_BUILD
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	DEFAULT_LINUX_BOOT_ENV \
+	DEFAULT_MMC_TI_ARGS \
 	"fdtfile=undefined\0" \
 	"bootpart=0:2\0" \
 	"bootdir=/boot\0" \
@@ -217,18 +238,11 @@
 		"uuid_disk=${uuid_gpt_disk};" \
 		"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}\0" \
 	"optargs=\0" \
-	"mmcdev=0\0" \
-	"mmcroot=/dev/mmcblk0p2 rw\0" \
-	"mmcrootfstype=ext4 rootwait\0" \
 	"usbroot=/dev/sda2 rw\0" \
 	"usbrootfstype=ext4 rootwait\0" \
 	"usbdev=0\0" \
 	"ramroot=/dev/ram0 rw\0" \
 	"ramrootfstype=ext2\0" \
-	"mmcargs=setenv bootargs console=${console} " \
-		"${optargs} " \
-		"root=${mmcroot} " \
-		"rootfstype=${mmcrootfstype}\0" \
 	"usbargs=setenv bootargs console=${console} " \
 		"${optargs} " \
 		"root=${usbroot} " \
@@ -260,7 +274,7 @@
 			"if run loadimage; then " \
 				"run loadfdt; " \
 				"echo Booting from mmc${mmcdev} ...; " \
-				"run mmcargs; " \
+				"run args_mmc; " \
 				"bootz ${loadaddr} - ${fdtaddr}; " \
 			"fi;" \
 		"fi;\0" \
@@ -284,6 +298,8 @@
 				"bootz ${loadaddr} - ${fdtaddr}; " \
 			"fi;" \
 		"fi\0" \
+		"fi;" \
+		"usb stop ${usbdev};\0" \
 	"findfdt="\
 		"if test $board_name = AM43EPOS; then " \
 			"setenv fdtfile am43x-epos-evm.dtb; fi; " \
@@ -307,11 +323,11 @@
 
 #endif
 
+#ifndef CONFIG_SPL_BUILD
 /* CPSW Ethernet */
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_PING
 #define CONFIG_CMD_MII
-#define CONFIG_DRIVER_TI_CPSW
 #define CONFIG_MII
 #define CONFIG_BOOTP_DEFAULT
 #define CONFIG_BOOTP_DNS
@@ -321,13 +337,21 @@
 #define CONFIG_BOOTP_SUBNETMASK
 #define CONFIG_NET_RETRY_COUNT		10
 #define CONFIG_PHY_GIGE
+#endif
+
+#define CONFIG_DRIVER_TI_CPSW
 #define CONFIG_PHYLIB
+#define PHY_ANEG_TIMEOUT	8000 /* PHY needs longer aneg time at 1G */
 
 #define CONFIG_SPL_ENV_SUPPORT
 #define CONFIG_SPL_NET_VCI_STRING	"AM43xx U-Boot SPL"
 
-#define CONFIG_SPL_ETH_SUPPORT
+#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_ETH_SUPPORT)
+#undef CONFIG_ENV_IS_IN_FAT
+#define CONFIG_ENV_IS_NOWHERE
 #define CONFIG_SPL_NET_SUPPORT
+#endif
+
 #define CONFIG_SYS_RX_ETH_BUFFER	64
 
 /* NAND support */

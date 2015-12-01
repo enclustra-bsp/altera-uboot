@@ -26,6 +26,7 @@
 #include <command.h>
 #include <dm.h>
 #include <errno.h>
+#include <memalign.h>
 #include <asm/processor.h>
 #include <asm/unaligned.h>
 #include <linux/ctype.h>
@@ -229,7 +230,7 @@ int legacy_hub_port_reset(struct usb_device *dev, int port,
 #ifdef CONFIG_DM_USB
 int hub_port_reset(struct udevice *dev, int port, unsigned short *portstat)
 {
-	struct usb_device *udev = dev_get_parentdata(dev);
+	struct usb_device *udev = dev_get_parent_priv(dev);
 
 	return legacy_hub_port_reset(udev, port, portstat);
 }
@@ -489,11 +490,15 @@ static int usb_hub_configure(struct usb_device *dev)
 			portstatus = le16_to_cpu(portsts->wPortStatus);
 			portchange = le16_to_cpu(portsts->wPortChange);
 
-			if ((portchange & USB_PORT_STAT_C_CONNECTION) ==
-				(portstatus & USB_PORT_STAT_CONNECTION))
+			/* No connection change happened, wait a bit more. */
+			if (!(portchange & USB_PORT_STAT_C_CONNECTION))
+				continue;
+
+			/* Test if the connection came up, and if so, exit. */
+			if (portstatus & USB_PORT_STAT_CONNECTION)
 				break;
 
-		} while (get_timer(start) < CONFIG_SYS_HZ * 10);
+		} while (get_timer(start) < CONFIG_SYS_HZ * 1);
 
 		if (ret < 0)
 			continue;
@@ -605,7 +610,7 @@ int usb_hub_probe(struct usb_device *dev, int ifnum)
 #ifdef CONFIG_DM_USB
 int usb_hub_scan(struct udevice *hub)
 {
-	struct usb_device *udev = dev_get_parentdata(hub);
+	struct usb_device *udev = dev_get_parent_priv(hub);
 
 	return usb_hub_configure(udev);
 }
@@ -652,6 +657,6 @@ static const struct usb_device_id hub_id_table[] = {
 	{ }	/* Terminating entry */
 };
 
-USB_DEVICE(usb_generic_hub, hub_id_table);
+U_BOOT_USB_DEVICE(usb_generic_hub, hub_id_table);
 
 #endif

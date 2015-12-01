@@ -37,7 +37,6 @@
 #define CONFIG_KW88F6281	1	/* SOC Name */
 #define CONFIG_MACH_TYPE	MACH_TYPE_DREAMPLUG
 #define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
-#define CONFIG_SYS_GENERIC_BOARD
 
 /* Add target to build it automatically upon "make" */
 #define CONFIG_BUILD_TARGET     "u-boot.kwb"
@@ -46,7 +45,6 @@
  * Commands configuration
  */
 #define CONFIG_SYS_NO_FLASH		/* Declare no flash (NOR/SPI) */
-#include <config_cmd_default.h>
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_ENV
 #define CONFIG_CMD_FAT
@@ -73,7 +71,6 @@
 #endif
 
 #ifdef CONFIG_CMD_SF
-#define CONFIG_SPI_FLASH		1
 #define CONFIG_HARD_SPI			1
 #define CONFIG_KIRKWOOD_SPI		1
 #define CONFIG_SPI_FLASH_MACRONIX	1

@@ -153,10 +153,10 @@ void set_fdt(void)
 {
 	switch (gd->bd->bi_arch_number) {
 	case MACH_TYPE_IGEP0020:
-		setenv("dtbfile", "omap3-igep0020.dtb");
+		setenv("fdtfile", "omap3-igep0020.dtb");
 		break;
 	case MACH_TYPE_IGEP0030:
-		setenv("dtbfile", "omap3-igep0030.dtb");
+		setenv("fdtfile", "omap3-igep0030.dtb");
 		break;
 	}
 }
@@ -171,7 +171,7 @@ int misc_init_r(void)
 
 	setup_net_chip();
 
-	dieid_num_r();
+	omap_die_id_display();
 
 	set_fdt();
 

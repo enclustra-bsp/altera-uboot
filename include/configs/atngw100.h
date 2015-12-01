@@ -80,8 +80,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_ASKENV
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_EXT2
@@ -91,10 +89,6 @@
 #define CONFIG_CMD_SF
 #define CONFIG_CMD_SPI
 
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_SETGETDCR
-#undef CONFIG_CMD_SOURCE
-#undef CONFIG_CMD_XIMG
 
 #define CONFIG_ATMEL_USART
 #define CONFIG_MACB
@@ -106,7 +100,6 @@
 #define CONFIG_GENERIC_MMC
 #define CONFIG_ATMEL_SPI
 
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_ATMEL
 
 #define CONFIG_SYS_DCACHE_LINESZ		32
@@ -142,7 +135,6 @@
 #define CONFIG_SYS_BOOTPARAMS_LEN		(16 * 1024)
 
 /* Other configuration settings that shouldn't have to change all that often */
-#define CONFIG_SYS_PROMPT			"U-Boot> "
 #define CONFIG_SYS_CBSIZE			256
 #define CONFIG_SYS_MAXARGS			16
 #define CONFIG_SYS_PBSIZE			(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)

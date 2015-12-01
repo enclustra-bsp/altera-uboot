@@ -14,19 +14,17 @@
 #define CONFIG_MX53
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
+#define CONFIG_SYS_FSL_CLK
 #define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_OF_LIBFDT
-#define CONFIG_SYS_GENERIC_BOARD
 #define CONFIG_MXC_GPIO
 
 #include <asm/arch/imx-regs.h>
-#include <config_cmd_default.h>
 
 #include <config_distro_defaults.h>
 
 /* U-Boot commands */
 #define CONFIG_CMD_MEMTEST
-#undef CONFIG_CMD_IMLS
 
 /* U-Boot environment */
 #define CONFIG_ENV_OVERWRITE
@@ -69,6 +67,8 @@
 #define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
 
 /* Fuse */
 #define CONFIG_CMD_FUSE

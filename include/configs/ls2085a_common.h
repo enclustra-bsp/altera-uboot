@@ -7,11 +7,12 @@
 #ifndef __LS2_COMMON_H
 #define __LS2_COMMON_H
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_REMAKE_ELF
+#define CONFIG_FSL_LAYERSCAPE
 #define CONFIG_FSL_LSCH3
 #define CONFIG_LS2085A
+#define CONFIG_MP
 #define CONFIG_GICV3
 #define CONFIG_FSL_TZPC_BP147
 
@@ -19,10 +20,14 @@
 #define CONFIG_ARM_ERRATA_828024
 #define CONFIG_ARM_ERRATA_826974
 
-#include <asm/arch-fsl-lsch3/config.h>
+#include <asm/arch/ls2085a_stream_id.h>
+#include <asm/arch/config.h>
 #if (defined(CONFIG_SYS_FSL_SRDS_1) || defined(CONFIG_SYS_FSL_SRDS_2))
 #define	CONFIG_SYS_HAS_SERDES
 #endif
+
+/* Link Definitions */
+#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_FSL_OCRAM_BASE + 0xfff0)
 
 /* We need architecture specific misc initializations */
 #define CONFIG_ARCH_MISC_INIT
@@ -46,6 +51,7 @@
 /* Flat Device Tree Definitions */
 #define CONFIG_OF_LIBFDT
 #define CONFIG_OF_BOARD_SETUP
+#define CONFIG_OF_STDOUT_VIA_ALIAS
 
 /* new uImage format support */
 #define CONFIG_FIT
@@ -61,6 +67,7 @@
 
 #define CONFIG_SYS_FSL_DDR_INTLV_256B	/* force 256 byte interleaving */
 
+#define CONFIG_VERY_BIG_RAM
 #define CONFIG_SYS_DDR_SDRAM_BASE	0x80000000UL
 #define CONFIG_SYS_FSL_DDR_SDRAM_BASE_PHY	0
 #define CONFIG_SYS_SDRAM_BASE		CONFIG_SYS_DDR_SDRAM_BASE
@@ -96,6 +103,8 @@
 #define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
 #define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
 #define CONFIG_SYS_I2C_MXC_I2C4		/* enable I2C bus 4 */
 
@@ -163,21 +172,30 @@ unsigned long long get_qixis_addr(void);
 #define CONFIG_SYS_NAND_BASE_PHYS		0x30000000
 
 /* Debug Server firmware */
-#define CONFIG_SYS_DEBUG_SERVER_DRAM_BLOCK_MIN_SIZE	(512UL * 1024 * 1024)
+#define CONFIG_FSL_DEBUG_SERVER
 /* 2 sec timeout */
 #define CONFIG_SYS_DEBUG_SERVER_TIMEOUT			(2 * 1000 * 1000)
 
 /* MC firmware */
 #define CONFIG_FSL_MC_ENET
-#define CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE	(512UL * 1024 * 1024)
 /* TODO Actual DPL max length needs to be confirmed with the MC FW team */
 #define CONFIG_SYS_LS_MC_DPC_MAX_LENGTH	    0x20000
 #define CONFIG_SYS_LS_MC_DRAM_DPC_OFFSET    0x00F00000
 #define CONFIG_SYS_LS_MC_DPL_MAX_LENGTH	    0x20000
 #define CONFIG_SYS_LS_MC_DRAM_DPL_OFFSET    0x00F20000
+#define CONFIG_SYS_LS_MC_AIOP_IMG_MAX_LENGTH	0x200000
+#define CONFIG_SYS_LS_MC_DRAM_AIOP_IMG_OFFSET	0x07000000
 
-/* Carve out a DDR region which will not be used by u-boot/Linux */
+/*
+ * Carve out a DDR region which will not be used by u-boot/Linux
+ *
+ * It will be used by MC and Debug Server. The MC region must be
+ * 512MB aligned, so the min size to hide is 512MB.
+ */
 #if defined(CONFIG_FSL_MC_ENET) || defined(CONFIG_FSL_DEBUG_SERVER)
+#define CONFIG_SYS_DEBUG_SERVER_DRAM_BLOCK_MIN_SIZE	(256UL * 1024 * 1024)
+#define CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE		(256UL * 1024 * 1024)
+#define CONFIG_SYS_MEM_TOP_HIDE_MIN			(512UL * 1024 * 1024)
 #define CONFIG_SYS_MEM_TOP_HIDE		get_dram_size_to_hide()
 #endif
 
@@ -186,7 +204,8 @@ unsigned long long get_qixis_addr(void);
 #define CONFIG_PCIE2		/* PCIE controler 2 */
 #define CONFIG_PCIE3		/* PCIE controler 3 */
 #define CONFIG_PCIE4		/* PCIE controler 4 */
-#define FSL_PCIE_COMPAT "fsl,20851a-pcie"
+#define CONFIG_PCIE_LAYERSCAPE	/* Use common FSL Layerscape PCIe code */
+#define FSL_PCIE_COMPAT "fsl,ls2085a-pcie"
 
 #define CONFIG_SYS_PCI_64BIT
 
@@ -205,20 +224,11 @@ unsigned long long get_qixis_addr(void);
 
 /* Command line configuration */
 #define CONFIG_CMD_CACHE
-#define CONFIG_CMD_BDI
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_ENV
-#define CONFIG_CMD_FLASH
-#define CONFIG_CMD_IMI
-#define CONFIG_CMD_LOADB
-#define CONFIG_CMD_MEMORY
+#define CONFIG_CMD_GREPENV
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
-#define CONFIG_CMD_SAVEENV
-#define CONFIG_CMD_RUN
-#define CONFIG_CMD_BOOTD
-#define CONFIG_CMD_ECHO
-#define CONFIG_CMD_SOURCE
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LOAD_ADDR	(CONFIG_SYS_DDR_SDRAM_BASE + 0x10000000)
@@ -246,20 +256,19 @@ unsigned long long get_qixis_addr(void);
 	"initrd_high=0xffffffffffffffff\0"	\
 	"kernel_start=0x581200000\0"		\
 	"kernel_load=0xa0000000\0"		\
-	"kernel_size=0x1000000\0"		\
+	"kernel_size=0x2800000\0"		\
 	"console=ttyAMA0,38400n8\0"
 
-#define CONFIG_BOOTARGS		"console=ttyS1,115200 root=/dev/ram0 " \
-				"earlycon=uart8250,mmio,0x21c0600,115200 " \
-				"default_hugepagesz=2m hugepagesz=2m " \
-				"hugepages=16"
+#define CONFIG_BOOTARGS		"console=ttyS0,115200 root=/dev/ram0 " \
+				"earlycon=uart8250,mmio,0x21c0500,115200 " \
+				"ramdisk_size=0x2000000 default_hugepagesz=2m" \
+				" hugepagesz=2m hugepages=16"
 #define CONFIG_BOOTCOMMAND		"cp.b $kernel_start $kernel_load "     \
 					"$kernel_size && bootm $kernel_load"
 #define CONFIG_BOOTDELAY		10
 
 /* Monitor Command Prompt */
 #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
-#define CONFIG_SYS_PROMPT		"=> "
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
 					sizeof(CONFIG_SYS_PROMPT) + 16)
 #define CONFIG_SYS_HUSH_PARSER
@@ -298,5 +307,8 @@ unsigned long get_dram_size_to_hide(void);
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x00100000
 #define CONFIG_SYS_SPL_MALLOC_START	0x80200000
 #define CONFIG_SYS_MONITOR_LEN		(512 * 1024)
+
+#define CONFIG_SYS_BOOTM_LEN   (64 << 20)      /* Increase max gunzip size */
+
 
 #endif /* __LS2_COMMON_H */

@@ -164,7 +164,7 @@ int board_eth_init(bd_t *bis)
 	struct mii_dev *bus;
 	struct phy_device *phydev;
 
-	int ret = enable_fec_anatop_clock(ENET_25MHZ);
+	int ret = enable_fec_anatop_clock(0, ENET_25MHZ);
 	if (ret)
 		return ret;
 
@@ -536,7 +536,7 @@ static const struct mx6_mmdc_calibration mx6dl_1g_mmcd_calib = {
 	.p0_mpdgctrl0 =    0x023C0224,
 	.p0_mpdgctrl1 =    0x02000220,
 	.p1_mpdgctrl0 =    0x02200220,
-	.p1_mpdgctrl1 =    0x02000220,
+	.p1_mpdgctrl1 =    0x02040208,
 	.p0_mprddlctl =    0x44444846,
 	.p1_mprddlctl =    0x4042463C,
 	.p0_mpwrdlctl =    0x32343032,
@@ -615,6 +615,7 @@ static void spl_dram_init(int width)
 		.bi_on = 1,	/* Bank interleaving enabled */
 		.sde_to_rst = 0x10,	/* 14 cycles, 200us (JEDEC default) */
 		.rst_to_cke = 0x23,	/* 33 cycles, 500us (JEDEC default) */
+		.ddr_type = DDR_TYPE_DDR3,
 	};
 
 	if (is_cpu_type(MXC_CPU_MX6D) || is_cpu_type(MXC_CPU_MX6Q))
@@ -627,7 +628,7 @@ static void spl_dram_init(int width)
 	else if (is_cpu_type(MXC_CPU_MX6Q))
 		mx6_dram_cfg(&sysinfo, &mx6q_2g_mmcd_calib, &mem_ddr_4g);
 	else if (is_cpu_type(MXC_CPU_MX6DL))
-		mx6_dram_cfg(&sysinfo, &mx6q_1g_mmcd_calib, &mem_ddr_2g);
+		mx6_dram_cfg(&sysinfo, &mx6dl_1g_mmcd_calib, &mem_ddr_2g);
 	else if (is_cpu_type(MXC_CPU_MX6SOLO))
 		mx6_dram_cfg(&sysinfo, &mx6dl_512m_mmcd_calib, &mem_ddr_2g);
 }

@@ -11,6 +11,7 @@
 #include <dm.h>
 #include <errno.h>
 #include <malloc.h>
+#include <memalign.h>
 #include <stdio_dev.h>
 #include <asm/byteorder.h>
 
@@ -460,10 +461,12 @@ static int usb_kbd_probe(struct usb_device *dev, unsigned int ifnum)
 	/* We found a USB Keyboard, install it. */
 	usb_set_protocol(dev, iface->desc.bInterfaceNumber, 0);
 
+	debug("USB KBD: found set idle...\n");
 #if !defined(CONFIG_SYS_USB_EVENT_POLL_VIA_CONTROL_EP) && \
     !defined(CONFIG_SYS_USB_EVENT_POLL_VIA_INT_QUEUE)
-	debug("USB KBD: found set idle...\n");
 	usb_set_idle(dev, iface->desc.bInterfaceNumber, REPEAT_RATE / 4, 0);
+#else
+	usb_set_idle(dev, iface->desc.bInterfaceNumber, 0, 0);
 #endif
 
 	debug("USB KBD: enable interrupt pipe...\n");
@@ -538,8 +541,8 @@ int drv_usb_kbd_init(void)
 	debug("%s: Probing for keyboard\n", __func__);
 #ifdef CONFIG_DM_USB
 	/*
-	 * TODO: We should add USB_DEVICE() declarations to each USB ethernet
-	 * driver and then most of this file can be removed.
+	 * TODO: We should add U_BOOT_USB_DEVICE() declarations to each USB
+	 * keyboard driver and then most of this file can be removed.
 	 */
 	struct udevice *bus;
 	struct uclass *uc;

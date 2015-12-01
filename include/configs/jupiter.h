@@ -15,6 +15,7 @@
 
 #define CONFIG_MPC5200		1	/* This is an MPC5200 CPU */
 #define CONFIG_JUPITER		1	/* ... on Jupiter board */
+#define CONFIG_DISPLAY_BOARDINFO
 
 /*
  * Valid values for CONFIG_SYS_TEXT_BASE are:
@@ -85,9 +86,6 @@
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
-#define CONFIG_CMD_NFS
 #define CONFIG_CMD_SNTP
 
 #if defined(CONFIG_PCI)

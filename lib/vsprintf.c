@@ -166,6 +166,25 @@ unsigned long long simple_strtoull(const char *cp, char **endp,
 	return result;
 }
 
+long trailing_strtoln(const char *str, const char *end)
+{
+	const char *p;
+
+	if (!end)
+		end = str + strlen(str);
+	for (p = end - 1; p > str; p--) {
+		if (!isdigit(*p))
+			return simple_strtoul(p + 1, NULL, 10);
+	}
+
+	return -1;
+}
+
+long trailing_strtol(const char *str)
+{
+	return trailing_strtoln(str, NULL);
+}
+
 /* we use this so that we can do without the ctype library */
 #define is_digit(c)	((c) >= '0' && (c) <= '9')
 
@@ -908,4 +927,20 @@ void print_grouped_ull(unsigned long long int_val, int digits)
 		printf("%.*s", grab, s);
 		grab = 3;
 	}
+}
+
+bool str2off(const char *p, loff_t *num)
+{
+	char *endptr;
+
+	*num = simple_strtoull(p, &endptr, 16);
+	return *p != '\0' && *endptr == '\0';
+}
+
+bool str2long(const char *p, ulong *num)
+{
+	char *endptr;
+
+	*num = simple_strtoul(p, &endptr, 16);
+	return *p != '\0' && *endptr == '\0';
 }

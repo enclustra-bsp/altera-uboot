@@ -18,6 +18,7 @@
 #define CONFIG_DISPLAY_CPUINFO
 #define CONFIG_DISPLAY_BOARDINFO
 
+#define CONFIG_SYS_FSL_CLK
 #define CONFIG_SYS_TEXT_BASE	0x97800000
 
 #include <asm/arch/imx-regs.h>
@@ -26,7 +27,6 @@
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_INITRD_TAG
 #define CONFIG_REVISION_TAG
-#define CONFIG_SYS_GENERIC_BOARD
 
 #define CONFIG_OF_LIBFDT
 
@@ -128,10 +128,7 @@
 /***********************************************************
  * Command definition
  ***********************************************************/
-
-#include <config_cmd_default.h>
 #define CONFIG_CMD_BOOTZ
-#undef CONFIG_CMD_IMLS
 
 #define CONFIG_CMD_DATE
 

@@ -13,7 +13,6 @@
 #ifndef _CONFIG_POGO_E02_H
 #define _CONFIG_POGO_E02_H
 
-#define CONFIG_SYS_GENERIC_BOARD
 
 /*
  * Machine type definition and ID
@@ -34,7 +33,6 @@
  */
 #define CONFIG_SYS_NO_FLASH		/* Declare no flash (NOR/SPI) */
 #define CONFIG_SYS_MVFS
-#include <config_cmd_default.h>
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_ENV
 #define CONFIG_CMD_MII
@@ -47,10 +45,6 @@
  * to enable certain macros
  */
 #include "mv-common.h"
-
-/* Remove or override few declarations from mv-common.h */
-#undef CONFIG_SYS_PROMPT	/* previously defined in mv-common.h */
-#define CONFIG_SYS_PROMPT	"PogoE02> "
 
 /*
  *  Environment variables configurations

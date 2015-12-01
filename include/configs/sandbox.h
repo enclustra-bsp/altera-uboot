@@ -81,7 +81,6 @@
 #define CONFIG_CMD_SF
 #define CONFIG_CMD_SF_TEST
 #define CONFIG_CMD_SPI
-#define CONFIG_SPI_FLASH
 #define CONFIG_SPI_FLASH_ATMEL
 #define CONFIG_SPI_FLASH_EON
 #define CONFIG_SPI_FLASH_GIGADEVICE
@@ -117,7 +116,6 @@
 #define CONFIG_SYS_NO_FLASH
 
 /* include default commands */
-#include <config_cmd_default.h>
 #include <config_distro_defaults.h>
 
 #define BOOT_TARGET_DEVICES(func) \
@@ -143,7 +141,6 @@
 #define CONFIG_IP_DEFRAG
 
 /* Can't boot elf images */
-#undef CONFIG_CMD_ELF
 
 #define CONFIG_CMD_HASH
 #define CONFIG_HASH_VERIFY
@@ -189,7 +186,8 @@
 
 #define SANDBOX_ETH_SETTINGS		"ethaddr=00:00:11:22:33:44\0" \
 					"eth1addr=00:00:11:22:33:45\0" \
-					"eth5addr=00:00:11:22:33:46\0" \
+					"eth3addr=00:00:11:22:33:46\0" \
+					"eth5addr=00:00:11:22:33:47\0" \
 					"ipaddr=1.2.3.4\0"
 
 #define MEM_LAYOUT_ENV_SETTINGS \

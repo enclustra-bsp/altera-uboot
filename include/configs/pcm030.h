@@ -50,15 +50,12 @@ Serial console configuration
 /*
  * Command line configuration.
  */
-#include <config_cmd_default.h>
-
 #define CONFIG_CMD_DATE
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_EEPROM
 #define CONFIG_CMD_I2C
 #define CONFIG_CMD_JFFS2
 #define CONFIG_CMD_MII
-#define CONFIG_CMD_NFS
 #define CONFIG_CMD_PCI
 
 #define	CONFIG_TIMESTAMP	1	/* Print image info with timestamp */
@@ -340,7 +337,6 @@ RTC configuration
  Miscellaneous configurable options
 -------------------------------------------------------------------------------*/
 #define CONFIG_SYS_LONGHELP	/* undef to save memory */
-#define CONFIG_SYS_PROMPT "uboot> " /* Monitor Command Prompt */
 
 #define CONFIG_CMDLINE_EDITING 1 /* add command line history */
 

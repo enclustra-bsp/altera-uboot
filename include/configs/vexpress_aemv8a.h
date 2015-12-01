@@ -8,10 +8,6 @@
 #ifndef __VEXPRESS_AEMV8A_H
 #define __VEXPRESS_AEMV8A_H
 
-/* We use generic board and device manager for v8 Versatile Express */
-#define CONFIG_SYS_GENERIC_BOARD
-#define CONFIG_DM
-
 #ifdef CONFIG_TARGET_VEXPRESS64_BASE_FVP
 #ifndef CONFIG_SEMIHOSTING
 #error CONFIG_TARGET_VEXPRESS64_BASE_FVP requires CONFIG_SEMIHOSTING
@@ -31,7 +27,8 @@
 #define CONFIG_BOOTP_VCI_STRING		"U-boot.armv8.vexpress_aemv8a"
 
 /* Link Definitions */
-#ifdef CONFIG_TARGET_VEXPRESS64_BASE_FVP
+#if defined(CONFIG_TARGET_VEXPRESS64_BASE_FVP) || \
+	defined(CONFIG_TARGET_VEXPRESS64_BASE_FVP_DRAM)
 /* ATF loads u-boot here for BASE_FVP model */
 #define CONFIG_SYS_TEXT_BASE		0x88000000
 #define CONFIG_SYS_INIT_SP_ADDR         (CONFIG_SYS_SDRAM_BASE + 0x03f00000)
@@ -41,6 +38,8 @@
 #else
 #error "Unknown board variant"
 #endif
+
+#define CONFIG_SYS_BOOTM_LEN (64 << 20)      /* Increase max gunzip size */
 
 /* Flat Device Tree Definitions */
 #define CONFIG_OF_LIBFDT
@@ -102,7 +101,8 @@
 #define GICR_BASE			(0x2f100000)
 #else
 
-#ifdef CONFIG_TARGET_VEXPRESS64_BASE_FVP
+#if defined(CONFIG_TARGET_VEXPRESS64_BASE_FVP) || \
+	defined(CONFIG_TARGET_VEXPRESS64_BASE_FVP_DRAM)
 #define GICD_BASE			(0x2f000000)
 #define GICC_BASE			(0x2c000000)
 #elif CONFIG_TARGET_VEXPRESS64_JUNO
@@ -114,7 +114,6 @@
 #endif /* !CONFIG_GICV3 */
 
 /* Size of malloc() pool */
-#define CONFIG_SYS_MALLOC_F_LEN		0x2000
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (8 << 20))
 
 /* Ethernet Configuration */
@@ -130,7 +129,6 @@
 #endif
 
 /* PL011 Serial Configuration */
-#define CONFIG_DM_SERIAL
 #define CONFIG_BAUDRATE			115200
 #define CONFIG_CONS_INDEX		0
 #define CONFIG_PL01X_SERIAL
@@ -145,22 +143,13 @@
 #define CONFIG_MENU
 /*#define CONFIG_MENU_SHOW*/
 #define CONFIG_CMD_CACHE
-#define CONFIG_CMD_BDI
 #define CONFIG_CMD_BOOTI
 #define CONFIG_CMD_UNZIP
 #define CONFIG_CMD_DHCP
 #define CONFIG_CMD_PXE
 #define CONFIG_CMD_ENV
-#define CONFIG_CMD_IMI
-#define CONFIG_CMD_LOADB
-#define CONFIG_CMD_MEMORY
 #define CONFIG_CMD_MII
 #define CONFIG_CMD_PING
-#define CONFIG_CMD_SAVEENV
-#define CONFIG_CMD_RUN
-#define CONFIG_CMD_BOOTD
-#define CONFIG_CMD_ECHO
-#define CONFIG_CMD_SOURCE
 #define CONFIG_CMD_FAT
 #define CONFIG_DOS_PARTITION
 
@@ -176,11 +165,13 @@
 #define CONFIG_SYS_LOAD_ADDR		(V2M_BASE + 0x10000000)
 
 /* Physical Memory Map */
-#define CONFIG_NR_DRAM_BANKS		1
+#define CONFIG_NR_DRAM_BANKS		2
 #define PHYS_SDRAM_1			(V2M_BASE)	/* SDRAM Bank #1 */
+#define PHYS_SDRAM_2			(0x880000000)
 /* Top 16MB reserved for secure world use */
 #define DRAM_SEC_SIZE		0x01000000
 #define PHYS_SDRAM_1_SIZE	0x80000000 - DRAM_SEC_SIZE
+#define PHYS_SDRAM_2_SIZE	0x180000000
 #define CONFIG_SYS_SDRAM_BASE	PHYS_SDRAM_1
 
 /* Enable memtest */
@@ -195,25 +186,46 @@
  * be copied into DRAM
  */
 #define CONFIG_EXTRA_ENV_SETTINGS	\
-				"kernel_name=Image\0"	\
+				"kernel_name=norkern\0"	\
+				"kernel_alt_name=Image\0"	\
 				"kernel_addr=0x80000000\0" \
-				"fdt_name=juno\0" \
+				"initrd_name=ramdisk.img\0"	\
+				"initrd_addr=0x84000000\0"	\
+				"fdt_name=board.dtb\0" \
+				"fdt_alt_name=juno\0" \
 				"fdt_addr=0x83000000\0" \
 				"fdt_high=0xffffffffffffffff\0" \
 				"initrd_high=0xffffffffffffffff\0" \
 
 /* Assume we boot with root on the first partition of a USB stick */
 #define CONFIG_BOOTARGS		"console=ttyAMA0,115200n8 " \
-				"root=/dev/sda1 rw " \
+				"root=/dev/sda2 rw " \
 				"rootwait "\
-				"earlyprintk=pl011,0x7ff80000 debug user_debug=31 "\
+				"earlyprintk=pl011,0x7ff80000 debug "\
+				"user_debug=31 "\
+				"androidboot.hardware=juno "\
 				"loglevel=9"
 
 /* Copy the kernel and FDT to DRAM memory and boot */
 #define CONFIG_BOOTCOMMAND	"afs load ${kernel_name} ${kernel_addr} ; " \
+				"if test $? -eq 1; then "\
+				"  echo Loading ${kernel_alt_name} instead of "\
+				"${kernel_name}; "\
+				"  afs load ${kernel_alt_name} ${kernel_addr};"\
+				"fi ; "\
 				"afs load  ${fdt_name} ${fdt_addr} ; " \
+				"if test $? -eq 1; then "\
+				"  echo Loading ${fdt_alt_name} instead of "\
+				"${fdt_name}; "\
+				"  afs load ${fdt_alt_name} ${fdt_addr}; "\
+				"fi ; "\
 				"fdt addr ${fdt_addr}; fdt resize; " \
-				"booti ${kernel_addr} - ${fdt_addr}"
+				"if afs load  ${initrd_name} ${initrd_addr} ; "\
+				"then "\
+				"  setenv initrd_param ${initrd_addr}; "\
+				"  else setenv initrd_param -; "\
+				"fi ; " \
+				"booti ${kernel_addr} ${initrd_param} ${fdt_addr}"
 
 #define CONFIG_BOOTDELAY		1
 
@@ -234,10 +246,30 @@
 
 #define CONFIG_BOOTCOMMAND	"smhload ${kernel_name} ${kernel_addr}; " \
 				"smhload ${fdt_name} ${fdt_addr}; " \
-				"smhload ${initrd_name} ${initrd_addr} initrd_end; " \
+				"smhload ${initrd_name} ${initrd_addr} "\
+				"initrd_end; " \
 				"fdt addr ${fdt_addr}; fdt resize; " \
 				"fdt chosen ${initrd_addr} ${initrd_end}; " \
 				"booti $kernel_addr - $fdt_addr"
+
+#define CONFIG_BOOTDELAY		1
+
+#elif CONFIG_TARGET_VEXPRESS64_BASE_FVP_DRAM
+#define CONFIG_EXTRA_ENV_SETTINGS	\
+				"kernel_addr=0x80080000\0"	\
+				"initrd_addr=0x84000000\0"	\
+				"fdt_addr=0x83000000\0"		\
+				"fdt_high=0xffffffffffffffff\0"	\
+				"initrd_high=0xffffffffffffffff\0"
+
+#define CONFIG_BOOTARGS		"console=ttyAMA0 earlyprintk=pl011,"\
+				"0x1c090000 debug user_debug=31 "\
+				"androidboot.hardware=fvpbase "\
+				"root=/dev/vda2 rw "\
+				"rootwait "\
+				"loglevel=9"
+
+#define CONFIG_BOOTCOMMAND	"booti $kernel_addr $initrd_addr $fdt_addr"
 
 #define CONFIG_BOOTDELAY		1
 
@@ -251,7 +283,6 @@
 
 /* Monitor Command Prompt */
 #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
-#define CONFIG_SYS_PROMPT		"VExpress64# "
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
 					sizeof(CONFIG_SYS_PROMPT) + 16)
 #define CONFIG_SYS_HUSH_PARSER
@@ -264,7 +295,6 @@
 #ifndef CONFIG_TARGET_VEXPRESS64_JUNO
 #define CONFIG_SYS_NO_FLASH
 #else
-#define CONFIG_CMD_FLASH
 #define CONFIG_CMD_ARMFLASH
 #define CONFIG_SYS_FLASH_CFI		1
 #define CONFIG_FLASH_CFI_DRIVER		1
