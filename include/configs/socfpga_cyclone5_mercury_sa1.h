@@ -41,7 +41,7 @@
 #define ENCLUSTRA_EEPROM_ADDR_WAKEY_TAB {0x64}
 
 /* Default MAC address */
-#define ENCLUSTRA_ETHADDR_DEFAULT "00:07:ED:00:01:23"
+#define ENCLUSTRA_ETHADDR_DEFAULT "00:07:ED:00:00:01"
 
 /* Memory configurations */
 #define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB */
