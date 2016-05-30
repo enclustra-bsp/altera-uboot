@@ -256,6 +256,8 @@ static int cadence_spi_xfer(struct udevice *dev, unsigned int bitlen,
 				err = cadence_qspi_apb_indirect_write_execute
 				(plat, data_bytes, dout);
 			}
+			/* XXX: Workararound for too fast writes ending with corrupted data */
+			udelay(1000);
 		break;
 		default:
 			err = -1;
