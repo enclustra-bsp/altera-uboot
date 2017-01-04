@@ -188,4 +188,10 @@
 /* The rest of the configuration is shared */
 #include <configs/socfpga_common.h>
 
+/* Configure the system clock */
+#ifdef CONFIG_SYS_TIMER_RATE
+#undef CONFIG_SYS_TIMER_RATE
+#endif
+#define CONFIG_SYS_TIMER_RATE		50000000
+
 #endif	/* __CONFIG_SOCFPGA_CYCLONE5_H__ */
