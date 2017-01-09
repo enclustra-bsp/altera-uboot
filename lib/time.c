@@ -12,6 +12,7 @@
 #include <watchdog.h>
 #include <div64.h>
 #include <asm/io.h>
+#include <asm/arch/clock_manager.h>
 
 #ifndef CONFIG_WD_PERIOD
 # define CONFIG_WD_PERIOD	(10 * 1000 * 1000)	/* 10 seconds default */
