@@ -93,12 +93,19 @@ int atsha204_send_read_cmd(u8 i2c_address, u8 zone, u16 address, u8 read_block) 
 int atsha204_wakeup(u8 i2c_address) {
 
 	u8 wake_cmd = 0x0;
+	int ret = 0;
 
-	return i2c_write(i2c_address,
+	ret = i2c_write(i2c_address,
 		  0,
 		  0,
 		  &wake_cmd,
 		  1);
+
+	if(ret) return ret;
+
+	/* wait for the chip to wake up */
+	udelay(2000);
+	return 0;
 
 }
 
