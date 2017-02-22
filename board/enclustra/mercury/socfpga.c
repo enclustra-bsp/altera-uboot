@@ -282,7 +282,7 @@ int board_late_init(void) {
 		if (!hwaddr_set)
 			setenv("ethaddr", ENCLUSTRA_ETHADDR_DEFAULT);
 	}
-  return 0;
+	return 0;
 }
 
 /*
