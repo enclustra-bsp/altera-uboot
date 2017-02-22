@@ -29,6 +29,11 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define ATSHA204_READ32_BYTES_FLAG	(1<<7)
 
+/* i2c controller defines */
+#define IC_SDA_HOLD_OFFSET	0x007c
+#define IC_ENABLE_OFFSET	0x006c
+#define IC_ENABLE		0x0001
+
 u16 atsha204_crc16(const u8 *buf, const u8 len)
 {
         u8 i;
@@ -219,6 +224,32 @@ static struct eeprom_mem eeproms[] = {
 	  .wakeup = NULL,}
 };
 
+#if CONFIG_SYS_I2C_BUS_MAX >= 1
+void ic_sda_hold_fixup(uint32_t i2c_addr) {
+	uint16_t ic_enable;
+	uint16_t ic_sda_hold;
+
+	/* In order to get the clock generator on the PE1 detected
+	 * via Altera HPS I2C, we need to set a value of 20 to the
+	 * IC_SDA_HOLD register
+	 */
+
+	ic_sda_hold = 20;
+
+	/* Disable i2c controller */
+	ic_enable = readw(i2c_addr + IC_ENABLE_OFFSET);
+	ic_enable &= ~IC_ENABLE;
+	writew(ic_enable, i2c_addr + IC_ENABLE_OFFSET);
+
+	/* Write the required value */
+	writew(ic_sda_hold, i2c_addr + IC_SDA_HOLD_OFFSET);
+
+	/* Re-enable i2c controller */
+	ic_enable &= ~IC_ENABLE;
+	writew(ic_enable, i2c_addr + IC_ENABLE_OFFSET);
+}
+#endif
+
 void s_init(void) {}
 
 /*
@@ -232,6 +263,27 @@ int board_init(void)
 	return 0;
 }
 
+void socfpga_i2c_init_all(void) {
+	#if CONFIG_SYS_I2C_BUS_MAX >= 1
+	i2c_init(0, 0);
+	i2c_set_bus_num(0);
+	ic_sda_hold_fixup(CONFIG_SYS_I2C_BASE);
+	#endif
+	#if CONFIG_SYS_I2C_BUS_MAX >= 2
+	i2c_set_bus_num(1);
+	ic_sda_hold_fixup(CONFIG_SYS_I2C_BASE1);
+	#endif
+	#if CONFIG_SYS_I2C_BUS_MAX >= 3
+	i2c_set_bus_num(2);
+	ic_sda_hold_fixup(CONFIG_SYS_I2C_BASE2);
+	#endif
+	#if CONFIG_SYS_I2C_BUS_MAX >= 4
+	i2c_set_bus_num(3);
+	ic_sda_hold_fixup(CONFIG_SYS_I2C_BASE3);
+	#endif
+
+}
+
 int board_late_init(void) {
 	int i;
 	u8 hwaddr[6] = {0, 0, 0, 0, 0, 0};
@@ -241,11 +293,12 @@ int board_late_init(void) {
 
 	hwaddr_set = false;
 
-	if (getenv("ethaddr") == NULL) {
-		/* Init i2c */
-		i2c_init(0, 0);
-		i2c_set_bus_num(0);
+	/* Initialize all i2c adapters */
+	socfpga_i2c_init_all();
 
+	if (getenv("ethaddr") == NULL) {
+		/* Choose correct i2c device */
+		i2c_set_bus_num(0);
 		for (i = 0; i < ARRAY_SIZE(eeproms); i++) {
 
 			if(eeproms[i].wakeup)
