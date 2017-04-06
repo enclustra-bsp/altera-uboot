@@ -117,43 +117,28 @@ int atsha204_wakeup(u8 i2c_address) {
 int atsha204_read_data(u8 i2c_address, u8* buffer, u8 len) {
 
 	int ret = 0;
-	u8 first_word[4];
+	u8 first_word[8];
 	u8 msg_len;
 	u8 i;
 
-	if (len < 4) return -ENOMEM;
+	if (len < 8) return -ENOMEM;
 	/* read the first 4 bytes from the device*/
 	ret = i2c_read(i2c_address,
 			0,
 			0,
 			first_word,
-			4);
+			8);
 
 	if(ret) return ret;
 
 	/* the first transferred byte is total length of the msg */
 	msg_len = first_word[0];
 
-	for(i = 0; i < 3; i++) buffer[i] = first_word[i+1];
+	for(i = 0; i < 4; i++) buffer[i] = first_word[i+1];
 
 	msg_len -= 4;
 
-	if(!msg_len) {
-		buffer[3] = 0xff;
-		return 4;
-	}
-
-	if( (len-3) < msg_len ) return -ENOMEM;
-
-	/* receive the rest of the data */
-
-	ret = i2c_read(i2c_address,
-			0,
-			0,
-			(u8*)(buffer + 3),
-			msg_len);
-	if(ret) return ret;
-	return msg_len + 3;
+	return msg_len;
 }
 
 
