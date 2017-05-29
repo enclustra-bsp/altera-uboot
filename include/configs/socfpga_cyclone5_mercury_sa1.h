@@ -90,6 +90,7 @@
 #define QSPI_LINUX_SIZE			0x00740000  // size 7,6 MB
 #define QSPI_ROOTFS_OFFSET		0x01000000  // Storage for Linux Root FS (JFFS)
 #define QSPI_ROOTFS_SIZE		0x03000000  // size 48 MiB
+#define QSPI_RAMDISK_SIZE		0xa00000  // size 10MB MiB
 
 /* Extra Environment */
 #define CONFIG_HOSTNAME		socfpga_cyclone5
@@ -122,6 +123,7 @@
 						\
 	"preloader_size="   __stringify(QSPI_PRELOADER_SIZE) "\0"\
 	"rootfs_size="     __stringify(QSPI_ROOTFS_SIZE) "\0"\
+	"ramdisk_size="     __stringify(QSPI_RAMDISK_SIZE) "\0"\
 	"kernel_size="     __stringify(QSPI_LINUX_SIZE)  "\0"\
 	"devicetree_size=" __stringify(QSPI_DTB_SIZE)    "\0"\
 	"bootscript_size=" __stringify(QSPI_BOOTSCRIPT_SIZE)   "\0"\
