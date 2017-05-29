@@ -142,7 +142,7 @@
 	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
 	"nfsargs=setenv bootargs console=ttyS0,115200 root=/dev/nfs nfsroot=${serverip}:${serverpath},v3 rw rootwait ip=dhcp\0"\
 	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
-	"qspiramdiskargs=setenv bootargs consol=ttyS0,115200 earlyprintk rw root=/dev/ram\0"\
+	"qspiramdiskargs=setenv bootargs console=ttyS0,115200 earlyprintk rw root=/dev/ram\0"\
 	"qspiboot=echo Bootinq on QSPI Flash ...; " \
 		"sf probe && "                          \
 		"sf read ${bootscript_loadaddr} ${qspi_bootscript_offset} ${bootscript_size} && "\
