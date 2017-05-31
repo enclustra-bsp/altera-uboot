@@ -146,21 +146,25 @@
 	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
 	"qspiramdiskargs=setenv bootargs console=ttyS0,115200 earlyprintk rw root=/dev/ram\0"\
 	"qspiboot=echo Bootinq on QSPI Flash ...; " \
+		"bridge enable && "	                \
 		"sf probe && "                          \
 		"sf read ${bootscript_loadaddr} ${qspi_bootscript_offset} ${bootscript_size} && "\
 		"source ${bootscript_loadaddr}\0"       \
                                                 \
 	"mmcboot=echo Booting on SD Card ...; "      \
+		"bridge enable && "                     \
 		"mmc rescan && "                        \
 		"load mmc 0 ${bootscript_loadaddr} ${bootscript_image} && "\
 		"source ${bootscript_loadaddr}\0"       \
                                                 \
 	"usbboot=echo Booting on USB ...; "     \
+		"bridge enable && "		\
 		"usb start && "			\
 		"load usb 0 ${bootscript_loadaddr} ${bootscript_image} && " \
 		"source ${bootscript_loadaddr} \0"\
                                                 \
     "netboot=echo Booting from TFTP/NFS ...; "  \
+		"bridge enable && "             \
         "tftpboot ${bootscript_loadaddr} ${bootscript_image} && "\
         "source ${bootscript_loadaddr}\0"       \
                                                 \
