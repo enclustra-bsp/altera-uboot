@@ -118,6 +118,7 @@
 	"kernel_loadaddr=0x3000000\0"               \
 	"devicetree_loadaddr=0x2A00000\0"           \
 	"rootfs_loadaddr=0x4000000\0"               \
+	"ramdisk_loadaddr=0x4000000\0"               \
 	"bootscript_loadaddr=0x1000000\0"           \
 	"initrd_high=0x10000000\0" \
 						\
@@ -131,6 +132,7 @@
 								\
 	"qspi_kernel_offset="     __stringify(QSPI_LINUX_OFFSET) "\0"\
 	"qspi_rootfs_offset="     __stringify(QSPI_ROOTFS_OFFSET)"\0"\
+	"qspi_ramdisk_offset="     __stringify(QSPI_ROOTFS_OFFSET)"\0"\
 	"qspi_devicetree_offset=" __stringify(QSPI_DTB_OFFSET)   "\0"\
 	"qspi_bootscript_offset=" __stringify(QSPI_BOOTSCRIPT_OFFSET)  "\0"\
 	"qspi_preloader_offset="  __stringify(QSPI_PRELOADER_OFFSET)   "\0"\
@@ -145,6 +147,8 @@
 	"nfsargs=setenv bootargs console=ttyS0,115200 root=/dev/nfs nfsroot=${serverip}:${serverpath},v3 rw rootwait ip=dhcp\0"\
 	"qspiargs=setenv bootargs console=ttyS0,115200 root=/dev/mtdblock1 rootfstype=jffs2 rw rootwait\0"\
 	"qspiramdiskargs=setenv bootargs console=ttyS0,115200 earlyprintk rw root=/dev/ram\0"\
+	"def_args=console=ttyS0,115200 rw earlyprintk\0"\
+	"ramdisk_args=setenv bootargs ${def_args} root=/dev/ram\0"\
 	"qspiboot=echo Bootinq on QSPI Flash ...; " \
 		"bridge enable && "	                \
 		"sf probe && "                          \
