@@ -169,11 +169,11 @@
         "source ${bootscript_loadaddr}\0"       \
                                                 \
 	"modeboot=setexpr.l bootsel *0xFFD08014 \\\\& 0x7;" \
-		"if test ${bootsel} -eq 4; || test ${bootsel} -eq 5;"\
+		"if test ${bootsel} -eq 4 || test ${bootsel} -eq 5;"\
 		"then;echo Booting from MMC ...;"\
 		"run mmcboot;"\
 		"fi;"\
-		"if test ${bootsel} -eq 6; || test ${bootsel} -eq 7;"\
+		"if test ${bootsel} -eq 6 || test ${bootsel} -eq 7;"\
 		"then;echo Booting from QSPI ...;"\
 		"run qspiboot;"\
 		"fi\0"
