@@ -292,6 +292,11 @@ config CMD_DEMO
 	  option is to use sandbox and pass the -d point to sandbox's
 	  u-boot.dtb file.
 
+config CMD_GPIO
+	bool "gpio"
+	help
+	  Enable 'gpio' command.
+
 config CMD_LOADB
 	bool "loadb"
 	default y
