@@ -2,7 +2,7 @@
 
 #include "pinmux_config.h"
 
-#if defined(CONFIG_TARGET_SOCFPGA_CYCLONE5) || defined (CONFIG_TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1)
+#if defined(CONFIG_TARGET_SOCFPGA_CYCLONE5) || defined (CONFIG_TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1) || defined(CONFIG_TARGET_SOCFPGA_CYCLONE5_MARS_MA3)
 /* pin mux configuration data */
 unsigned long sys_mgr_init_table[CONFIG_HPS_PINMUX_NUM] = {
 	3, /* EMACIO0 */

@@ -32,6 +32,8 @@ config TARGET_SOCFPGA_TERASIC_SOCKIT
 
 config TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 	bool "Enclustra Mercury SA1"
+config TARGET_SOCFPGA_CYCLONE5_MARS_MA3
+	bool "Enclustra Mars MA3"
 
 endchoice
 
@@ -42,6 +44,7 @@ config SYS_BOARD
 	default "mcvevk" if TARGET_SOCFPGA_DENX_MCVEVK
 	default "sockit" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
+	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 
 config SYS_VENDOR
 	default "altera" if TARGET_SOCFPGA_ARRIA5_SOCDK
@@ -50,6 +53,7 @@ config SYS_VENDOR
 	default "terasic" if TARGET_SOCFPGA_TERASIC_DE0_NANO
 	default "terasic" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "enclustra" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
+	default "enclustra" if TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 
 config SYS_SOC
 	default "socfpga"
@@ -61,5 +65,6 @@ config SYS_CONFIG_NAME
 	default "socfpga_mcvevk" if TARGET_SOCFPGA_DENX_MCVEVK
 	default "socfpga_sockit" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "socfpga_cyclone5_mercury_sa1" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
+	default "socfpga_cyclone5_mars_ma3" if TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 
 endif
