@@ -4,8 +4,8 @@ load mmc 0 ${kernel_loadaddr} ${kernel_image} || exit;
 load mmc 0 ${devicetree_loadaddr} ${devicetree_image} || exit;
 load mmc 0 ${ramdisk_loadaddr} ${uramdisk_image} || exit;
 
-# switch SD card to eMMC by setting EMMC_EN to 0
-gpio clear 53;
+# mux proper SD interface and setup devicetree
+run altera_mux_sd_memory;
 
 # setup ramdisk bootargs
 run ramdisk_args;
