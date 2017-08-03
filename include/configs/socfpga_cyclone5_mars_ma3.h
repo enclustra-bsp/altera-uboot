@@ -22,15 +22,9 @@
 	"importbootenv=echo Importing environment from SD ...; " \
 	"env import -t ${loadbootenv_addr} $filesize\0" \
 	"sd_uenvtxt_exists=test -e mmc 0 ${envfile}\0" \
-	"preboot=run altera_enable_mmc; if env run sd_uenvtxt_exists; " \
+	"preboot=mmc rescan; if env run sd_uenvtxt_exists; " \
 		"then if env run loadbootenv; "\
 			"then env run importbootenv; " \
-			"fi; " \
-		"else run altera_enable_emmc; " \
-			"if env run sd_uenvtxt_exists; " \
-			"then if env run loadbootenv; "\
-				"then env run importbootenv; " \
-				"fi; " \
 			"fi; " \
 		"fi;\0" \
 	"altera_mux_sd_memory=if test \"${sd_target}\" = emmc; " \
