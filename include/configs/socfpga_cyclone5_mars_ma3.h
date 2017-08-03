@@ -26,21 +26,18 @@
 		"then if env run loadbootenv; "\
 			"then env run importbootenv; " \
 			"fi; " \
-		"else altera_enable_emmc; " \
+		"else run altera_enable_emmc; " \
 			"if env run sd_uenvtxt_exists; " \
 			"then if env run loadbootenv; "\
 				"then env run importbootenv; " \
 				"fi; " \
 			"fi; " \
 		"fi;\0" \
-	"altera_mux_sd_memory=fdt addr ${devicetree_loadaddr}; " \
-	"if test \"${sd_target}\" = emmc; " \
+	"altera_mux_sd_memory=if test \"${sd_target}\" = emmc; " \
 		"then echo \"Switching SD interface to eMMC\"; " \
-			"gpio clear 53; " \
-			"fdt set /soc/dwmmc0@ff704000 bus-width <0x00000008>; " \
+			"run altera_enable_emmc; " \
 		"else echo \"Switching SD interface to MMC\";" \
-			"gpio set 53; " \
-			"fdt set /soc/dwmmc0@ff704000 bus-width <0x00000004>; " \
+			"run altera_enable_mmc; " \
 		"fi;\0" \
 	"altera_enable_mmc=gpio set 53; mmc rescan;\0" \
 	"altera_enable_emmc=gpio clear 53; mmc rescan;\0" \
