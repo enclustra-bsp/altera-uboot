@@ -12,6 +12,9 @@
 
 #define CONFIG_PREBOOT
 
+/* Set PHY_ADDR to use Micrel KSZ PHY only. */
+#define CONFIG_PHY_ADDR 3
+
 #ifdef CONFIG_EXTRA_ENV_SETTINGS
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #endif
