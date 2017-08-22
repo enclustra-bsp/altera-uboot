@@ -29,11 +29,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #define RK_I2C_FIFO_SIZE	32
 
 struct rk_i2c {
-	struct udevice *clk;
-	struct udevice *pinctrl;
+	struct clk clk;
 	struct i2c_regs *regs;
 	unsigned int speed;
-	enum periph_id id;
 };
 
 static inline void rk_i2c_get_div(int div, int *divh, int *divl)
@@ -56,7 +54,7 @@ static void rk_i2c_set_clk(struct rk_i2c *i2c, uint32_t scl_rate)
 	int div, divl, divh;
 
 	/* First get i2c rate from pclk */
-	i2c_rate = clk_get_periph_rate(i2c->clk, i2c->id);
+	i2c_rate = clk_get_rate(&i2c->clk);
 
 	div = DIV_ROUND_UP(i2c_rate, scl_rate * 8) - 2;
 	divh = 0;
@@ -260,7 +258,7 @@ static int rk_i2c_write(struct rk_i2c *i2c, uchar chip, uint reg, uint r_len,
 
 	while (bytes_remain_len) {
 		if (bytes_remain_len > RK_I2C_FIFO_SIZE)
-			bytes_xferred = 32;
+			bytes_xferred = RK_I2C_FIFO_SIZE;
 		else
 			bytes_xferred = bytes_remain_len;
 		words_xferred = DIV_ROUND_UP(bytes_xferred, 4);
@@ -271,17 +269,17 @@ static int rk_i2c_write(struct rk_i2c *i2c, uchar chip, uint reg, uint r_len,
 				if ((i * 4 + j) == bytes_xferred)
 					break;
 
-				if (i == 0 && j == 0) {
+				if (i == 0 && j == 0 && pbuf == buf) {
 					txdata |= (chip << 1);
-				} else if (i == 0 && j <= r_len) {
+				} else if (i == 0 && j <= r_len && pbuf == buf) {
 					txdata |= (reg &
 						(0xff << ((j - 1) * 8))) << 8;
 				} else {
 					txdata |= (*pbuf++)<<(j * 8);
 				}
-				writel(txdata, &regs->txdata[i]);
 			}
-			debug("I2c Write TXDATA[%d] = 0x%x\n", i, txdata);
+			writel(txdata, &regs->txdata[i]);
+			debug("I2c Write TXDATA[%d] = 0x%08x\n", i, txdata);
 		}
 
 		writel(I2C_CON_EN | I2C_CON_MOD(I2C_MODE_TX), &regs->con);
@@ -352,23 +350,28 @@ int rockchip_i2c_set_bus_speed(struct udevice *bus, unsigned int speed)
 	return 0;
 }
 
-static int rockchip_i2c_probe(struct udevice *bus)
+static int rockchip_i2c_ofdata_to_platdata(struct udevice *bus)
 {
-	struct rk_i2c *i2c = dev_get_priv(bus);
+	struct rk_i2c *priv = dev_get_priv(bus);
 	int ret;
 
-	ret = uclass_get_device(UCLASS_PINCTRL, 0, &i2c->pinctrl);
-	if (ret)
+	ret = clk_get_by_index(bus, 0, &priv->clk);
+	if (ret < 0) {
+		debug("%s: Could not get clock for %s: %d\n", __func__,
+		      bus->name, ret);
 		return ret;
-	ret = uclass_get_device(UCLASS_CLK, 0, &i2c->clk);
-	if (ret)
-		return ret;
-	ret = pinctrl_get_periph_id(i2c->pinctrl, bus);
-	if (ret < 0)
-		return ret;
-	i2c->id = ret;
-	i2c->regs = (void *)dev_get_addr(bus);
-	return pinctrl_request(i2c->pinctrl, i2c->id, 0);
+	}
+
+	return 0;
+}
+
+static int rockchip_i2c_probe(struct udevice *bus)
+{
+	struct rk_i2c *priv = dev_get_priv(bus);
+
+	priv->regs = (void *)devfdt_get_addr(bus);
+
+	return 0;
 }
 
 static const struct dm_i2c_ops rockchip_i2c_ops = {
@@ -377,7 +380,10 @@ static const struct dm_i2c_ops rockchip_i2c_ops = {
 };
 
 static const struct udevice_id rockchip_i2c_ids[] = {
+	{ .compatible = "rockchip,rk3066-i2c" },
+	{ .compatible = "rockchip,rk3188-i2c" },
 	{ .compatible = "rockchip,rk3288-i2c" },
+	{ .compatible = "rockchip,rk3399-i2c" },
 	{ }
 };
 
@@ -385,6 +391,7 @@ U_BOOT_DRIVER(i2c_rockchip) = {
 	.name	= "i2c_rockchip",
 	.id	= UCLASS_I2C,
 	.of_match = rockchip_i2c_ids,
+	.ofdata_to_platdata = rockchip_i2c_ofdata_to_platdata,
 	.probe	= rockchip_i2c_probe,
 	.priv_auto_alloc_size = sizeof(struct rk_i2c),
 	.ops	= &rockchip_i2c_ops,

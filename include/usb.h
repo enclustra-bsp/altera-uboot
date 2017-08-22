@@ -130,7 +130,7 @@ struct usb_device {
 	int string_langid;		/* language ID for strings */
 	int (*irq_handle)(struct usb_device *dev);
 	unsigned long irq_status;
-	int irq_act_len;		/* transfered bytes */
+	int irq_act_len;		/* transferred bytes */
 	void *privptr;
 	/*
 	 * Child devices -  if this is a hub device
@@ -138,7 +138,7 @@ struct usb_device {
 	 */
 	unsigned long status;
 	unsigned long int_pending;	/* 1 bit per ep, used by int_queue */
-	int act_len;			/* transfered bytes */
+	int act_len;			/* transferred bytes */
 	int maxchild;			/* Number of ports if hub */
 	int portnr;			/* Port number, 1=first */
 #ifndef CONFIG_DM_USB
@@ -187,7 +187,8 @@ int submit_control_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 			int transfer_len, int interval);
 
-#if defined CONFIG_USB_EHCI || defined CONFIG_USB_MUSB_HOST || defined(CONFIG_DM_USB)
+#if defined CONFIG_USB_EHCI_HCD || defined CONFIG_USB_MUSB_HOST \
+	|| defined(CONFIG_DM_USB)
 struct int_queue *create_int_queue(struct usb_device *dev, unsigned long pipe,
 	int queuesize, int elementsize, void *buffer, int interval);
 int destroy_int_queue(struct usb_device *dev, struct int_queue *queue);
@@ -227,8 +228,7 @@ int board_usb_cleanup(int index, enum usb_init_type init);
 
 #ifdef CONFIG_USB_STORAGE
 
-#define USB_MAX_STOR_DEV 5
-block_dev_desc_t *usb_stor_get_dev(int index);
+#define USB_MAX_STOR_DEV 7
 int usb_stor_scan(int mode);
 int usb_stor_info(void);
 
@@ -266,8 +266,9 @@ int usb_submit_int_msg(struct usb_device *dev, unsigned long pipe,
 			void *buffer, int transfer_len, int interval);
 int usb_disable_asynch(int disable);
 int usb_maxpacket(struct usb_device *dev, unsigned long pipe);
-int usb_get_configuration_no(struct usb_device *dev, unsigned char *buffer,
-				int cfgno);
+int usb_get_configuration_no(struct usb_device *dev, int cfgno,
+			unsigned char *buffer, int length);
+int usb_get_configuration_len(struct usb_device *dev, int cfgno);
 int usb_get_report(struct usb_device *dev, int ifnum, unsigned char type,
 			unsigned char id, void *buf, int size);
 int usb_get_class_descriptor(struct usb_device *dev, int ifnum,
@@ -555,6 +556,10 @@ struct usb_hub_descriptor {
 struct usb_hub_device {
 	struct usb_device *pusb_dev;
 	struct usb_hub_descriptor desc;
+
+	ulong connect_timeout;		/* Device connection timeout in ms */
+	ulong query_delay;		/* Device query delay in ms */
+	int overcurrent_count[USB_MAXCHILDREN];	/* Over-current counter */
 };
 
 #ifdef CONFIG_DM_USB
@@ -874,6 +879,18 @@ int legacy_hub_port_reset(struct usb_device *dev, int port,
 
 int hub_port_reset(struct udevice *dev, int port, unsigned short *portstat);
 
+/*
+ * usb_find_usb2_hub_address_port() - Get hub address and port for TT setting
+ *
+ * Searches for the first HS hub above the given device. If a
+ * HS hub is found, the hub address and the port the device is
+ * connected to is return, as required for SPLIT transactions
+ *
+ * @param: udev full speed or low speed device
+ */
+void usb_find_usb2_hub_address_port(struct usb_device *udev,
+				    uint8_t *hub_address, uint8_t *hub_port);
+
 /**
  * usb_alloc_new_device() - Allocate a new device
  *
@@ -938,6 +955,17 @@ int usb_emul_bulk(struct udevice *emul, struct usb_device *udev,
 		  unsigned long pipe, void *buffer, int length);
 
 /**
+ * usb_emul_int() - Send an interrupt packet to an emulator
+ *
+ * @emul:	Emulator device
+ * @udev:	USB device (which the emulator is causing to appear)
+ * See struct dm_usb_ops for details on other parameters
+ * @return 0 if OK, -ve on error
+ */
+int usb_emul_int(struct udevice *emul, struct usb_device *udev,
+		  unsigned long pipe, void *buffer, int length, int interval);
+
+/**
  * usb_emul_find() - Find an emulator for a particular device
  *
  * Check @pipe to find a device number on bus @bus and return it.
@@ -950,11 +978,29 @@ int usb_emul_bulk(struct udevice *emul, struct usb_device *udev,
 int usb_emul_find(struct udevice *bus, ulong pipe, struct udevice **emulp);
 
 /**
+ * usb_emul_find_for_dev() - Find an emulator for a particular device
+ *
+ * @bus:	USB bus (controller)
+ * @dev:	USB device to check
+ * @emulp:	Returns pointer to emulator, or NULL if not found
+ * @return 0 if found, -ve on error
+ */
+int usb_emul_find_for_dev(struct udevice *dev, struct udevice **emulp);
+
+/**
  * usb_emul_reset() - Reset all emulators ready for use
  *
  * Clear out any address information in the emulators and make then ready for
  * a new USB scan
  */
 void usb_emul_reset(struct udevice *dev);
+
+/**
+ * usb_show_tree() - show the USB device tree
+ *
+ * This shows a list of active USB devices along with basic information about
+ * each.
+ */
+void usb_show_tree(void);
 
 #endif /*_USB_H_ */

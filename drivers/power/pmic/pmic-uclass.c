@@ -18,29 +18,28 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int pmic_bind_children(struct udevice *pmic, int offset,
+#if CONFIG_IS_ENABLED(PMIC_CHILDREN)
+int pmic_bind_children(struct udevice *pmic, ofnode parent,
 		       const struct pmic_child_info *child_info)
 {
 	const struct pmic_child_info *info;
-	const void *blob = gd->fdt_blob;
 	struct driver *drv;
 	struct udevice *child;
 	const char *node_name;
 	int bind_count = 0;
-	int node;
+	ofnode node;
 	int prefix_len;
 	int ret;
 
 	debug("%s for '%s' at node offset: %d\n", __func__, pmic->name,
-	      pmic->of_offset);
+	      dev_of_offset(pmic));
 
-	for (node = fdt_first_subnode(blob, offset);
-	     node > 0;
-	     node = fdt_next_subnode(blob, node)) {
-		node_name = fdt_get_name(blob, node, NULL);
+	for (node = ofnode_first_subnode(parent);
+	     ofnode_valid(node);
+	     node = ofnode_next_subnode(node)) {
+		node_name = ofnode_get_name(node);
 
-		debug("* Found child node: '%s' at offset:%d\n", node_name,
-								 node);
+		debug("* Found child node: '%s'\n", node_name);
 
 		child = NULL;
 		for (info = child_info; info->prefix && info->driver; info++) {
@@ -59,8 +58,8 @@ int pmic_bind_children(struct udevice *pmic, int offset,
 
 			debug("  - found child driver: '%s'\n", drv->name);
 
-			ret = device_bind(pmic, drv, node_name, NULL,
-					  node, &child);
+			ret = device_bind_with_driver_data(pmic, drv, node_name,
+							   0, node, &child);
 			if (ret) {
 				debug("  - child binding error: %d\n", ret);
 				continue;
@@ -81,9 +80,10 @@ int pmic_bind_children(struct udevice *pmic, int offset,
 			debug("  - compatible prefix not found\n");
 	}
 
-	debug("Bound: %d childs for PMIC: '%s'\n", bind_count, pmic->name);
+	debug("Bound: %d children for PMIC: '%s'\n", bind_count, pmic->name);
 	return bind_count;
 }
+#endif
 
 int pmic_get(const char *name, struct udevice **devp)
 {
@@ -131,8 +131,9 @@ int pmic_reg_read(struct udevice *dev, uint reg)
 	u8 byte;
 	int ret;
 
+	debug("%s: reg=%x", __func__, reg);
 	ret = pmic_read(dev, reg, &byte, 1);
-	debug("%s: reg=%x, value=%x\n", __func__, reg, byte);
+	debug(", value=%x, ret=%d\n", byte, ret);
 
 	return ret ? ret : byte;
 }
@@ -140,9 +141,13 @@ int pmic_reg_read(struct udevice *dev, uint reg)
 int pmic_reg_write(struct udevice *dev, uint reg, uint value)
 {
 	u8 byte = value;
+	int ret;
 
-	debug("%s: reg=%x, value=%x\n", __func__, reg, value);
-	return pmic_write(dev, reg, &byte, 1);
+	debug("%s: reg=%x, value=%x", __func__, reg, value);
+	ret = pmic_write(dev, reg, &byte, 1);
+	debug(", ret=%d\n", ret);
+
+	return ret;
 }
 
 int pmic_clrsetbits(struct udevice *dev, uint reg, uint clr, uint set)

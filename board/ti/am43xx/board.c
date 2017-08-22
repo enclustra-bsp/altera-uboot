@@ -10,15 +10,18 @@
 
 #include <common.h>
 #include <i2c.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <spl.h>
 #include <usb.h>
+#include <asm/omap_sec_common.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/mux.h>
 #include <asm/arch/ddr_defs.h>
 #include <asm/arch/gpio.h>
 #include <asm/emif.h>
+#include <asm/omap_common.h>
+#include "../common/board_detect.h"
 #include "board.h"
 #include <power/pmic.h>
 #include <power/tps65218.h>
@@ -37,53 +40,16 @@ static struct ctrl_dev *cdev = (struct ctrl_dev *)CTRL_DEVICE_BASE;
 /*
  * Read header information from EEPROM into global structure.
  */
-static int read_eeprom(struct am43xx_board_id *header)
+#ifdef CONFIG_TI_I2C_BOARD_DETECT
+void do_board_detect(void)
 {
-	/* Check if baseboard eeprom is available */
-	if (i2c_probe(CONFIG_SYS_I2C_EEPROM_ADDR)) {
-		printf("Could not probe the EEPROM at 0x%x\n",
-		       CONFIG_SYS_I2C_EEPROM_ADDR);
-		return -ENODEV;
-	}
-
-	/* read the eeprom using i2c */
-	if (i2c_read(CONFIG_SYS_I2C_EEPROM_ADDR, 0, 2, (uchar *)header,
-		     sizeof(struct am43xx_board_id))) {
-		printf("Could not read the EEPROM\n");
-		return -EIO;
-	}
-
-	if (header->magic != 0xEE3355AA) {
-		/*
-		 * read the eeprom using i2c again,
-		 * but use only a 1 byte address
-		 */
-		if (i2c_read(CONFIG_SYS_I2C_EEPROM_ADDR, 0, 1, (uchar *)header,
-			     sizeof(struct am43xx_board_id))) {
-			printf("Could not read the EEPROM at 0x%x\n",
-			       CONFIG_SYS_I2C_EEPROM_ADDR);
-			return -EIO;
-		}
-
-		if (header->magic != 0xEE3355AA) {
-			printf("Incorrect magic number (0x%x) in EEPROM\n",
-			       header->magic);
-			return -EINVAL;
-		}
-	}
-
-	strncpy(am43xx_board_name, (char *)header->name, sizeof(header->name));
-	am43xx_board_name[sizeof(header->name)] = 0;
-
-	strncpy(am43xx_board_rev, (char *)header->version, sizeof(header->version));
-	am43xx_board_rev[sizeof(header->version)] = 0;
-
-	return 0;
+	if (ti_i2c_eeprom_am_get(CONFIG_EEPROM_BUS_ADDRESS,
+				 CONFIG_EEPROM_CHIP_ADDRESS))
+		printf("ti_i2c_eeprom_init failed\n");
 }
+#endif
 
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
-
-#define NUM_OPPS	6
 
 const struct dpll_params dpll_mpu[NUM_CRYSTAL_FREQ][NUM_OPPS] = {
 	{	/* 19.2 MHz */
@@ -351,37 +317,18 @@ void emif_get_ext_phy_ctrl_const_regs(const u32 **regs, u32 *size)
 	return;
 }
 
-/*
- * get_sys_clk_index : returns the index of the sys_clk read from
- *			ctrl status register. This value is either
- *			read from efuse or sysboot pins.
- */
-static u32 get_sys_clk_index(void)
-{
-	struct ctrl_stat *ctrl = (struct ctrl_stat *)CTRL_BASE;
-	u32 ind = readl(&ctrl->statusreg), src;
-
-	src = (ind & CTRL_CRYSTAL_FREQ_SRC_MASK) >> CTRL_CRYSTAL_FREQ_SRC_SHIFT;
-	if (src == CTRL_CRYSTAL_FREQ_SRC_EFUSE) /* Value read from EFUSE */
-		return ((ind & CTRL_CRYSTAL_FREQ_SELECTION_MASK) >>
-			CTRL_CRYSTAL_FREQ_SELECTION_SHIFT);
-	else /* Value read from SYS BOOT pins */
-		return ((ind & CTRL_SYSBOOT_15_14_MASK) >>
-			CTRL_SYSBOOT_15_14_SHIFT);
-}
-
 const struct dpll_params *get_dpll_ddr_params(void)
 {
 	int ind = get_sys_clk_index();
 
 	if (board_is_eposevm())
 		return &epos_evm_dpll_ddr[ind];
-	else if (board_is_gpevm() || board_is_sk())
+	else if (board_is_evm() || board_is_sk())
 		return &gp_evm_dpll_ddr;
 	else if (board_is_idk())
 		return &idk_dpll_ddr;
 
-	printf(" Board '%s' not supported\n", am43xx_board_name);
+	printf(" Board '%s' not supported\n", board_ti_get_name());
 	return NULL;
 }
 
@@ -475,6 +422,13 @@ void scale_vcores_generic(u32 m)
 		printf("%s failure\n", __func__);
 		return;
 	}
+
+	/* Set DCDC3 (DDR) voltage */
+	if (tps65218_voltage_update(TPS65218_DCDC3,
+	    TPS65218_DCDC3_VOLT_SEL_1350MV)) {
+		printf("%s failure\n", __func__);
+		return;
+	}
 }
 
 void scale_vcores_idk(u32 m)
@@ -512,15 +466,25 @@ void scale_vcores_idk(u32 m)
 	}
 }
 
+void gpi2c_init(void)
+{
+	/* When needed to be invoked prior to BSS initialization */
+	static bool first_time = true;
+
+	if (first_time) {
+		enable_i2c0_pin_mux();
+		i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED,
+			 CONFIG_SYS_OMAP24_I2C_SLAVE);
+		first_time = false;
+	}
+}
+
 void scale_vcores(void)
 {
 	const struct dpll_params *mpu_params;
-	struct am43xx_board_id header;
 
-	enable_i2c0_pin_mux();
-	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED, CONFIG_SYS_OMAP24_I2C_SLAVE);
-	if (read_eeprom(&header) < 0)
-		puts("Could not get board ID.\n");
+	/* Ensure I2C is initialized for PMIC configuration */
+	gpi2c_init();
 
 	/* Get the frequency */
 	mpu_params = get_dpll_mpu_params();
@@ -573,7 +537,7 @@ void sdram_init(void)
 		enable_vtt_regulator();
 		config_ddr(0, &ioregs_ddr3, NULL, NULL,
 			   &ddr3_emif_regs_400Mhz_beta, 0);
-	} else if (board_is_gpevm()) {
+	} else if (board_is_evm()) {
 		enable_vtt_regulator();
 		config_ddr(0, &ioregs_ddr3, NULL, NULL,
 			   &ddr3_emif_regs_400Mhz, 0);
@@ -655,20 +619,14 @@ int board_init(void)
 int board_late_init(void)
 {
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
-	char safe_string[HDR_NAME_LEN + 1];
-	struct am43xx_board_id header;
+	set_board_info_env(NULL);
 
-	if (read_eeprom(&header) < 0)
-		puts("Could not get board ID.\n");
-
-	/* Now set variables based on the header. */
-	strncpy(safe_string, (char *)header.name, sizeof(header.name));
-	safe_string[sizeof(header.name)] = 0;
-	setenv("board_name", safe_string);
-
-	strncpy(safe_string, (char *)header.version, sizeof(header.version));
-	safe_string[sizeof(header.version)] = 0;
-	setenv("board_rev", safe_string);
+	/*
+	 * Default FIT boot on HS devices. Non FIT images are not allowed
+	 * on HS devices.
+	 */
+	if (get_device_type() == HS_DEVICE)
+		setenv("boot_fit", "1");
 #endif
 	return 0;
 }
@@ -711,60 +669,6 @@ static struct ti_usb_phy_device usb_phy2_device = {
 	.index = 1,
 };
 
-int board_usb_init(int index, enum usb_init_type init)
-{
-	enable_usb_clocks(index);
-	switch (index) {
-	case 0:
-		if (init == USB_INIT_DEVICE) {
-			usb_otg_ss1.dr_mode = USB_DR_MODE_PERIPHERAL;
-			usb_otg_ss1_glue.vbus_id_status = OMAP_DWC3_VBUS_VALID;
-		} else {
-			usb_otg_ss1.dr_mode = USB_DR_MODE_HOST;
-			usb_otg_ss1_glue.vbus_id_status = OMAP_DWC3_ID_GROUND;
-		}
-
-		dwc3_omap_uboot_init(&usb_otg_ss1_glue);
-		ti_usb_phy_uboot_init(&usb_phy1_device);
-		dwc3_uboot_init(&usb_otg_ss1);
-		break;
-	case 1:
-		if (init == USB_INIT_DEVICE) {
-			usb_otg_ss2.dr_mode = USB_DR_MODE_PERIPHERAL;
-			usb_otg_ss2_glue.vbus_id_status = OMAP_DWC3_VBUS_VALID;
-		} else {
-			usb_otg_ss2.dr_mode = USB_DR_MODE_HOST;
-			usb_otg_ss2_glue.vbus_id_status = OMAP_DWC3_ID_GROUND;
-		}
-
-		ti_usb_phy_uboot_init(&usb_phy2_device);
-		dwc3_omap_uboot_init(&usb_otg_ss2_glue);
-		dwc3_uboot_init(&usb_otg_ss2);
-		break;
-	default:
-		printf("Invalid Controller Index\n");
-	}
-
-	return 0;
-}
-
-int board_usb_cleanup(int index, enum usb_init_type init)
-{
-	switch (index) {
-	case 0:
-	case 1:
-		ti_usb_phy_uboot_exit(index);
-		dwc3_uboot_exit(index);
-		dwc3_omap_uboot_exit(index);
-		break;
-	default:
-		printf("Invalid Controller Index\n");
-	}
-	disable_usb_clocks(index);
-
-	return 0;
-}
-
 int usb_gadget_handle_interrupts(int index)
 {
 	u32 status;
@@ -775,7 +679,61 @@ int usb_gadget_handle_interrupts(int index)
 
 	return 0;
 }
+#endif /* CONFIG_USB_DWC3 */
+
+#if defined(CONFIG_USB_DWC3) || defined(CONFIG_USB_XHCI_OMAP)
+int omap_xhci_board_usb_init(int index, enum usb_init_type init)
+{
+	enable_usb_clocks(index);
+#ifdef CONFIG_USB_DWC3
+	switch (index) {
+	case 0:
+		if (init == USB_INIT_DEVICE) {
+			usb_otg_ss1.dr_mode = USB_DR_MODE_PERIPHERAL;
+			usb_otg_ss1_glue.vbus_id_status = OMAP_DWC3_VBUS_VALID;
+			dwc3_omap_uboot_init(&usb_otg_ss1_glue);
+			ti_usb_phy_uboot_init(&usb_phy1_device);
+			dwc3_uboot_init(&usb_otg_ss1);
+		}
+		break;
+	case 1:
+		if (init == USB_INIT_DEVICE) {
+			usb_otg_ss2.dr_mode = USB_DR_MODE_PERIPHERAL;
+			usb_otg_ss2_glue.vbus_id_status = OMAP_DWC3_VBUS_VALID;
+			ti_usb_phy_uboot_init(&usb_phy2_device);
+			dwc3_omap_uboot_init(&usb_otg_ss2_glue);
+			dwc3_uboot_init(&usb_otg_ss2);
+		}
+		break;
+	default:
+		printf("Invalid Controller Index\n");
+	}
 #endif
+
+	return 0;
+}
+
+int omap_xhci_board_usb_cleanup(int index, enum usb_init_type init)
+{
+#ifdef CONFIG_USB_DWC3
+	switch (index) {
+	case 0:
+	case 1:
+		if (init == USB_INIT_DEVICE) {
+			ti_usb_phy_uboot_exit(index);
+			dwc3_uboot_exit(index);
+			dwc3_omap_uboot_exit(index);
+		}
+		break;
+	default:
+		printf("Invalid Controller Index\n");
+	}
+#endif
+	disable_usb_clocks(index);
+
+	return 0;
+}
+#endif /* defined(CONFIG_USB_DWC3) || defined(CONFIG_USB_XHCI_OMAP) */
 
 #ifdef CONFIG_DRIVER_TI_CPSW
 
@@ -877,5 +835,28 @@ int board_eth_init(bd_t *bis)
 		printf("Error %d registering CPSW switch\n", rv);
 
 	return rv;
+}
+#endif
+
+#ifdef CONFIG_SPL_LOAD_FIT
+int board_fit_config_name_match(const char *name)
+{
+	if (board_is_evm() && !strcmp(name, "am437x-gp-evm"))
+		return 0;
+	else if (board_is_sk() && !strcmp(name, "am437x-sk-evm"))
+		return 0;
+	else if (board_is_eposevm() && !strcmp(name, "am43x-epos-evm"))
+		return 0;
+	else if (board_is_idk() && !strcmp(name, "am437x-idk-evm"))
+		return 0;
+	else
+		return -1;
+}
+#endif
+
+#ifdef CONFIG_TI_SECURE_DEVICE
+void board_fit_image_post_process(void **p_image, size_t *p_size)
+{
+	secure_boot_verify_image(p_image, p_size);
 }
 #endif

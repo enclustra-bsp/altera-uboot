@@ -12,31 +12,23 @@
 #include <asm/post.h>
 
 static struct pci_device_id mmc_supported[] = {
-	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_VALLEYVIEW_SDIO },
-	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_VALLEYVIEW_SDCARD },
+	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_BYT_SDIO },
+	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_BYT_SD },
+	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_BYT_EMMC2 },
+	{},
 };
 
 int cpu_mmc_init(bd_t *bis)
 {
-	return pci_mmc_init("ValleyView SDHCI", mmc_supported,
-			    ARRAY_SIZE(mmc_supported));
+	return pci_mmc_init("ValleyView SDHCI", mmc_supported);
 }
 
 #ifndef CONFIG_EFI_APP
 int arch_cpu_init(void)
 {
-	int ret;
-
 	post_code(POST_CPU_INIT);
-#ifdef CONFIG_SYS_X86_TSC_TIMER
-	timer_set_base(rdtsc());
-#endif
 
-	ret = x86_cpu_init_f();
-	if (ret)
-		return ret;
-
-	return 0;
+	return x86_cpu_init_f();
 }
 
 int arch_misc_init(void)
@@ -53,17 +45,9 @@ int arch_misc_init(void)
 	mrccache_save();
 #endif
 
-	return pirq_init();
+	return 0;
 }
 
-int reserve_arch(void)
-{
-#ifdef CONFIG_ENABLE_MRC_CACHE
-	return mrccache_reserve();
-#else
-	return 0;
-#endif
-}
 #endif
 
 void reset_cpu(ulong addr)

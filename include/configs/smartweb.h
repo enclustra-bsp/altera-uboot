@@ -45,14 +45,18 @@
 #define CONFIG_CMDLINE_TAG		/* pass commandline to Kernel */
 #define CONFIG_SETUP_MEMORY_TAGS	/* pass memory defs to kernel */
 #define CONFIG_INITRD_TAG		/* pass initrd param to kernel */
-#define CONFIG_SKIP_LOWLEVEL_INIT	/* U-Boot is loaded by a bootloader */
-#define CONFIG_BOARD_EARLY_INIT_F	/* call board_early_init_f() */
-#define CONFIG_DISPLAY_CPUINFO		/* display CPU Info at startup */
+#define CONFIG_SKIP_LOWLEVEL_INIT_ONLY	/* U-Boot is loaded by a bootloader */
+
+/* We set the max number of command args high to avoid HUSH bugs. */
+#define CONFIG_SYS_MAXARGS    32
 
 /* setting board specific options */
-# define CONFIG_MACH_TYPE		MACH_TYPE_SMARTWEB
-#define CONFIG_CMDLINE_EDITING
+#define CONFIG_MACH_TYPE		MACH_TYPE_SMARTWEB
 #define CONFIG_AUTO_COMPLETE
+#define CONFIG_ENV_OVERWRITE    1 /* Overwrite ethaddr / serial# */
+#define CONFIG_AUTO_COMPLETE
+#define CONFIG_SYS_AUTOLOAD "yes"
+#define CONFIG_RESET_TO_RETRY
 
 /* The LED PINs */
 #define CONFIG_RED_LED			AT91_PIN_PA9
@@ -79,7 +83,6 @@
 
 /* NAND flash settings */
 #define CONFIG_NAND_ATMEL
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		ATMEL_BASE_CS3
 #define CONFIG_SYS_NAND_DBW_8
@@ -109,13 +112,13 @@
 #define CONFIG_ATMEL_USART
 #define CONFIG_USART_BASE		ATMEL_BASE_DBGU
 #define CONFIG_USART_ID			ATMEL_ID_SYS
-#define CONFIG_BAUDRATE			115200
 
 /*
  * Ethernet configuration
  *
  */
 #define CONFIG_MACB
+#define CONFIG_PHYLIB
 #define CONFIG_USB_HOST_ETHER
 #define CONFIG_USB_ETHER_ASIX
 #define CONFIG_USB_ETHER_MCS7830
@@ -143,7 +146,6 @@
 
 #if !defined(CONFIG_SPL_BUILD)
 /* USB configuration */
-#define CONFIG_CMD_USB
 #define CONFIG_USB_ATMEL
 #define CONFIG_USB_ATMEL_CLK_SEL_PLLB
 #define CONFIG_USB_OHCI_NEW
@@ -152,41 +154,21 @@
 #define CONFIG_SYS_USB_OHCI_SLOT_NAME	"at91sam9260"
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS	2
 
-#define CONFIG_USB_HOST_ETHER
-#define CONFIG_USB_ETHER_ASIX
-#define CONFIG_USB_ETHER_MCS7830
-
 /* USB DFU support */
 #define CONFIG_CMD_MTDPARTS
 #define CONFIG_MTD_DEVICE
 #define CONFIG_MTD_PARTITIONS
 
-#define CONFIG_USB_GADGET
 #define CONFIG_USB_GADGET_AT91
 
 /* DFU class support */
-#define CONFIG_CMD_DFU
-#define CONFIG_USB_FUNCTION_DFU
-#define CONFIG_DFU_NAND
-#define CONFIG_USB_GADGET_DOWNLOAD
-#define CONFIG_USB_GADGET_VBUS_DRAW	2
 #define CONFIG_SYS_DFU_DATA_BUF_SIZE	SZ_1M
 #define DFU_MANIFEST_POLL_TIMEOUT	25000
-
-/* USB DFU IDs */
-#define CONFIG_G_DNL_VENDOR_NUM 0x0908
-#define CONFIG_G_DNL_PRODUCT_NUM 0x02d2
-#define CONFIG_G_DNL_MANUFACTURER "Siemens AG"
-
-#define CONFIG_SYS_CACHELINE_SIZE	0x2000
 #endif
 
 /* General Boot Parameter */
-#define CONFIG_BOOTDELAY		3
 #define CONFIG_BOOTCOMMAND		"run flashboot"
-#define CONFIG_BOOT_RETRY_TIME          30
 #define CONFIG_SYS_CBSIZE		512
-#define CONFIG_SYS_MAXARGS		16
 #define CONFIG_SYS_PBSIZE \
 	(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
 #define CONFIG_SYS_LONGHELP
@@ -218,34 +200,20 @@
 	"mtdparts="MTDPARTS_DEFAULT"\0"
 
 /* Command line & features configuration */
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_IMI
-#undef CONFIG_CMD_IMLS
-#undef CONFIG_CMD_LOADS
 
 #define CONFIG_CMD_NAND
-#define CONFIG_CMD_FAT
 
 #ifdef CONFIG_MACB
-# define CONFIG_CMD_PING
-# define CONFIG_CMD_DHCP
 #else
-# undef CONFIG_CMD_BOOTD
-# undef CONFIG_CMD_NET
-# undef CONFIG_CMD_NFS
 #endif /* CONFIG_MACB */
-
-#if !defined(CONFIG_SPL_BUILD)
-/* Enable Device-Tree (FDT) support */
-#define CONFIG_OF_LIBFDT
-#define CONFIG_CMD_FDT
-#define CONFIG_FIT
-#endif
 
 #ifdef CONFIG_SPL_BUILD
 #define CONFIG_SYS_INIT_SP_ADDR		0x301000
 #define CONFIG_SPL_STACK_R
 #define CONFIG_SPL_STACK_R_ADDR		CONFIG_SYS_TEXT_BASE
+/* we have only 4k sram in SPL, so cut SYS_MALLOC_F_LEN */
+#undef CONFIG_SYS_MALLOC_F_LEN
+#define CONFIG_SYS_MALLOC_F_LEN 0x400
 #else
 /*
  * Initial stack pointer: 4k - GENERATED_GBL_DATA_SIZE in internal SRAM,
@@ -255,7 +223,6 @@
 #define CONFIG_SYS_INIT_SP_ADDR \
 	(ATMEL_BASE_SRAM1 + 0x1000 - GENERATED_GBL_DATA_SIZE)
 #endif
-
 
 /* Defines for SPL */
 #define CONFIG_SPL_FRAMEWORK
@@ -269,13 +236,7 @@
 #define CONFIG_SYS_SPL_MALLOC_SIZE      CONFIG_SYS_MALLOC_LEN
 #define CONFIG_SPL_LDSCRIPT	arch/arm/mach-at91/arm926ejs/u-boot-spl.lds
 
-#define CONFIG_SPL_LIBCOMMON_SUPPORT
-#define CONFIG_SPL_LIBGENERIC_SUPPORT
-
-#define CONFIG_SPL_BOARD_INIT
-#define CONFIG_SPL_GPIO_SUPPORT
 #define CONFIG_SYS_NAND_ENABLE_PIN_SPL	(2*32 + 14)
-#define CONFIG_SPL_NAND_SUPPORT
 #define CONFIG_SYS_USE_NANDFLASH	1
 #define CONFIG_SPL_NAND_DRIVERS
 #define CONFIG_SPL_NAND_BASE
@@ -310,9 +271,7 @@
 #define CONFIG_SYS_AT91_PLLB		0x10483f0e
 
 #if defined(CONFIG_SPL_BUILD)
-#define CONFIG_SYS_THUMB_BUILD
 #define CONFIG_SYS_ICACHE_OFF
 #define CONFIG_SYS_DCACHE_OFF
-#undef CONFIG_SPL_OS_BOOT		/* Not supported by existing map */
 #endif
 #endif /* __CONFIG_H */

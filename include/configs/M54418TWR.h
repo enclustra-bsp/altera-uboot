@@ -22,7 +22,6 @@
 
 #define CONFIG_MCFUART
 #define CONFIG_SYS_UART_PORT		(0)
-#define CONFIG_BAUDRATE		115200
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600 , 19200 , 38400 , 57600, 115200 }
 
 #undef CONFIG_WATCHDOG
@@ -38,19 +37,8 @@
 #define CONFIG_BOOTP_HOSTNAME
 
 /* Command line configuration */
-#define CONFIG_CMD_CACHE
-#undef CONFIG_CMD_DATE
-#define CONFIG_CMD_DHCP
-#undef CONFIG_CMD_I2C
-#undef CONFIG_CMD_JFFS2
-#undef CONFIG_CMD_UBI
-#define CONFIG_CMD_MII
 #undef CONFIG_CMD_NAND
-#define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_SPI
-#define CONFIG_CMD_SF
-
 
 /*
  * NAND FLASH
@@ -71,7 +59,7 @@
 #define CONFIG_MII_INIT		1
 #define CONFIG_SYS_DISCOVER_PHY
 #define CONFIG_SYS_RX_ETH_BUFFER	2
-#define CONFIG_SYS_FAULT_ECCONFIG_SYS_NO_FLASHHO_LINK_DOWN
+#define CONFIG_SYS_FAULT_ECHO_LINK_DOWN
 #define CONFIG_SYS_TX_ETH_BUFFER	2
 #define CONFIG_HAS_ETH1
 
@@ -83,7 +71,6 @@
 #define CONFIG_SYS_FEC0_PHYADDR	0
 #define CONFIG_SYS_FEC1_PHYADDR	1
 
-#define CONFIG_BOOTDELAY		2	/* autoboot after 5 seconds */
 
 #ifdef	CONFIG_SYS_NAND_BOOT
 #define CONFIG_BOOTARGS	"root=/dev/mtdblock2 rw rootfstype=jffs2 " \
@@ -178,7 +165,6 @@
 
 /* I2c */
 #undef CONFIG_SYS_FSL_I2C
-#undef CONFIG_HARD_I2C		/* I2C with hardware support */
 #undef	CONFIG_SYS_I2C_SOFT	/* I2C bit-banged */
 /* I2C speed and slave address  */
 #define CONFIG_SYS_I2C_SPEED		80000
@@ -193,7 +179,6 @@
 #define CONFIG_HARD_SPI
 #define CONFIG_SYS_SBFHDR_SIZE		0x7
 #ifdef CONFIG_CMD_SPI
-#	define CONFIG_SPI_FLASH_ATMEL
 
 #	define CONFIG_SYS_DSPI_CTAR0	(DSPI_CTAR_TRSZ(7) | \
 					 DSPI_CTAR_PCSSCK_1CLK | \
@@ -210,10 +195,6 @@
 #define CONFIG_EXTRA_CLOCK
 
 #define CONFIG_PRAM			2048	/* 2048 KB */
-
-/* HUSH */
-#define CONFIG_SYS_HUSH_PARSER		1
-#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
 
@@ -268,7 +249,7 @@
 #endif
 
 #if defined(CONFIG_SERIAL_BOOT)
-#define CONFIG_SYS_MONITOR_BASE	(TEXT_BASE + 0x400)
+#define CONFIG_SYS_MONITOR_BASE	(CONFIG_SYS_TEXT_BASE + 0x400)
 #else
 #define CONFIG_SYS_MONITOR_BASE	(CONFIG_SYS_FLASH_BASE + 0x400)
 #endif
@@ -292,14 +273,12 @@
  * Environment is embedded in u-boot in the second sector of the flash
  */
 #if !defined(CONFIG_SERIAL_BOOT)  /*MRAM boot*/
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENV_IS_IN_MRAM	1
 #define CONFIG_ENV_ADDR		(0x40000 - 0x1000) /*MRAM size 40000*/
 #define CONFIG_ENV_SIZE		0x1000
 #endif
 
 #if defined(CONFIG_CF_SBF)
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENV_IS_IN_SPI_FLASH	1
 #define CONFIG_ENV_SPI_CS		1
 #define CONFIG_ENV_OFFSET		0x40000
@@ -307,7 +286,6 @@
 #define CONFIG_ENV_SECT_SIZE		0x10000
 #endif
 #if defined(CONFIG_SYS_NAND_BOOT)
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENV_IS_NOWHERE
 #define CONFIG_ENV_OFFSET	0x80000
 #define CONFIG_ENV_SIZE	0x20000

@@ -19,14 +19,12 @@
 #define CONFIG_MPC8313
 #define CONFIG_IDS8313
 
-
 #define CONFIG_FSL_ELBC
 
 #define CONFIG_MISC_INIT_R
 
 #define CONFIG_BOOT_RETRY_TIME		900
 #define CONFIG_BOOT_RETRY_MIN		30
-#define CONFIG_BOOTDELAY		1
 #define CONFIG_RESET_TO_RETRY
 
 #define CONFIG_83XX_CLKIN		66000000	/* in Hz */
@@ -167,7 +165,6 @@
 #define CONFIG_TSEC2
 #define CONFIG_TSEC_ENET
 #define CONFIG_HARD_SPI
-#define CONFIG_HARD_I2C
 
 /*
  * NOR FLASH setup
@@ -277,7 +274,6 @@
 /*
  * I2C setup
  */
-#define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_FSL
 #define CONFIG_SYS_FSL_I2C_SPEED	400000
@@ -291,7 +287,6 @@
  */
 #ifdef CONFIG_HARD_SPI
 #define CONFIG_MPC8XXX_SPI
-#define CONFIG_CMD_SPI
 #define CONFIG_SYS_GPIO1_PRELIM
 #define CONFIG_SYS_GPIO1_DIR		0x00000001
 #define CONFIG_SYS_GPIO1_DAT		0x00000001
@@ -323,7 +318,6 @@
  * Serial Port
  */
 #define CONFIG_CONS_INDEX		1
-#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 
@@ -417,23 +411,13 @@
 /*
  * U-Boot environment setup
  */
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_PING
 #define CONFIG_CMD_NAND
-#define CONFIG_CMD_SNTP
-#define CONFIG_CMD_MII
-#define CONFIG_CMD_DATE
 #define CONFIG_CMDLINE_EDITING
-#define CONFIG_CMD_JFFS2
 #define CONFIG_BOOTP_SUBNETMASK
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_HOSTNAME
 #define CONFIG_BOOTP_BOOTPATH
 #define CONFIG_BOOTP_BOOTFILESIZE
-/* pass open firmware flat tree */
-#define CONFIG_OF_LIBFDT
-#define CONFIG_OF_BOARD_SETUP
-#define CONFIG_OF_STDOUT_VIA_ALIAS
 
 /*
  * The reserved memory
@@ -452,7 +436,6 @@
 #define CONFIG_ENV_ADDR_REDUND	(CONFIG_ENV_ADDR + CONFIG_ENV_SIZE)
 #define CONFIG_ENV_SIZE_REDUND	(CONFIG_ENV_SIZE)
 
-
 #define CONFIG_NETDEV			eth1
 #define CONFIG_HOSTNAME		ids8313
 #define CONFIG_ROOTPATH		"/opt/eldk-4.2/ppc_6xx"
@@ -460,10 +443,7 @@
 #define CONFIG_UBOOTPATH		"ids8313/u-boot.bin"
 #define CONFIG_FDTFILE			"ids8313/ids8313.dtb"
 #define CONFIG_LOADADDR		0x400000
-#define CONFIG_CMD_ENV_FLAGS
 #define CONFIG_ENV_FLAGS_LIST_STATIC "ethaddr:mo,eth1addr:mo"
-
-#define CONFIG_BAUDRATE		115200
 
 /* Initial Memory map for Linux*/
 #define CONFIG_SYS_BOOTMAPSZ		(256 << 20)
@@ -477,8 +457,6 @@
 					 + sizeof(CONFIG_SYS_PROMPT)+16)
 #define CONFIG_SYS_MAXARGS		16
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
-#define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser	*/
-#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 
 #define CONFIG_SYS_MEMTEST_START	0x00001000
 #define CONFIG_SYS_MEMTEST_END		0x00C00000
@@ -549,7 +527,6 @@
 
 /* UBI Support */
 #define CONFIG_CMD_NAND_TRIMFFS
-#define CONFIG_CMD_UBI
 #define CONFIG_CMD_UBIFS
 #define CONFIG_RBTREE
 #define CONFIG_LZO
@@ -561,12 +538,6 @@
 #define CONFIG_BOOTCOUNT_ALEN	1
 #define CONFIG_SYS_BOOTCOUNT_ADDR	0x9
 
-#define CONFIG_VERSION_VARIABLE
-
 #define CONFIG_IMAGE_FORMAT_LEGACY
-#define CONFIG_CMD_FDT
-#define CONFIG_CMD_HASH
-#define CONFIG_SHA1
-#define CONFIG_SHA256
 
 #endif	/* __CONFIG_H */

@@ -10,14 +10,15 @@
 
 int arch_cpu_init(void)
 {
-#ifdef CONFIG_SYS_X86_TSC_TIMER
-	timer_set_base(rdtsc());
-#endif
-
 	return 0;
 }
 
 int board_early_init_f(void)
+{
+	return 0;
+}
+
+int checkcpu(void)
 {
 	return 0;
 }

@@ -33,6 +33,10 @@
 #define ARC_AUX_TIMER0_CTRL	0x22	/* Timer 0 control */
 #define ARC_AUX_TIMER0_LIMIT	0x23	/* Timer 0 limit */
 
+#define ARC_AUX_TIMER1_CNT	0x100	/* Timer 1 count */
+#define ARC_AUX_TIMER1_CTRL	0x101	/* Timer 1 control */
+#define ARC_AUX_TIMER1_LIMIT	0x102	/* Timer 1 limit */
+
 #define ARC_AUX_INTR_VEC_BASE	0x25
 
 /* Data cache related auxiliary registers */
@@ -53,6 +57,13 @@
 #define ARC_AUX_SLC_INVALIDATE	0x905
 #define ARC_AUX_SLC_IVDL	0x910
 #define ARC_AUX_SLC_FLDL	0x912
+#define ARC_BCR_CLUSTER		0xcf
+
+/* IO coherency related auxiliary registers */
+#define ARC_AUX_IO_COH_ENABLE	0x500
+#define ARC_AUX_IO_COH_PARTIAL	0x501
+#define ARC_AUX_IO_COH_AP0_BASE	0x508
+#define ARC_AUX_IO_COH_AP0_SIZE	0x509
 
 #ifndef __ASSEMBLY__
 /* Accessors for auxiliary registers */

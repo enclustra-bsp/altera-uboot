@@ -506,6 +506,9 @@ static int exynos5_pinmux_config(int peripheral, int flags)
 		 */
 		gpio_set_pull(EXYNOS5_GPIO_X07, S5P_GPIO_PULL_NONE);
 		break;
+	case PERIPH_ID_PWM0:
+		gpio_cfg_pin(EXYNOS5_GPIO_B20, S5P_GPIO_FUNC(2));
+		break;
 	default:
 		debug("%s: invalid peripheral %d", __func__, peripheral);
 		return -1;
@@ -547,6 +550,9 @@ static int exynos5420_pinmux_config(int peripheral, int flags)
 	case PERIPH_ID_I2C9:
 	case PERIPH_ID_I2C10:
 		exynos5420_i2c_config(peripheral);
+		break;
+	case PERIPH_ID_PWM0:
+		gpio_cfg_pin(EXYNOS5420_GPIO_B20, S5P_GPIO_FUNC(2));
 		break;
 	default:
 		debug("%s: invalid peripheral %d", __func__, peripheral);
@@ -737,10 +743,10 @@ static int exynos4x12_mmc_config(int peripheral, int flags)
 		return -1;
 	}
 	for (i = start; i < (start + 7); i++) {
+		gpio_set_pull(i, S5P_GPIO_PULL_NONE);
 		if (i == (start + 2))
 			continue;
 		gpio_cfg_pin(i,  func);
-		gpio_set_pull(i, S5P_GPIO_PULL_NONE);
 		gpio_set_drv(i, S5P_GPIO_DRV_4X);
 	}
 	if (flags & PINMUX_FLAG_8BIT_MODE) {
@@ -858,7 +864,7 @@ static int exynos4x12_pinmux_config(int peripheral, int flags)
 int exynos_pinmux_config(int peripheral, int flags)
 {
 	if (cpu_is_exynos5()) {
-		if (proid_is_exynos5420() || proid_is_exynos5800())
+		if (proid_is_exynos5420() || proid_is_exynos5422())
 			return exynos5420_pinmux_config(peripheral, flags);
 		else if (proid_is_exynos5250())
 			return exynos5_pinmux_config(peripheral, flags);

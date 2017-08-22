@@ -6,6 +6,7 @@
  */
 
 #include <common.h>
+#include <console.h>
 #include <debug_uart.h>
 #include <stdarg.h>
 #include <iomux.h>
@@ -15,6 +16,7 @@
 #include <stdio_dev.h>
 #include <exports.h>
 #include <environment.h>
+#include <watchdog.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -39,14 +41,14 @@ static int on_console(const char *name, const char *value, enum env_op op,
 	case env_op_create:
 	case env_op_overwrite:
 
-#ifdef CONFIG_CONSOLE_MUX
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 		if (iomux_doenv(console, value))
 			return 1;
 #else
 		/* Try assigning specified device */
 		if (console_assign(console, value) < 0)
 			return 1;
-#endif /* CONFIG_CONSOLE_MUX */
+#endif
 		return 0;
 
 	case env_op_delete:
@@ -64,11 +66,11 @@ U_BOOT_ENV_CALLBACK(console, on_console);
 static int on_silent(const char *name, const char *value, enum env_op op,
 	int flags)
 {
-#ifndef CONFIG_SILENT_CONSOLE_UPDATE_ON_SET
+#if !CONFIG_IS_ENABLED(CONFIG_SILENT_CONSOLE_UPDATE_ON_SET)
 	if (flags & H_INTERACTIVE)
 		return 0;
 #endif
-#ifndef CONFIG_SILENT_CONSOLE_UPDATE_ON_RELOC
+#if !CONFIG_IS_ENABLED(CONFIG_SILENT_CONSOLE_UPDATE_ON_RELOC)
 	if ((flags & H_INTERACTIVE) == 0)
 		return 0;
 #endif
@@ -83,7 +85,7 @@ static int on_silent(const char *name, const char *value, enum env_op op,
 U_BOOT_ENV_CALLBACK(silent, on_silent);
 #endif
 
-#ifdef CONFIG_SYS_CONSOLE_IS_IN_ENV
+#if CONFIG_IS_ENABLED(SYS_CONSOLE_IS_IN_ENV)
 /*
  * if overwrite_console returns 1, the stdin, stderr and stdout
  * are switched to the serial port, else the settings in the
@@ -96,7 +98,7 @@ extern int overwrite_console(void);
 #define OVERWRITE_CONSOLE 0
 #endif /* CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE */
 
-#endif /* CONFIG_SYS_CONSOLE_IS_IN_ENV */
+#endif /* CONFIG_IS_ENABLED(SYS_CONSOLE_IS_IN_ENV) */
 
 static int console_setfile(int file, struct stdio_dev * dev)
 {
@@ -143,7 +145,7 @@ static int console_setfile(int file, struct stdio_dev * dev)
 	return error;
 }
 
-#if defined(CONFIG_CONSOLE_MUX)
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 /** Console I/O multiplexing *******************************************/
 
 static struct stdio_dev *tstcdev;
@@ -200,7 +202,7 @@ static void console_putc(int file, const char c)
 	}
 }
 
-#ifdef CONFIG_PRE_CONSOLE_BUFFER
+#if CONFIG_IS_ENABLED(PRE_CONSOLE_BUFFER)
 static void console_puts_noserial(int file, const char *s)
 {
 	int i;
@@ -226,11 +228,6 @@ static void console_puts(int file, const char *s)
 	}
 }
 
-static inline void console_printdevs(int file)
-{
-	iomux_printdevs(file);
-}
-
 static inline void console_doenv(int file, struct stdio_dev *dev)
 {
 	iomux_doenv(file, dev->name);
@@ -251,7 +248,7 @@ static inline void console_putc(int file, const char c)
 	stdio_devices[file]->putc(stdio_devices[file], c);
 }
 
-#ifdef CONFIG_PRE_CONSOLE_BUFFER
+#if CONFIG_IS_ENABLED(PRE_CONSOLE_BUFFER)
 static inline void console_puts_noserial(int file, const char *s)
 {
 	if (strcmp(stdio_devices[file]->name, "serial") != 0)
@@ -264,16 +261,11 @@ static inline void console_puts(int file, const char *s)
 	stdio_devices[file]->puts(stdio_devices[file], s);
 }
 
-static inline void console_printdevs(int file)
-{
-	printf("%s\n", stdio_devices[file]->name);
-}
-
 static inline void console_doenv(int file, struct stdio_dev *dev)
 {
 	console_setfile(file, dev);
 }
-#endif /* defined(CONFIG_CONSOLE_MUX) */
+#endif /* CONIFIG_IS_ENABLED(CONSOLE_MUX) */
 
 /** U-Boot INITIAL CONSOLE-NOT COMPATIBLE FUNCTIONS *************************/
 
@@ -298,11 +290,12 @@ int serial_printf(const char *fmt, ...)
 int fgetc(int file)
 {
 	if (file < MAX_FILES) {
-#if defined(CONFIG_CONSOLE_MUX)
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 		/*
 		 * Effectively poll for input wherever it may be available.
 		 */
 		for (;;) {
+			WATCHDOG_RESET();
 			/*
 			 * Upper layer may have already called tstc() so
 			 * check for that first.
@@ -377,6 +370,15 @@ int getc(void)
 	if (!gd->have_console)
 		return 0;
 
+#ifdef CONFIG_CONSOLE_RECORD
+	if (gd->console_in.start) {
+		int ch;
+
+		ch = membuff_getbyte(&gd->console_in);
+		if (ch != -1)
+			return 1;
+	}
+#endif
 	if (gd->flags & GD_FLG_DEVINIT) {
 		/* Get from the standard input */
 		return fgetc(stdin);
@@ -395,7 +397,12 @@ int tstc(void)
 
 	if (!gd->have_console)
 		return 0;
-
+#ifdef CONFIG_CONSOLE_RECORD
+	if (gd->console_in.start) {
+		if (membuff_peekbyte(&gd->console_in) != -1)
+			return 1;
+	}
+#endif
 	if (gd->flags & GD_FLG_DEVINIT) {
 		/* Test the standard input */
 		return ftstc(stdin);
@@ -408,7 +415,7 @@ int tstc(void)
 #define PRE_CONSOLE_FLUSHPOINT1_SERIAL			0
 #define PRE_CONSOLE_FLUSHPOINT2_EVERYTHING_BUT_SERIAL	1
 
-#ifdef CONFIG_PRE_CONSOLE_BUFFER
+#if CONFIG_IS_ENABLED(PRE_CONSOLE_BUFFER)
 #define CIRC_BUF_IDX(idx) ((idx) % (unsigned long)CONFIG_PRE_CON_BUF_SZ)
 
 static void pre_console_putc(const char c)
@@ -469,6 +476,10 @@ void putc(const char c)
 		return;
 	}
 #endif
+#ifdef CONFIG_CONSOLE_RECORD
+	if (gd && (gd->flags & GD_FLG_RECORD) && gd->console_out.start)
+		membuff_putbyte(&gd->console_out, c);
+#endif
 #ifdef CONFIG_SILENT_CONSOLE
 	if (gd->flags & GD_FLG_SILENT)
 		return;
@@ -506,11 +517,13 @@ void puts(const char *s)
 			int ch = *s++;
 
 			printch(ch);
-			if (ch == '\n')
-				printch('\r');
 		}
 		return;
 	}
+#endif
+#ifdef CONFIG_CONSOLE_RECORD
+	if (gd && (gd->flags & GD_FLG_RECORD) && gd->console_out.start)
+		membuff_put(&gd->console_out, s, strlen(s));
 #endif
 #ifdef CONFIG_SILENT_CONSOLE
 	if (gd->flags & GD_FLG_SILENT)
@@ -535,44 +548,31 @@ void puts(const char *s)
 	}
 }
 
-int printf(const char *fmt, ...)
+#ifdef CONFIG_CONSOLE_RECORD
+int console_record_init(void)
 {
-	va_list args;
-	uint i;
-	char printbuffer[CONFIG_SYS_PBSIZE];
+	int ret;
 
-	va_start(args, fmt);
+	ret = membuff_new(&gd->console_out, CONFIG_CONSOLE_RECORD_OUT_SIZE);
+	if (ret)
+		return ret;
+	ret = membuff_new(&gd->console_in, CONFIG_CONSOLE_RECORD_IN_SIZE);
 
-	/* For this to work, printbuffer must be larger than
-	 * anything we ever want to print.
-	 */
-	i = vscnprintf(printbuffer, sizeof(printbuffer), fmt, args);
-	va_end(args);
-
-	/* Print the string */
-	puts(printbuffer);
-	return i;
+	return ret;
 }
 
-int vprintf(const char *fmt, va_list args)
+void console_record_reset(void)
 {
-	uint i;
-	char printbuffer[CONFIG_SYS_PBSIZE];
+	membuff_purge(&gd->console_out);
+	membuff_purge(&gd->console_in);
+}
 
-#if defined(CONFIG_PRE_CONSOLE_BUFFER) && !defined(CONFIG_SANDBOX)
-	if (!gd->have_console)
-		return 0;
+void console_record_reset_enable(void)
+{
+	console_record_reset();
+	gd->flags |= GD_FLG_RECORD;
+}
 #endif
-
-	/* For this to work, printbuffer must be larger than
-	 * anything we ever want to print.
-	 */
-	i = vscnprintf(printbuffer, sizeof(printbuffer), fmt, args);
-
-	/* Print the string */
-	puts(printbuffer);
-	return i;
-}
 
 /* test if ctrl-c was pressed */
 static int ctrlc_disabled = 0;	/* see disable_ctrl() */
@@ -643,44 +643,6 @@ void clear_ctrlc(void)
 	ctrlc_was_pressed = 0;
 }
 
-#ifdef CONFIG_MODEM_SUPPORT_DEBUG
-char	screen[1024];
-char *cursor = screen;
-int once = 0;
-inline void dbg(const char *fmt, ...)
-{
-	va_list	args;
-	uint	i;
-	char	printbuffer[CONFIG_SYS_PBSIZE];
-
-	if (!once) {
-		memset(screen, 0, sizeof(screen));
-		once++;
-	}
-
-	va_start(args, fmt);
-
-	/* For this to work, printbuffer must be larger than
-	 * anything we ever want to print.
-	 */
-	i = vsnprintf(printbuffer, sizeof(printbuffer), fmt, args);
-	va_end(args);
-
-	if ((screen + sizeof(screen) - 1 - cursor)
-	    < strlen(printbuffer) + 1) {
-		memset(screen, 0, sizeof(screen));
-		cursor = screen;
-	}
-	sprintf(cursor, printbuffer);
-	cursor += strlen(printbuffer);
-
-}
-#else
-static inline void dbg(const char *fmt, ...)
-{
-}
-#endif
-
 /** U-Boot INIT FUNCTIONS *************************************************/
 
 struct stdio_dev *search_device(int flags, const char *name)
@@ -688,6 +650,10 @@ struct stdio_dev *search_device(int flags, const char *name)
 	struct stdio_dev *dev;
 
 	dev = stdio_get_by_name(name);
+#ifdef CONFIG_VIDCONSOLE_AS_LCD
+	if (!dev && !strcmp(name, "lcd"))
+		dev = stdio_get_by_name("vidconsole");
+#endif
 
 	if (dev && (dev->flags & flags))
 		return dev;
@@ -723,15 +689,22 @@ int console_assign(int file, const char *devname)
 	return -1;
 }
 
+static void console_update_silent(void)
+{
+#ifdef CONFIG_SILENT_CONSOLE
+	if (getenv("silent") != NULL)
+		gd->flags |= GD_FLG_SILENT;
+	else
+		gd->flags &= ~GD_FLG_SILENT;
+#endif
+}
+
 /* Called before relocation - use serial functions */
 int console_init_f(void)
 {
 	gd->have_console = 1;
 
-#ifdef CONFIG_SILENT_CONSOLE
-	if (getenv("silent") != NULL)
-		gd->flags |= GD_FLG_SILENT;
-#endif
+	console_update_silent();
 
 	print_pre_console_buffer(PRE_CONSOLE_FLUSHPOINT1_SERIAL);
 
@@ -763,7 +736,7 @@ void stdio_print_current_devices(void)
 	}
 }
 
-#ifdef CONFIG_SYS_CONSOLE_IS_IN_ENV
+#if CONFIG_IS_ENABLED(SYS_CONSOLE_IS_IN_ENV)
 /* Called after the relocation - use desired console functions */
 int console_init_r(void)
 {
@@ -772,7 +745,7 @@ int console_init_r(void)
 #ifdef CONFIG_SYS_CONSOLE_ENV_OVERWRITE
 	int i;
 #endif /* CONFIG_SYS_CONSOLE_ENV_OVERWRITE */
-#ifdef CONFIG_CONSOLE_MUX
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 	int iomux_err = 0;
 #endif
 
@@ -793,7 +766,7 @@ int console_init_r(void)
 		inputdev  = search_device(DEV_FLAGS_INPUT,  stdinname);
 		outputdev = search_device(DEV_FLAGS_OUTPUT, stdoutname);
 		errdev    = search_device(DEV_FLAGS_OUTPUT, stderrname);
-#ifdef CONFIG_CONSOLE_MUX
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 		iomux_err = iomux_doenv(stdin, stdinname);
 		iomux_err += iomux_doenv(stdout, stdoutname);
 		iomux_err += iomux_doenv(stderr, stderrname);
@@ -826,13 +799,17 @@ int console_init_r(void)
 		console_doenv(stdin, inputdev);
 	}
 
-#ifdef CONFIG_CONSOLE_MUX
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 done:
 #endif
 
 #ifndef CONFIG_SYS_CONSOLE_INFO_QUIET
 	stdio_print_current_devices();
 #endif /* CONFIG_SYS_CONSOLE_INFO_QUIET */
+#ifdef CONFIG_VIDCONSOLE_AS_LCD
+	if (strstr(stdoutname, "lcd"))
+		printf("Warning: Please change 'lcd' to 'vidconsole' in stdout/stderr environment vars\n");
+#endif
 
 #ifdef CONFIG_SYS_CONSOLE_ENV_OVERWRITE
 	/* set the environment variables (will overwrite previous env settings) */
@@ -852,7 +829,7 @@ done:
 	return 0;
 }
 
-#else /* CONFIG_SYS_CONSOLE_IS_IN_ENV */
+#else /* !CONFIG_IS_ENABLED(SYS_CONSOLE_IS_IN_ENV) */
 
 /* Called after the relocation - use desired console functions */
 int console_init_r(void)
@@ -862,6 +839,8 @@ int console_init_r(void)
 	struct list_head *list = stdio_get_list();
 	struct list_head *pos;
 	struct stdio_dev *dev;
+
+	console_update_silent();
 
 #ifdef CONFIG_SPLASH_SCREEN
 	/*
@@ -894,7 +873,7 @@ int console_init_r(void)
 	if (outputdev != NULL) {
 		console_setfile(stdout, outputdev);
 		console_setfile(stderr, outputdev);
-#ifdef CONFIG_CONSOLE_MUX
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 		console_devices[stdout][0] = outputdev;
 		console_devices[stderr][0] = outputdev;
 #endif
@@ -903,7 +882,7 @@ int console_init_r(void)
 	/* Initializes input console */
 	if (inputdev != NULL) {
 		console_setfile(stdin, inputdev);
-#ifdef CONFIG_CONSOLE_MUX
+#if CONFIG_IS_ENABLED(CONSOLE_MUX)
 		console_devices[stdin][0] = inputdev;
 #endif
 	}
@@ -928,4 +907,4 @@ int console_init_r(void)
 	return 0;
 }
 
-#endif /* CONFIG_SYS_CONSOLE_IS_IN_ENV */
+#endif /* CONFIG_IS_ENABLED(SYS_CONSOLE_IS_IN_ENV) */

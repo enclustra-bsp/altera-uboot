@@ -12,6 +12,8 @@
 		eth3 = &eth_3;
 		eth5 = &eth_5;
 		i2c0 = "/i2c@0";
+		mmc0 = "/mmc0";
+		mmc1 = "/mmc1";
 		pci0 = &pci;
 		remoteproc1 = &rproc_1;
 		remoteproc2 = &rproc_2;
@@ -57,6 +59,23 @@
 		compatible = "denx,u-boot-fdt-test";
 		ping-expect = <3>;
 		ping-add = <3>;
+	};
+
+	phy_provider0: gen_phy@0 {
+		compatible = "sandbox,phy";
+		#phy-cells = <1>;
+	};
+
+	phy_provider1: gen_phy@1 {
+		compatible = "sandbox,phy";
+		#phy-cells = <0>;
+		broken;
+	};
+
+	gen_phy_user: gen_phy_user {
+		compatible = "simple-bus";
+		phys = <&phy_provider0 0>, <&phy_provider0 1>, <&phy_provider1>;
+		phy-names = "phy1", "phy2", "phy3";
 	};
 
 	some-bus {
@@ -108,8 +127,23 @@
 		compatible = "denx,u-boot-fdt-test";
 	};
 
-	clk@0 {
+	clk_fixed: clk-fixed {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <1234>;
+	};
+
+	clk_sandbox: clk-sbox {
 		compatible = "sandbox,clk";
+		#clock-cells = <1>;
+	};
+
+	clk-test {
+		compatible = "sandbox,clk-test";
+		clocks = <&clk_fixed>,
+			 <&clk_sandbox 1>,
+			 <&clk_sandbox 0>;
+		clock-names = "fixed", "i2c", "spi";
 	};
 
 	eth@10002000 {
@@ -189,6 +223,19 @@
 		};
 	};
 
+	adc@0 {
+		compatible = "sandbox,adc";
+		vdd-supply = <&buck2>;
+		vss-microvolts = <0>;
+	};
+
+	lcd {
+		u-boot,dm-pre-reloc;
+		compatible = "sandbox,lcd-sdl";
+		xres = <1366>;
+		yres = <768>;
+	};
+
 	leds {
 		compatible = "gpio-leds";
 
@@ -203,7 +250,26 @@
 		};
 	};
 
-	mmc {
+	mbox: mbox {
+		compatible = "sandbox,mbox";
+		#mbox-cells = <1>;
+	};
+
+	mbox-test {
+		compatible = "sandbox,mbox-test";
+		mboxes = <&mbox 100>, <&mbox 1>;
+		mbox-names = "other", "test";
+	};
+
+	mmc2 {
+		compatible = "sandbox,mmc";
+	};
+
+	mmc1 {
+		compatible = "sandbox,mmc";
+	};
+
+	mmc0 {
 		compatible = "sandbox,mmc";
 	};
 
@@ -223,6 +289,24 @@
 		};
 	};
 
+	pwrdom: power-domain {
+		compatible = "sandbox,power-domain";
+		#power-domain-cells = <1>;
+	};
+
+	power-domain-test {
+		compatible = "sandbox,power-domain-test";
+		power-domains = <&pwrdom 2>;
+	};
+
+	pwm {
+		compatible = "sandbox,pwm";
+	};
+
+	pwm2 {
+		compatible = "sandbox,pwm";
+	};
+
 	ram {
 		compatible = "sandbox,ram";
 	};
@@ -233,6 +317,17 @@
 
 	reset@1 {
 		compatible = "sandbox,reset";
+	};
+
+	resetc: reset-ctl {
+		compatible = "sandbox,reset-ctl";
+		#reset-cells = <1>;
+	};
+
+	reset-ctl-test {
+		compatible = "sandbox,reset-ctl-test";
+		resets = <&resetc 100>, <&resetc 2>;
+		reset-names = "other", "test";
 	};
 
 	rproc_1: rproc@1 {
@@ -273,6 +368,11 @@
 			0x38 8>;
 	};
 
+	timer {
+		compatible = "sandbox,timer";
+		clock-frequency = <1000000>;
+	};
+
 	uart0: serial {
 		compatible = "sandbox,serial";
 		u-boot,dm-pre-reloc;
@@ -301,10 +401,27 @@
 				compatible = "sandbox,usb-hub";
 				#address-cells = <1>;
 				#size-cells = <0>;
-				flash-stick {
+				flash-stick@0 {
 					reg = <0>;
 					compatible = "sandbox,usb-flash";
 					sandbox,filepath = "testflash.bin";
+				};
+
+				flash-stick@1 {
+					reg = <1>;
+					compatible = "sandbox,usb-flash";
+					sandbox,filepath = "testflash1.bin";
+				};
+
+				flash-stick@2 {
+					reg = <2>;
+					compatible = "sandbox,usb-flash";
+					sandbox,filepath = "testflash2.bin";
+				};
+
+				keyb@3 {
+					reg = <3>;
+					compatible = "sandbox,usb-keyb";
 				};
 
 			};
@@ -316,6 +433,30 @@
 		status = "disabled";
 	};
 
+	spmi: spmi@0 {
+		compatible = "sandbox,spmi";
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+		pm8916@0 {
+			compatible = "qcom,spmi-pmic";
+			reg = <0x0 0x1>;
+			#address-cells = <0x1>;
+			#size-cells = <0x1>;
+
+			spmi_gpios: gpios@c000 {
+				compatible = "qcom,pm8916-gpio";
+				reg = <0xc000 0x400>;
+				gpio-controller;
+				gpio-count = <4>;
+				#gpio-cells = <2>;
+				gpio-bank-name="spmi";
+			};
+		};
+	};
+
+	wdt0: wdt@0 {
+		compatible = "sandbox,wdt";
+	};
 };
 
 #include "sandbox_pmic.dtsi"

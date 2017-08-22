@@ -5,7 +5,6 @@
  */
 
 #include <common.h>
-#include <i2c.h>
 #include <spl.h>
 #include <asm/io.h>
 #include <asm/arch/cpu.h>
@@ -13,8 +12,6 @@
 
 #include "high_speed_env_spec.h"
 #include "sys_env_lib.h"
-
-#define SERDES_VERION	"2.0"
 
 u8 selectors_serdes_rev1_map[LAST_SERDES_TYPE][MAX_SERDES_LANES] = {
 	/* 0  1    2    3    4    5 */

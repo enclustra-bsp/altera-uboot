@@ -218,6 +218,14 @@ void enable_caches(void)
 }
 #endif /* #ifndef CONFIG_SYS_DCACHE_OFF */
 
+
+uint get_svr(void)
+{
+	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+
+	return in_be32(&gur->svr);
+}
+
 #if defined(CONFIG_DISPLAY_CPUINFO)
 int print_cpuinfo(void)
 {
@@ -371,4 +379,14 @@ void reset_cpu(ulong addr)
 		 * Let the watchdog trigger
 		 */
 	}
+}
+
+void arch_preboot_os(void)
+{
+	unsigned long ctrl;
+
+	/* Disable PL1 Physical Timer */
+	asm("mrc p15, 0, %0, c14, c2, 1" : "=r" (ctrl));
+	ctrl &= ~ARCH_TIMER_CTRL_ENABLE;
+	asm("mcr p15, 0, %0, c14, c2, 1" : : "r" (ctrl));
 }

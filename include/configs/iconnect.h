@@ -9,12 +9,6 @@
 #ifndef _CONFIG_ICONNECT_H
 #define _CONFIG_ICONNECT_H
 
-
-/*
- * Version number information
- */
-#define CONFIG_IDENT_STRING	" Iomega iConnect"
-
 /*
  * High level configuration options
  */
@@ -31,19 +25,13 @@
  * Compression configuration
  */
 #define CONFIG_BZIP2
-#define CONFIG_LZMA
 #define CONFIG_LZO
 
 /*
  * Commands configuration
  */
-#define CONFIG_SYS_NO_FLASH		/* declare no flash (NOR/SPI) */
 #define CONFIG_SYS_MVFS
-#define CONFIG_CMD_ENV
-#define CONFIG_CMD_MII
 #define CONFIG_CMD_NAND
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_USB
 
 /*
  * mv-common.h should be defined after CMD configs since it used them
@@ -98,10 +86,6 @@
 /*
  * File system
  */
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_JFFS2
-#define CONFIG_CMD_UBI
 #define CONFIG_CMD_UBIFS
 #define CONFIG_RBTREE
 #define CONFIG_MTD_DEVICE

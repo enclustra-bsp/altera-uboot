@@ -337,6 +337,30 @@ struct sandbox_state *state_get_current(void)
 	return state;
 }
 
+void state_set_skip_delays(bool skip_delays)
+{
+	struct sandbox_state *state = state_get_current();
+
+	state->skip_delays = skip_delays;
+}
+
+bool state_get_skip_delays(void)
+{
+	struct sandbox_state *state = state_get_current();
+
+	return state->skip_delays;
+}
+
+void state_reset_for_test(struct sandbox_state *state)
+{
+	/* No reset yet, so mark it as such. Always allow power reset */
+	state->last_sysreset = SYSRESET_COUNT;
+	state->sysreset_allowed[SYSRESET_POWER] = true;
+
+	memset(&state->wdt, '\0', sizeof(state->wdt));
+	memset(state->spi, '\0', sizeof(state->spi));
+}
+
 int state_init(void)
 {
 	state = &main_state;
@@ -345,10 +369,7 @@ int state_init(void)
 	state->ram_buf = os_malloc(state->ram_size);
 	assert(state->ram_buf);
 
-	/* No reset yet, so mark it as such. Always allow power reset */
-	state->last_reset = RESET_COUNT;
-	state->reset_allowed[RESET_POWER] = true;
-
+	state_reset_for_test(state);
 	/*
 	 * Example of how to use GPIOs:
 	 *

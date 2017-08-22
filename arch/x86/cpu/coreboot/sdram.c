@@ -9,7 +9,6 @@
 #include <common.h>
 #include <asm/e820.h>
 #include <asm/arch/sysinfo.h>
-#include <asm/arch/tables.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -105,7 +104,7 @@ int dram_init(void)
 	return 0;
 }
 
-void dram_init_banksize(void)
+int dram_init_banksize(void)
 {
 	int i, j;
 
@@ -122,4 +121,6 @@ void dram_init_banksize(void)
 			}
 		}
 	}
+
+	return 0;
 }

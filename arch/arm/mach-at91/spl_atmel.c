@@ -77,7 +77,13 @@ void s_init(void)
 
 void board_init_f(ulong dummy)
 {
+	int ret;
+
 	switch_to_main_crystal_osc();
+
+#ifdef CONFIG_SAMA5D2
+	configure_2nd_sram_as_l2_cache();
+#endif
 
 	/* disable watchdog */
 	at91_disable_wdt();
@@ -95,7 +101,14 @@ void board_init_f(ulong dummy)
 
 	board_early_init_f();
 
+	mem_init();
+
+	ret = spl_init();
+	if (ret) {
+		debug("spl_init() failed: %d\n", ret);
+		hang();
+	}
+
 	preloader_console_init();
 
-	mem_init();
 }

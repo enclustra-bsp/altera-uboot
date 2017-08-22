@@ -30,17 +30,13 @@ void ft_fixup_enet_phy_connect_type(void *fdt)
 	int phy_node;
 	int i = 0;
 	uint32_t ph;
+	char *name[3] = { "eTSEC1", "eTSEC2", "eTSEC3" };
 
-	while ((dev = eth_get_dev_by_index(i++)) != NULL) {
-		if (strstr(dev->name, "eTSEC1")) {
-			strcpy(enet, "ethernet0");
-			strcpy(phy, "enet0_rgmii_phy");
-		} else if (strstr(dev->name, "eTSEC2")) {
-			strcpy(enet, "ethernet1");
-			strcpy(phy, "enet1_rgmii_phy");
-		} else if (strstr(dev->name, "eTSEC3")) {
-			strcpy(enet, "ethernet2");
-			strcpy(phy, "enet2_rgmii_phy");
+	for (; i < ARRAY_SIZE(name); i++) {
+		dev = eth_get_dev_by_name(name[i]);
+		if (dev) {
+			sprintf(enet, "ethernet%d", i);
+			sprintf(phy, "enet%d_rgmii_phy", i);
 		} else {
 			continue;
 		}
@@ -97,8 +93,6 @@ void ft_cpu_setup(void *blob, bd_t *bd)
 		fdt_fixup_crypto_node(blob, sec_in32(&sec->secvid_ms));
 	}
 #endif
-
-	fdt_fixup_ethernet(blob);
 
 	off = fdt_node_offset_by_prop_value(blob, -1, "device_type", "cpu", 4);
 	while (off != -FDT_ERR_NOTFOUND) {

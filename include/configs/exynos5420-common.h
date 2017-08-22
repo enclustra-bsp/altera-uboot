@@ -15,8 +15,8 @@
 
 #define CONFIG_EXYNOS5_DT
 
-#define MACH_TYPE_SMDK5420	8002
-#define CONFIG_MACH_TYPE	MACH_TYPE_SMDK5420
+/* Provide the MACH_TYPE value that the vendor kernel requires. */
+#define CONFIG_MACH_TYPE		8002
 
 #define CONFIG_VAR_SIZE_SPL
 
@@ -48,7 +48,6 @@
  */
 #define CONFIG_CORE_COUNT		0x8
 
-#define CONFIG_USB_XHCI
 #define CONFIG_USB_XHCI_EXYNOS
 
 #endif	/* __CONFIG_EXYNOS5420_H */

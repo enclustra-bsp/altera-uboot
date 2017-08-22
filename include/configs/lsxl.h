@@ -8,17 +8,14 @@
 #ifndef _CONFIG_LSXL_H
 #define _CONFIG_LSXL_H
 
-
 /*
  * Version number information
  */
 #if defined(CONFIG_LSCHLV2)
-#define CONFIG_IDENT_STRING " LS-CHLv2"
 #define CONFIG_SYS_KWD_CONFIG $(CONFIG_BOARDDIR)/kwbimage-lschl.cfg
 #define CONFIG_MACH_TYPE 3006
 #define CONFIG_SYS_TCLK 166666667 /* 166 MHz */
 #elif defined(CONFIG_LSXHL)
-#define CONFIG_IDENT_STRING " LS-XHL"
 #define CONFIG_SYS_KWD_CONFIG $(CONFIG_BOARDDIR)/kwbimage-lsxhl.cfg
 #define CONFIG_MACH_TYPE 2663
 /* CONFIG_SYS_TCLK is 200000000 by default */
@@ -37,36 +34,10 @@
 #define CONFIG_SHOW_BOOT_PROGRESS
 
 #define CONFIG_KIRKWOOD_GPIO
-#define CONFIG_OF_LIBFDT
-
-#define CONFIG_SYS_NO_FLASH
-#define CONFIG_SYS_HUSH_PARSER
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV
-#define CONFIG_SYS_CONSOLE_INFO_QUIET
-
-/*
- * Enable u-boot API for standalone programs.
- */
-#define CONFIG_API
 
 /*
  * Commands configuration
  */
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_ENV
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_IDE
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_SF
-#define CONFIG_CMD_SPI
-#define CONFIG_CMD_USB
-#define CONFIG_CMD_FS_GENERIC
-
-#define CONFIG_DOS_PARTITION
-#define CONFIG_EFI_PARTITION
 
 /*
  * mv-common.h should be defined after CMD configs since it used them
@@ -78,15 +49,10 @@
 #define CONFIG_SUPPORT_RAW_INITRD
 
 /* ST M25P40 */
-#undef CONFIG_SPI_FLASH_MACRONIX
-#define CONFIG_SPI_FLASH_STMICRO
 #undef CONFIG_ENV_SPI_MAX_HZ
 #define CONFIG_ENV_SPI_MAX_HZ		25000000
 #undef CONFIG_SF_DEFAULT_SPEED
 #define CONFIG_SF_DEFAULT_SPEED		25000000
-
-
-#define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
 
 /*
  *  Environment variables configurations
@@ -179,7 +145,7 @@
 #undef CONFIG_RESET_PHY_R
 #endif /* CONFIG_CMD_NET */
 
-#ifdef CONFIG_CMD_IDE
+#ifdef CONFIG_IDE
 #undef CONFIG_IDE_LED
 #undef CONFIG_SYS_IDE_MAXBUS
 #define CONFIG_SYS_IDE_MAXBUS		1

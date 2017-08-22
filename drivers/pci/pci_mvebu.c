@@ -12,7 +12,7 @@
 
 #include <common.h>
 #include <pci.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/soc.h>
@@ -91,25 +91,26 @@ static void __iomem *mvebu_pcie_membase = (void __iomem *)MBUS_PCI_MEM_BASE;
 #if defined(CONFIG_ARMADA_38X)
 #define PCIE_BASE(if)					\
 	((if) == 0 ?					\
-	 MVEBU_REG_PCIE_BASE + 0x40000 :		\
-	 MVEBU_REG_PCIE_BASE + 0x4000 * (if))
+	 MVEBU_REG_PCIE0_BASE :				\
+	 (MVEBU_REG_PCIE_BASE + 0x4000 * (if - 1)))
 
 /*
  * On A38x MV6820 these PEX ports are supported:
  *  0 - Port 0.0
- *  1 - Port 0.1
- *  2 - Port 0.2
+ *  1 - Port 1.0
+ *  2 - Port 2.0
+ *  3 - Port 3.0
  */
-#define MAX_PEX 3
+#define MAX_PEX 4
 static struct mvebu_pcie pcie_bus[MAX_PEX];
 
 static void mvebu_get_port_lane(struct mvebu_pcie *pcie, int pex_idx,
 				int *mem_target, int *mem_attr)
 {
-	u8 port[] = { 0, 1, 2 };
-	u8 lane[] = { 0, 0, 0 };
-	u8 target[] = { 8, 4, 4 };
-	u8 attr[] = { 0xe8, 0xe8, 0xd8 };
+	u8 port[] = { 0, 1, 2, 3 };
+	u8 lane[] = { 0, 0, 0, 0 };
+	u8 target[] = { 8, 4, 4, 4 };
+	u8 attr[] = { 0xe8, 0xe8, 0xd8, 0xb8 };
 
 	pcie->port = port[pex_idx];
 	pcie->lane = lane[pex_idx];
@@ -154,6 +155,14 @@ static void mvebu_get_port_lane(struct mvebu_pcie *pcie, int pex_idx,
 	*mem_attr = attr[pex_idx];
 }
 #endif
+
+static int mvebu_pex_unit_is_x4(int pex_idx)
+{
+	int pex_unit = pex_idx < 9 ? pex_idx >> 2 : 3;
+	u32 mask = (0x0f << (pex_unit * 8));
+
+	return (readl(COMPHY_REFCLK_ALIGNMENT) & mask) == mask;
+}
 
 static inline bool mvebu_pcie_link_up(struct mvebu_pcie *pcie)
 {
@@ -343,9 +352,9 @@ void pci_init_board(void)
 		mvebu_get_port_lane(pcie, i, &mem_target, &mem_attr);
 
 		/* Don't read at all from pci registers if port power is down */
-		if (pcie->lane == 0 && SELECT(soc_ctrl, pcie->port) == 0) {
-			i += 3;
-			debug("%s: skipping port %d\n", __func__, pcie->port);
+		if (SELECT(soc_ctrl, pcie->port) == 0) {
+			if (pcie->lane == 0)
+				debug("%s: skipping port %d\n", __func__, pcie->port);
 			continue;
 		}
 
@@ -419,5 +428,11 @@ void pci_init_board(void)
 		writel(0, pcie->base + PCIE_BAR_HI_OFF(0));
 
 		bus = hose->last_busno + 1;
+
+		/* need to skip more for X4 links, otherwise scan will hang */
+		if (mvebu_soc_family() == MVEBU_SOC_AXP) {
+			if (mvebu_pex_unit_is_x4(i))
+				i += 3;
+		}
 	}
 }

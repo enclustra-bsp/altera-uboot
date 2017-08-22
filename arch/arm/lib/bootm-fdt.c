@@ -21,13 +21,16 @@
 #include <asm/armv7.h>
 #endif
 #include <asm/psci.h>
+#include <asm/spin_table.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
 int arch_fixup_fdt(void *blob)
 {
+	int ret = 0;
+#if defined(CONFIG_ARMV7_NONSEC) || defined(CONFIG_OF_LIBFDT)
 	bd_t *bd = gd->bd;
-	int bank, ret;
+	int bank;
 	u64 start[CONFIG_NR_DRAM_BANKS];
 	u64 size[CONFIG_NR_DRAM_BANKS];
 
@@ -41,12 +44,25 @@ int arch_fixup_fdt(void *blob)
 #endif
 	}
 
+#ifdef CONFIG_OF_LIBFDT
 	ret = fdt_fixup_memory_banks(blob, start, size, CONFIG_NR_DRAM_BANKS);
-#ifdef CONFIG_ARMV7_NONSEC
 	if (ret)
 		return ret;
-
-	ret = psci_update_dt(blob);
 #endif
-	return ret;
+
+#ifdef CONFIG_ARMV8_SPIN_TABLE
+	ret = spin_table_update_dt(blob);
+	if (ret)
+		return ret;
+#endif
+
+#if defined(CONFIG_ARMV7_NONSEC) || defined(CONFIG_ARMV8_PSCI) || \
+	defined(CONFIG_SEC_FIRMWARE_ARMV8_PSCI)
+	ret = psci_update_dt(blob);
+	if (ret)
+		return ret;
+#endif
+#endif
+
+	return 0;
 }

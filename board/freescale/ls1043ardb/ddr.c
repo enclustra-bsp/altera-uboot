@@ -11,6 +11,7 @@
 #ifdef CONFIG_FSL_DEEP_SLEEP
 #include <fsl_sleep.h>
 #endif
+#include <asm/arch/clock.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -91,6 +92,9 @@ found:
 	/* Enable ZQ calibration */
 	popts->zq_en = 1;
 
+	/* optimize cpo for erratum A-009942 */
+	popts->cpo_sample = 0x46;
+
 	popts->ddr_cdr1 = DDR_CDR1_DHC_EN | DDR_CDR1_ODT(DDR_CDR_ODT_80ohm);
 	popts->ddr_cdr2 = DDR_CDR2_ODT(DDR_CDR_ODT_80ohm) |
 			  DDR_CDR2_VREF_OVRD(70);	/* Vref = 70% */
@@ -167,7 +171,7 @@ int fsl_ddr_get_dimm_params(dimm_params_t *pdimm,
 }
 #endif
 
-phys_size_t initdram(int board_type)
+int fsl_initdram(void)
 {
 	phys_size_t dram_size;
 
@@ -177,15 +181,13 @@ phys_size_t initdram(int board_type)
 #else
 	dram_size =  fsl_ddr_sdram_size();
 #endif
+	erratum_a008850_post();
+
 #ifdef CONFIG_FSL_DEEP_SLEEP
 	fsl_dp_ddr_restore();
 #endif
 
-	return dram_size;
-}
+	gd->ram_size = dram_size;
 
-void dram_init_banksize(void)
-{
-	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
-	gd->bd->bi_dram[0].size = gd->ram_size;
+	return 0;
 }

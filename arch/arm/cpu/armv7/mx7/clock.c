@@ -10,7 +10,7 @@
 #include <common.h>
 #include <div64.h>
 #include <asm/io.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/arch/clock.h>
@@ -1067,6 +1067,12 @@ void clock_init(void)
 #ifdef CONFIG_NAND_MXS
 	clock_enable(CCGR_RAWNAND, 1);
 #endif
+
+	if (IS_ENABLED(CONFIG_IMX_RDC)) {
+		clock_enable(CCGR_RDC, 1);
+		clock_enable(CCGR_SEMA1, 1);
+		clock_enable(CCGR_SEMA2, 1);
+	}
 }
 
 #ifdef CONFIG_SECURE_BOOT

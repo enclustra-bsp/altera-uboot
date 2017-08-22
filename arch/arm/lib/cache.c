@@ -46,6 +46,24 @@ __weak void flush_dcache_range(unsigned long start, unsigned long stop)
 	/* An empty stub, real implementation should be in platform code */
 }
 
+int check_cache_range(unsigned long start, unsigned long stop)
+{
+	int ok = 1;
+
+	if (start & (CONFIG_SYS_CACHELINE_SIZE - 1))
+		ok = 0;
+
+	if (stop & (CONFIG_SYS_CACHELINE_SIZE - 1))
+		ok = 0;
+
+	if (!ok) {
+		warn_non_spl("CACHE: Misaligned operation at range [%08lx, %08lx]\n",
+			     start, stop);
+	}
+
+	return ok;
+}
+
 #ifdef CONFIG_SYS_NONCACHED_MEMORY
 /*
  * Reserve one MMU section worth of address space below the malloc() area that
@@ -88,3 +106,14 @@ phys_addr_t noncached_alloc(size_t size, size_t align)
 	return next;
 }
 #endif /* CONFIG_SYS_NONCACHED_MEMORY */
+
+#if CONFIG_IS_ENABLED(SYS_THUMB_BUILD)
+void invalidate_l2_cache(void)
+{
+	unsigned int val = 0;
+
+	asm volatile("mcr p15, 1, %0, c15, c11, 0 @ invl l2 cache"
+		: : "r" (val) : "cc");
+	isb();
+}
+#endif

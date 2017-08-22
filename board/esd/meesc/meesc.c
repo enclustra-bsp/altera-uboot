@@ -13,6 +13,8 @@
 #include <common.h>
 #include <asm/io.h>
 #include <asm/gpio.h>
+#include <asm/mach-types.h>
+#include <asm/setup.h>
 #include <asm/arch/at91sam9_smc.h>
 #include <asm/arch/at91_common.h>
 #include <asm/arch/at91_pmc.h>
@@ -87,9 +89,8 @@ static void meesc_nand_hw_init(void)
 #ifdef CONFIG_MACB
 static void meesc_macb_hw_init(void)
 {
-	at91_pmc_t	*pmc	= (at91_pmc_t *) ATMEL_BASE_PMC;
-	/* Enable clock */
-	writel(1 << ATMEL_ID_EMAC, &pmc->pcer);
+	at91_periph_clk_enable(ATMEL_ID_EMAC);
+
 	at91_macb_hw_init();
 }
 #endif
@@ -133,10 +134,12 @@ int dram_init(void)
 	return 0;
 }
 
-void dram_init_banksize(void)
+int dram_init_banksize(void)
 {
 	gd->bd->bi_dram[0].start = PHYS_SDRAM;
 	gd->bd->bi_dram[0].size = PHYS_SDRAM_SIZE;
+
+	return 0;
 }
 
 int board_eth_init(bd_t *bis)
@@ -244,12 +247,10 @@ int misc_init_r(void)
 
 int board_early_init_f(void)
 {
-	at91_pmc_t	*pmc	= (at91_pmc_t *) ATMEL_BASE_PMC;
-
-	/* enable all clocks */
-	writel((1 << ATMEL_ID_PIOA) | (1 << ATMEL_ID_PIOB) |
-		(1 << ATMEL_ID_PIOCDE) | (1 << ATMEL_ID_UHP),
-		&pmc->pcer);
+	at91_periph_clk_enable(ATMEL_ID_PIOA);
+	at91_periph_clk_enable(ATMEL_ID_PIOB);
+	at91_periph_clk_enable(ATMEL_ID_PIOCDE);
+	at91_periph_clk_enable(ATMEL_ID_UHP);
 
 	at91_seriald_hw_init();
 

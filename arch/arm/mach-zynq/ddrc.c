@@ -12,6 +12,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#ifndef CONFIG_ZYNQ_DDRC_INIT
+void zynq_ddrc_init(void) {}
+#else
 /* Control regsiter bitfield definitions */
 #define ZYNQ_DDRC_CTRLREG_BUSWIDTH_MASK		0xC
 #define ZYNQ_DDRC_CTRLREG_BUSWIDTH_SHIFT	2
@@ -42,9 +45,8 @@ void zynq_ddrc_init(void)
 		 */
 		/* cppcheck-suppress nullPointer */
 		memset((void *)0, 0, 1 * 1024 * 1024);
-
-		gd->ram_size /= 2;
 	} else {
 		puts("ECC disabled ");
 	}
 }
+#endif

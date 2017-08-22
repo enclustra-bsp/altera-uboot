@@ -23,6 +23,17 @@ struct syscon_ops {
 
 #define syscon_get_ops(dev)        ((struct syscon_ops *)(dev)->driver->ops)
 
+#if CONFIG_IS_ENABLED(OF_PLATDATA)
+/*
+ * We don't support 64-bit machines. If they are so resource-contrained that
+ * they need to use OF_PLATDATA, something is horribly wrong with the
+ * education of our hardware engineers.
+ */
+struct syscon_base_platdata {
+	u32 reg[2];
+};
+#endif
+
 /**
  * syscon_get_regmap() - Get access to a register map
  *
@@ -31,6 +42,20 @@ struct syscon_ops {
  * @return 0 if OK, -ve on error
  */
 struct regmap *syscon_get_regmap(struct udevice *dev);
+
+/**
+ * syscon_get_regmap_by_driver_data() - Look up a controller by its ID
+ *
+ * Each system controller can be accessed by its driver data, which is
+ * assumed to be unique through the scope of all system controllers that
+ * are in use. This function looks up the controller given this driver data.
+ *
+ * @driver_data:	Driver data value to look up
+ * @devp:		Returns the controller correponding to @driver_data
+ * @return 0 on success, -ENODEV if the ID was not found, or other -ve error
+ *	   code
+ */
+int syscon_get_by_driver_data(ulong driver_data, struct udevice **devp);
 
 /**
  * syscon_get_regmap_by_driver_data() - Look up a controller by its ID

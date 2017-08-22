@@ -177,7 +177,10 @@ static int tegra_gpio_get_value(struct udevice *dev, unsigned offset)
 	debug("%s: pin = %d (port %d:bit %d)\n", __func__,
 	      gpio, GPIO_FULLPORT(gpio), GPIO_BIT(gpio));
 
-	val = readl(&state->bank->gpio_in[GPIO_PORT(gpio)]);
+	if (get_direction(gpio) == DIRECTION_INPUT)
+		val = readl(&state->bank->gpio_in[GPIO_PORT(gpio)]);
+	else
+		val = readl(&state->bank->gpio_out[GPIO_PORT(gpio)]);
 
 	return (val >> GPIO_BIT(gpio)) & 1;
 }
@@ -233,7 +236,7 @@ static int tegra_gpio_get_function(struct udevice *dev, unsigned offset)
 }
 
 static int tegra_gpio_xlate(struct udevice *dev, struct gpio_desc *desc,
-			    struct fdtdec_phandle_args *args)
+			    struct ofnode_phandle_args *args)
 {
 	int gpio, port, ret;
 
@@ -334,10 +337,11 @@ static int gpio_tegra_bind(struct udevice *parent)
 	 * This driver does not make use of interrupts, other than to figure
 	 * out the number of GPIO banks
 	 */
-	if (!fdt_getprop(gd->fdt_blob, parent->of_offset, "interrupts", &len))
+	if (!fdt_getprop(gd->fdt_blob, dev_of_offset(parent), "interrupts",
+			 &len))
 		return -EINVAL;
 	bank_count = len / 3 / sizeof(u32);
-	ctlr = (struct gpio_ctlr *)dev_get_addr(parent);
+	ctlr = (struct gpio_ctlr *)devfdt_get_addr(parent);
 	}
 #endif
 	for (bank = 0; bank < bank_count; bank++) {
@@ -360,7 +364,7 @@ static int gpio_tegra_bind(struct udevice *parent)
 					  plat->port_name, plat, -1, &dev);
 			if (ret)
 				return ret;
-			dev->of_offset = parent->of_offset;
+			dev_set_of_offset(dev, dev_of_offset(parent));
 		}
 	}
 

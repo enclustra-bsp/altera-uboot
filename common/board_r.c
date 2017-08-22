@@ -11,20 +11,22 @@
  */
 
 #include <common.h>
+#include <api.h>
 /* TODO: can we just include all these headers whether needed or not? */
 #if defined(CONFIG_CMD_BEDBUG)
 #include <bedbug/type.h>
 #endif
+#include <command.h>
+#include <console.h>
 #ifdef CONFIG_HAS_DATAFLASH
 #include <dataflash.h>
 #endif
 #include <dm.h>
 #include <environment.h>
 #include <fdtdec.h>
-#if defined(CONFIG_CMD_IDE)
 #include <ide.h>
-#endif
 #include <initcall.h>
+#include <init_helpers.h>
 #ifdef CONFIG_PS2KBD
 #include <keyboard.h>
 #endif
@@ -39,26 +41,23 @@
 #endif
 #include <mmc.h>
 #include <nand.h>
+#include <of_live.h>
 #include <onenand_uboot.h>
 #include <scsi.h>
 #include <serial.h>
 #include <spi.h>
 #include <stdio_dev.h>
+#include <timer.h>
 #include <trace.h>
 #include <watchdog.h>
 #ifdef CONFIG_ADDR_MAP
 #include <asm/mmu.h>
 #endif
 #include <asm/sections.h>
-#ifdef CONFIG_X86
-#include <asm/init_helpers.h>
-#endif
 #include <dm/root.h>
 #include <linux/compiler.h>
 #include <linux/err.h>
-#ifdef CONFIG_AVR32
-#include <asm/arch/mmu.h>
-#endif
+#include <efi_loader.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -105,7 +104,6 @@ static int initr_reloc(void)
 {
 	/* tell others: relocation done */
 	gd->flags |= GD_FLG_RELOC | GD_FLG_FULL_MALLOC_INIT;
-	bootstage_mark_name(BOOTSTAGE_ID_START_UBOOT_R, "board_init_r");
 
 	return 0;
 }
@@ -161,6 +159,17 @@ static int initr_reloc_global_data(void)
 	 */
 	gd->env_addr += gd->relocaddr - CONFIG_SYS_MONITOR_BASE;
 #endif
+#ifdef CONFIG_OF_EMBED
+	/*
+	* The fdt_blob needs to be moved to new relocation address
+	* incase of FDT blob is embedded with in image
+	*/
+	gd->fdt_blob += gd->reloc_off;
+#endif
+#ifdef CONFIG_EFI_LOADER
+	efi_runtime_relocate(gd->relocaddr, NULL);
+#endif
+
 	return 0;
 }
 
@@ -170,7 +179,7 @@ static int initr_serial(void)
 	return 0;
 }
 
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#if defined(CONFIG_PPC) || defined(CONFIG_M68K) || defined(CONFIG_MIPS)
 static int initr_trap(void)
 {
 	/*
@@ -215,13 +224,6 @@ static int initr_post_backlog(void)
 }
 #endif
 
-#ifdef CONFIG_SYS_DELAYED_ICACHE
-static int initr_icache_enable(void)
-{
-	return 0;
-}
-#endif
-
 #if defined(CONFIG_SYS_INIT_RAM_LOCK) && defined(CONFIG_E500)
 static int initr_unlock_ram_in_cache(void)
 {
@@ -237,17 +239,6 @@ static int initr_pci(void)
 	pci_init();
 #endif
 
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_WINBOND_83C553
-static int initr_w83c553f(void)
-{
-	/*
-	 * Initialise the ISA bridge
-	 */
-	initialise_w83c553f();
 	return 0;
 }
 #endif
@@ -276,6 +267,15 @@ static int initr_malloc(void)
 	return 0;
 }
 
+static int initr_console_record(void)
+{
+#if defined(CONFIG_CONSOLE_RECORD)
+	return console_record_init();
+#else
+	return 0;
+#endif
+}
+
 #ifdef CONFIG_SYS_NONCACHED_MEMORY
 static int initr_noncached(void)
 {
@@ -284,18 +284,53 @@ static int initr_noncached(void)
 }
 #endif
 
+#ifdef CONFIG_OF_LIVE
+static int initr_of_live(void)
+{
+	int ret;
+
+	bootstage_start(BOOTSTAGE_ID_ACCUM_OF_LIVE, "of_live");
+	ret = of_live_build(gd->fdt_blob, (struct device_node **)&gd->of_root);
+	bootstage_accum(BOOTSTAGE_ID_ACCUM_OF_LIVE);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_DM
 static int initr_dm(void)
 {
+	int ret;
+
 	/* Save the pre-reloc driver model and start a new one */
 	gd->dm_root_f = gd->dm_root;
 	gd->dm_root = NULL;
 #ifdef CONFIG_TIMER
 	gd->timer = NULL;
 #endif
-	return dm_init_and_scan(false);
+	bootstage_start(BOOTSTATE_ID_ACCUM_DM_R, "dm_r");
+	ret = dm_init_and_scan(false);
+	bootstage_accum(BOOTSTATE_ID_ACCUM_DM_R);
+	if (ret)
+		return ret;
+#ifdef CONFIG_TIMER_EARLY
+	ret = dm_timer_init();
+	if (ret)
+		return ret;
+#endif
+
+	return 0;
 }
 #endif
+
+static int initr_bootstage(void)
+{
+	bootstage_mark_name(BOOTSTAGE_ID_START_UBOOT_R, "board_init_r");
+
+	return 0;
+}
 
 __weak int power_init_board(void)
 {
@@ -317,7 +352,7 @@ static int initr_manual_reloc_cmdtable(void)
 }
 #endif
 
-#if !defined(CONFIG_SYS_NO_FLASH)
+#if defined(CONFIG_MTD_NOR_FLASH)
 static int initr_flash(void)
 {
 	ulong flash_size = 0;
@@ -388,6 +423,7 @@ static int initr_nand(void)
 {
 	puts("NAND:  ");
 	nand_init();
+	printf("%lu MiB\n", nand_size() / 1024);
 	return 0;
 }
 #endif
@@ -402,7 +438,7 @@ static int initr_onenand(void)
 }
 #endif
 
-#ifdef CONFIG_GENERIC_MMC
+#ifdef CONFIG_MMC
 static int initr_mmc(void)
 {
 	puts("MMC:   ");
@@ -423,7 +459,7 @@ static int initr_dataflash(void)
 /*
  * Tell if it's OK to load the environment early in boot.
  *
- * If CONFIG_OF_CONFIG is defined, we'll check with the FDT to see
+ * If CONFIG_OF_CONTROL is defined, we'll check with the FDT to see
  * if this is OK (defaulting to saying it's OK).
  *
  * NOTE: Loading the environment early can be a bad idea if security is
@@ -455,24 +491,7 @@ static int initr_env(void)
 
 	/* Initialize from environment */
 	load_addr = getenv_ulong("loadaddr", 16, load_addr);
-#if defined(CONFIG_SYS_EXTBDINFO)
-#if defined(CONFIG_405GP) || defined(CONFIG_405EP)
-#if defined(CONFIG_I2CFAST)
-	/*
-	 * set bi_iic_fast for linux taking environment variable
-	 * "i2cfast" into account
-	 */
-	{
-		char *s = getenv("i2cfast");
 
-		if (s && ((*s == 'y') || (*s == 'Y'))) {
-			gd->bd->bi_iic_fast[0] = 1;
-			gd->bd->bi_iic_fast[1] = 1;
-		}
-	}
-#endif /* CONFIG_I2CFAST */
-#endif /* CONFIG_405GP, CONFIG_405EP */
-#endif /* CONFIG_SYS_EXTBDINFO */
 	return 0;
 }
 
@@ -504,7 +523,7 @@ static int initr_api(void)
 #endif
 
 /* enable exceptions */
-#if defined(CONFIG_ARM) || defined(CONFIG_AVR32)
+#ifdef CONFIG_ARM
 static int initr_enable_interrupts(void)
 {
 	enable_interrupts();
@@ -547,11 +566,11 @@ static int initr_kgdb(void)
 }
 #endif
 
-#if defined(CONFIG_STATUS_LED)
+#if defined(CONFIG_LED_STATUS)
 static int initr_status_led(void)
 {
-#if defined(STATUS_LED_BOOT)
-	status_led_set(STATUS_LED_BOOT, STATUS_LED_BLINKING);
+#if defined(CONFIG_LED_STATUS_BOOT)
+	status_led_set(CONFIG_LED_STATUS_BOOT, CONFIG_LED_STATUS_BLINKING);
 #else
 	status_led_init();
 #endif
@@ -559,21 +578,12 @@ static int initr_status_led(void)
 }
 #endif
 
-#if defined(CONFIG_CMD_SCSI)
+#if defined(CONFIG_SCSI) && !defined(CONFIG_DM_SCSI)
 static int initr_scsi(void)
 {
 	puts("SCSI:  ");
 	scsi_init();
 
-	return 0;
-}
-#endif
-
-#if defined(CONFIG_CMD_DOC)
-static int initr_doc(void)
-{
-	puts("DOC:   ");
-	doc_init();
 	return 0;
 }
 #endif
@@ -607,7 +617,7 @@ static int initr_post(void)
 }
 #endif
 
-#if defined(CONFIG_CMD_PCMCIA) && !defined(CONFIG_CMD_IDE)
+#if defined(CONFIG_CMD_PCMCIA) && !defined(CONFIG_IDE)
 static int initr_pcmcia(void)
 {
 	puts("PCMCIA:");
@@ -616,14 +626,10 @@ static int initr_pcmcia(void)
 }
 #endif
 
-#if defined(CONFIG_CMD_IDE)
+#if defined(CONFIG_IDE)
 static int initr_ide(void)
 {
-#ifdef	CONFIG_IDE_8xx_PCCARD
-	puts("PCMCIA:");
-#else
 	puts("IDE:   ");
-#endif
 #if defined(CONFIG_START_IDE)
 	if (board_start_ide())
 		ide_init();
@@ -696,7 +702,7 @@ static int run_main_loop(void)
  *
  * TODO: perhaps reset the watchdog in the initcall function after each call?
  */
-init_fnc_t init_sequence_r[] = {
+static init_fnc_t init_sequence_r[] = {
 	initr_trace,
 	initr_reloc,
 	/* TODO: could x86/PPC have this also perhaps? */
@@ -715,10 +721,15 @@ init_fnc_t init_sequence_r[] = {
 #endif
 	initr_barrier,
 	initr_malloc,
+	initr_bootstage,	/* Needs malloc() but has its own timer */
+	initr_console_record,
 #ifdef CONFIG_SYS_NONCACHED_MEMORY
 	initr_noncached,
 #endif
 	bootstage_relocate,
+#ifdef CONFIG_OF_LIVE
+	initr_of_live,
+#endif
 #ifdef CONFIG_DM
 	initr_dm,
 #endif
@@ -734,6 +745,9 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_CLOCKS
 	set_cpu_clk_info, /* Setup clock information */
 #endif
+#ifdef CONFIG_EFI_LOADER
+	efi_memory_init,
+#endif
 	stdio_init_tables,
 	initr_serial,
 	initr_announce,
@@ -741,7 +755,7 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_NEEDS_MANUAL_RELOC
 	initr_manual_reloc_cmdtable,
 #endif
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#if defined(CONFIG_PPC) || defined(CONFIG_M68K) || defined(CONFIG_MIPS)
 	initr_trap,
 #endif
 #ifdef CONFIG_ADDR_MAP
@@ -758,9 +772,6 @@ init_fnc_t init_sequence_r[] = {
 	initr_post_backlog,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
-#ifdef CONFIG_SYS_DELAYED_ICACHE
-	initr_icache_enable,
-#endif
 #if defined(CONFIG_PCI) && defined(CONFIG_SYS_EARLY_PCI_INIT)
 	/*
 	 * Do early PCI configuration _before_ the flash gets initialised,
@@ -768,14 +779,11 @@ init_fnc_t init_sequence_r[] = {
 	 */
 	initr_pci,
 #endif
-#ifdef CONFIG_WINBOND_83C553
-	initr_w83c553f,
-#endif
 #ifdef CONFIG_ARCH_EARLY_INIT_R
 	arch_early_init_r,
 #endif
 	power_init_board,
-#ifndef CONFIG_SYS_NO_FLASH
+#ifdef CONFIG_MTD_NOR_FLASH
 	initr_flash,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
@@ -792,7 +800,7 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_CMD_ONENAND
 	initr_onenand,
 #endif
-#ifdef CONFIG_GENERIC_MMC
+#ifdef CONFIG_MMC
 	initr_mmc,
 #endif
 #ifdef CONFIG_HAS_DATAFLASH
@@ -834,14 +842,13 @@ init_fnc_t init_sequence_r[] = {
 	initr_kgdb,
 #endif
 	interrupt_init,
-#if defined(CONFIG_ARM) || defined(CONFIG_AVR32)
+#ifdef CONFIG_ARM
 	initr_enable_interrupts,
 #endif
-#if defined(CONFIG_X86) || defined(CONFIG_MICROBLAZE) || defined(CONFIG_AVR32) \
-	|| defined(CONFIG_M68K)
+#if defined(CONFIG_MICROBLAZE) || defined(CONFIG_M68K)
 	timer_init,		/* initialize timer */
 #endif
-#if defined(CONFIG_STATUS_LED)
+#if defined(CONFIG_LED_STATUS)
 	initr_status_led,
 #endif
 	/* PPC has a udelay(20) here dating from 2002. Why? */
@@ -851,13 +858,9 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_BOARD_LATE_INIT
 	board_late_init,
 #endif
-#ifdef CONFIG_CMD_SCSI
+#if defined(CONFIG_SCSI) && !defined(CONFIG_DM_SCSI)
 	INIT_FUNC_WATCHDOG_RESET
 	initr_scsi,
-#endif
-#ifdef CONFIG_CMD_DOC
-	INIT_FUNC_WATCHDOG_RESET
-	initr_doc,
 #endif
 #ifdef CONFIG_BITBANGMII
 	initr_bbmii,
@@ -869,10 +872,10 @@ init_fnc_t init_sequence_r[] = {
 #ifdef CONFIG_POST
 	initr_post,
 #endif
-#if defined(CONFIG_CMD_PCMCIA) && !defined(CONFIG_CMD_IDE)
+#if defined(CONFIG_CMD_PCMCIA) && !defined(CONFIG_IDE)
 	initr_pcmcia,
 #endif
-#if defined(CONFIG_CMD_IDE)
+#if defined(CONFIG_IDE)
 	initr_ide,
 #endif
 #ifdef CONFIG_LAST_STAGE_INIT
@@ -899,12 +902,18 @@ init_fnc_t init_sequence_r[] = {
 
 void board_init_r(gd_t *new_gd, ulong dest_addr)
 {
-#ifdef CONFIG_NEEDS_MANUAL_RELOC
-	int i;
+	/*
+	 * Set up the new global data pointer. So far only x86 does this
+	 * here.
+	 * TODO(sjg@chromium.org): Consider doing this for all archs, or
+	 * dropping the new_gd parameter.
+	 */
+#if CONFIG_IS_ENABLED(X86_64)
+	arch_setup_gd(new_gd);
 #endif
 
-#ifdef CONFIG_AVR32
-	mmu_init_r(dest_addr);
+#ifdef CONFIG_NEEDS_MANUAL_RELOC
+	int i;
 #endif
 
 #if !defined(CONFIG_X86) && !defined(CONFIG_ARM) && !defined(CONFIG_ARM64)

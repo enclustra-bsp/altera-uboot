@@ -10,12 +10,7 @@
 #include <config_distro_defaults.h>
 
 #define CONFIG_SYS_DCACHE_OFF
-#define CONFIG_SYS_THUMB_BUILD
 
-#define CONFIG_SYS_NO_FLASH
-
-#define CONFIG_OF_BOARD_SETUP
-#define CONFIG_FIT
 #define CONFIG_SYS_BOOTMAPSZ		(16 << 20)
 
 #define CONFIG_SYS_TIMER_RATE		(150000000/256)
@@ -31,8 +26,6 @@
 #define CONFIG_PL011_CLOCK		150000000
 #define CONFIG_PL01x_PORTS		{ (void *)(0xFFF36000) }
 #define CONFIG_CONS_INDEX		0
-
-#define CONFIG_BAUDRATE			115200
 
 #define CONFIG_BOOTCOUNT_LIMIT
 #define CONFIG_SYS_BOOTCOUNT_SINGLEWORD
@@ -53,7 +46,7 @@
 /*
  * Command line configuration.
  */
-#define CONFIG_CMD_SCSI
+#define CONFIG_SCSI
 
 #define CONFIG_BOOT_RETRY_TIME		-1
 #define CONFIG_RESET_TO_RETRY
@@ -70,7 +63,6 @@
 
 #define CONFIG_SYS_LOAD_ADDR		0x800000
 #define CONFIG_SYS_64BIT_LBA
-
 
 /*-----------------------------------------------------------------------
  * Physical Memory Map

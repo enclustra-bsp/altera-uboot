@@ -19,6 +19,7 @@
 #include <asm/imx-common/mxc_i2c.h>
 #include <asm/imx-common/boot_mode.h>
 #include <asm/imx-common/video.h>
+#include <asm/imx-common/sata.h>
 #include <asm/io.h>
 #include <linux/sizes.h>
 #include <common.h>
@@ -121,8 +122,9 @@ static void setup_iomux_enet(void)
 
 	/* Reset AR8031 PHY */
 	gpio_direction_output(ETH_PHY_RESET, 0);
-	udelay(500);
+	mdelay(10);
 	gpio_set_value(ETH_PHY_RESET, 1);
+	udelay(100);
 }
 
 static struct fsl_esdhc_cfg usdhc_cfg[2] = {
@@ -154,7 +156,7 @@ int board_mmc_init(bd_t *bis)
 
 	/*
 	 * Following map is done:
-	 * (U-boot device node)    (Physical Port)
+	 * (U-Boot device node)    (Physical Port)
 	 * mmc0                    SOM MicroSD
 	 * mmc1                    Carrier board MicroSD
 	 */
@@ -187,7 +189,7 @@ int board_mmc_init(bd_t *bis)
 	return 0;
 }
 
-static int mx6_rgmii_rework(struct phy_device *phydev)
+static int ar8031_phy_fixup(struct phy_device *phydev)
 {
 	unsigned short val;
 
@@ -212,7 +214,7 @@ static int mx6_rgmii_rework(struct phy_device *phydev)
 
 int board_phy_config(struct phy_device *phydev)
 {
-	mx6_rgmii_rework(phydev);
+	ar8031_phy_fixup(phydev);
 
 	if (phydev->drv->config)
 		phydev->drv->config(phydev);
@@ -377,6 +379,12 @@ int board_early_init_f(void)
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
 #endif
+#ifdef CONFIG_CMD_SATA
+	/* Only mx6q wandboard has SATA */
+	if (is_cpu_type(MXC_CPU_MX6Q))
+		setup_sata();
+#endif
+
 	return 0;
 }
 
@@ -416,7 +424,7 @@ int board_late_init(void)
 #endif
 
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
-	if (is_cpu_type(MXC_CPU_MX6Q) || is_cpu_type(MXC_CPU_MX6D))
+	if (is_mx6dq())
 		setenv("board_rev", "MX6Q");
 	else
 		setenv("board_rev", "MX6DL");
@@ -434,11 +442,13 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
+#if defined(CONFIG_VIDEO_IPUV3)
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6dl_i2c2_pad_info);
-	if (is_cpu_type(MXC_CPU_MX6Q) || is_cpu_type(MXC_CPU_MX6D))
+	if (is_mx6dq())
 		setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6q_i2c2_pad_info);
 	else
 		setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &mx6dl_i2c2_pad_info);
+#endif
 
 	return 0;
 }

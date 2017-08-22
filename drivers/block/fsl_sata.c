@@ -7,6 +7,7 @@
 
 #include <common.h>
 #include <command.h>
+#include <console.h>
 #include <asm/io.h>
 #include <asm/processor.h>
 #include <asm/fsl_serdes.h>
@@ -123,7 +124,7 @@ int init_sata(int dev)
 	length = sizeof(struct cmd_hdr_tbl);
 	align = SATA_HC_CMD_HDR_TBL_ALIGN;
 	sata->cmd_hdr_tbl_offset = (void *)malloc(length + align);
-	if (!sata) {
+	if (!sata->cmd_hdr_tbl_offset) {
 		printf("alloc the command header failed\n\r");
 		return -1;
 	}
@@ -397,7 +398,7 @@ static int fsl_ata_exec_ata_cmd(struct fsl_sata *sata, struct sata_fis_h2d *cfis
 	debug("attribute = %08x\n\r", val32);
 	cmd_hdr->attribute = cpu_to_le32(val32);
 
-	/* Make sure cmd desc and cmd slot valid before commmand issue */
+	/* Make sure cmd desc and cmd slot valid before command issue */
 	sync();
 
 	/* PMP*/

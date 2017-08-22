@@ -29,14 +29,6 @@
  */
 #define CONFIG_SYS_TEXT_BASE		0x21F00000
 
-/*
- * since a number of boards are not being listed in linux
- * arch/arm/tools/mach-types any more, the mach-types have to be
- * defined here
- */
-#define MACH_TYPE_MEESC			2165
-#define MACH_TYPE_ETHERCAN2		2407
-
 /* ARM asynchronous clock */
 #define CONFIG_SYS_AT91_SLOW_CLOCK	32768	/* 32.768 kHz crystal */
 #define CONFIG_SYS_AT91_MAIN_CLOCK	16000000/* 16.0 MHz crystal */
@@ -44,7 +36,6 @@
 /* Misc CPU related */
 #define CONFIG_SKIP_LOWLEVEL_INIT
 #define CONFIG_ARCH_CPU_INIT
-#define CONFIG_BOARD_EARLY_INIT_F		/* call board_early_init_f() */
 #define CONFIG_SETUP_MEMORY_TAGS
 #define CONFIG_INITRD_TAG
 #define CONFIG_SERIAL_TAG
@@ -52,12 +43,7 @@
 #define CONFIG_CMDLINE_TAG			/* enable passing of ATAGs */
 #define CONFIG_MISC_INIT_R			/* Call misc_init_r */
 
-#define CONFIG_DISPLAY_BOARDINFO		/* call checkboard() */
-#define CONFIG_DISPLAY_CPUINFO			/* display cpu info and speed */
 #define CONFIG_PREBOOT				/* enable preboot variable */
-
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_OF_LIBFDT
 
 /*
  * Hardware drivers
@@ -70,10 +56,6 @@
 #define CONFIG_ATMEL_USART
 #define CONFIG_USART_BASE		ATMEL_BASE_DBGU
 #define CONFIG_USART_ID			ATMEL_ID_SYS
-#define CONFIG_BAUDRATE			115200
-
-#define CONFIG_BOOTDELAY		3
-#define CONFIG_ZERO_BOOTDELAY_CHECK
 
 /*
  * BOOTP options
@@ -86,13 +68,6 @@
 /*
  * Command line configuration.
  */
-#undef CONFIG_CMD_BDI
-#undef CONFIG_CMD_FPGA
-#undef CONFIG_CMD_LOADS
-#undef CONFIG_CMD_IMLS
-
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_DHCP
 
 #ifdef CONFIG_SYS_USE_NANDFLASH
 #define CONFIG_CMD_NAND
@@ -135,9 +110,6 @@
 # define DATAFLASH_TCHS				(0x1 << 24)
 #endif
 
-/* NOR flash is not populated, disable it */
-#define CONFIG_SYS_NO_FLASH
-
 /* NAND flash */
 #ifdef CONFIG_CMD_NAND
 # define CONFIG_NAND_ATMEL
@@ -153,7 +125,6 @@
 /* Ethernet */
 #define CONFIG_MACB
 #define CONFIG_RMII
-#define CONFIG_FIT
 #define CONFIG_NET_RETRY_COUNT			20
 #undef CONFIG_RESET_PHY_R
 
@@ -187,7 +158,6 @@
 #define CONFIG_SYS_LONGHELP
 #define CONFIG_CMDLINE_EDITING
 #define CONFIG_AUTO_COMPLETE
-#define CONFIG_SYS_HUSH_PARSER
 
 /*
  * Size of malloc() pool

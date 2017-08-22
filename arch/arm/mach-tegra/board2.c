@@ -13,15 +13,9 @@
 #include <linux/sizes.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
-#ifdef CONFIG_LCD
-#include <asm/arch/display.h>
-#endif
 #include <asm/arch/funcmux.h>
 #include <asm/arch/pinmux.h>
 #include <asm/arch/pmu.h>
-#ifdef CONFIG_PWM_TEGRA
-#include <asm/arch/pwm.h>
-#endif
 #include <asm/arch/tegra.h>
 #include <asm/arch-tegra/ap.h>
 #include <asm/arch-tegra/board.h>
@@ -34,13 +28,9 @@
 #ifdef CONFIG_TEGRA_CLOCK_SCALING
 #include <asm/arch/emc.h>
 #endif
-#ifdef CONFIG_USB_EHCI_TEGRA
 #include <asm/arch-tegra/usb.h>
+#ifdef CONFIG_USB_EHCI_TEGRA
 #include <usb.h>
-#endif
-#ifdef CONFIG_TEGRA_MMC
-#include <asm/arch-tegra/tegra_mmc.h>
-#include <asm/arch-tegra/mmc.h>
 #endif
 #include <asm/arch-tegra/xusb-padctl.h>
 #include <power/as3722.h>
@@ -60,6 +50,7 @@ U_BOOT_DEVICE(tegra_gpios) = {
 __weak void pinmux_init(void) {}
 __weak void pin_mux_usb(void) {}
 __weak void pin_mux_spi(void) {}
+__weak void pin_mux_mmc(void) {}
 __weak void gpio_early_init_uart(void) {}
 __weak void pin_mux_display(void) {}
 __weak void start_cpu_fan(void) {}
@@ -128,19 +119,19 @@ int board_init(void)
 	clock_init();
 	clock_verify();
 
-	config_gpu();
+	tegra_gpu_config();
 
 #ifdef CONFIG_TEGRA_SPI
 	pin_mux_spi();
 #endif
 
-#ifdef CONFIG_PWM_TEGRA
-	if (pwm_init(gd->fdt_blob))
-		debug("%s: Failed to init pwm\n", __func__);
+#ifdef CONFIG_MMC_SDHCI_TEGRA
+	pin_mux_mmc();
 #endif
-#ifdef CONFIG_LCD
+
+	/* Init is handled automatically in the driver-model case */
+#if defined(CONFIG_DM_VIDEO)
 	pin_mux_display();
-	tegra_lcd_check_next_stage(gd->fdt_blob, 0);
 #endif
 	/* boot param addr */
 	gd->bd->bi_boot_params = (NV_PA_SDRAM_BASE + 0x100);
@@ -157,7 +148,7 @@ int board_init(void)
 		debug("Memory controller init failed: %d\n", err);
 #  endif
 # endif /* CONFIG_TEGRA_PMU */
-#ifdef CONFIG_AS3722_POWER
+#ifdef CONFIG_PMIC_AS3722
 	err = as3722_init(NULL);
 	if (err && err != -ENODEV)
 		return err;
@@ -168,12 +159,11 @@ int board_init(void)
 	pin_mux_usb();
 #endif
 
-#ifdef CONFIG_LCD
+#if defined(CONFIG_DM_VIDEO)
 	board_id = tegra_board_id();
 	err = tegra_lcd_pmic_init(board_id);
 	if (err)
 		return err;
-	tegra_lcd_check_next_stage(gd->fdt_blob, 0);
 #endif
 
 #ifdef CONFIG_TEGRA_NAND
@@ -201,6 +191,17 @@ void gpio_early_init(void) __attribute__((weak, alias("__gpio_early_init")));
 
 int board_early_init_f(void)
 {
+	if (!clock_early_init_done())
+		clock_early_init();
+
+#if defined(CONFIG_TEGRA_DISCONNECT_UDC_ON_BOOT)
+#define USBCMD_FS2 (1 << 15)
+	{
+		struct usb_ctlr *usbctlr = (struct usb_ctlr *)0x7d000000;
+		writel(USBCMD_FS2, &usbctlr->usb_cmd);
+	}
+#endif
+
 	/* Do any special system timer/TSC setup */
 #if defined(CONFIG_TEGRA_SUPPORT_NON_SECURE)
 	if (!tegra_cpu_is_non_secure())
@@ -213,9 +214,6 @@ int board_early_init_f(void)
 	/* Initialize periph GPIOs */
 	gpio_early_init();
 	gpio_early_init_uart();
-#ifdef CONFIG_LCD
-	tegra_lcd_early_init(gd->fdt_blob);
-#endif
 
 	return 0;
 }
@@ -223,10 +221,6 @@ int board_early_init_f(void)
 
 int board_late_init(void)
 {
-#ifdef CONFIG_LCD
-	/* Make sure we finish initing the LCD */
-	tegra_lcd_check_next_stage(gd->fdt_blob, 1);
-#endif
 #if defined(CONFIG_TEGRA_SUPPORT_NON_SECURE)
 	if (tegra_cpu_is_non_secure()) {
 		printf("CPU is in NS mode\n");
@@ -239,54 +233,6 @@ int board_late_init(void)
 
 	return 0;
 }
-
-#if defined(CONFIG_TEGRA_MMC)
-__weak void pin_mux_mmc(void)
-{
-}
-
-/* this is a weak define that we are overriding */
-int board_mmc_init(bd_t *bd)
-{
-	debug("%s called\n", __func__);
-
-	/* Enable muxes, etc. for SDMMC controllers */
-	pin_mux_mmc();
-
-	debug("%s: init MMC\n", __func__);
-	tegra_mmc_init();
-
-	return 0;
-}
-
-void pad_init_mmc(struct mmc_host *host)
-{
-#if defined(CONFIG_TEGRA30)
-	enum periph_id id = host->mmc_id;
-	u32 val;
-
-	debug("%s: sdmmc address = %08x, id = %d\n", __func__,
-		(unsigned int)host->reg, id);
-
-	/* Set the pad drive strength for SDMMC1 or 3 only */
-	if (id != PERIPH_ID_SDMMC1 && id != PERIPH_ID_SDMMC3) {
-		debug("%s: settings are only valid for SDMMC1/SDMMC3!\n",
-			__func__);
-		return;
-	}
-
-	val = readl(&host->reg->sdmemcmppadctl);
-	val &= 0xFFFFFFF0;
-	val |= MEMCOMP_PADCTRL_VREF;
-	writel(val, &host->reg->sdmemcmppadctl);
-
-	val = readl(&host->reg->autocalcfg);
-	val &= 0xFFFF0000;
-	val |= AUTO_CAL_PU_OFFSET | AUTO_CAL_PD_OFFSET | AUTO_CAL_ENABLED;
-	writel(val, &host->reg->autocalcfg);
-#endif	/* T30 */
-}
-#endif	/* MMC */
 
 /*
  * In some SW environments, a memory carve-out exists to house a secure
@@ -372,10 +318,14 @@ static ulong usable_ram_size_below_4g(void)
  * start address of that bank cannot be represented in the 32-bit .size
  * field.
  */
-void dram_init_banksize(void)
+int dram_init_banksize(void)
 {
 	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
 	gd->bd->bi_dram[0].size = usable_ram_size_below_4g();
+
+#ifdef CONFIG_PCI
+	gd->pci_ram_top = gd->bd->bi_dram[0].start + gd->bd->bi_dram[0].size;
+#endif
 
 #ifdef CONFIG_PHYS_64BIT
 	if (gd->ram_size > SZ_2G) {
@@ -387,6 +337,8 @@ void dram_init_banksize(void)
 		gd->bd->bi_dram[1].start = 0;
 		gd->bd->bi_dram[1].size = 0;
 	}
+
+	return 0;
 }
 
 /*

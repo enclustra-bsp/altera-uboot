@@ -10,15 +10,7 @@
 /*
  * High Level Configuration Options (easy to change)
  */
-#define CONFIG_ARMADA_XP		/* SOC Family Name */
-#define CONFIG_ARMADA_38X
-#define CONFIG_DB_88F6820_GP		/* Board target name for DDR training */
 
-#define CONFIG_SYS_L2_PL310
-
-#ifdef CONFIG_SPL_BUILD
-#define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
-#endif
 #define CONFIG_DISPLAY_BOARDINFO_LATE
 
 /*
@@ -32,23 +24,8 @@
 /*
  * Commands configuration
  */
-#define CONFIG_SYS_NO_FLASH		/* Declare no flash (NOR/SPI) */
-#define CONFIG_CMD_CACHE
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_ENV
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_FS_GENERIC
-#define CONFIG_CMD_I2C
-#define CONFIG_CMD_MMC
 #define CONFIG_CMD_PCI
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_SCSI
-#define CONFIG_CMD_SF
-#define CONFIG_CMD_SPI
-#define CONFIG_CMD_TFTPPUT
-#define CONFIG_CMD_TIME
+#define CONFIG_SCSI
 
 /* I2C */
 #define CONFIG_SYS_I2C
@@ -60,16 +37,10 @@
 /* SPI NOR flash default params, used by sf commands */
 #define CONFIG_SF_DEFAULT_SPEED		1000000
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_3
-#define CONFIG_SPI_FLASH_STMICRO
 
 /*
  * SDIO/MMC Card Configuration
  */
-#define CONFIG_MMC
-#define CONFIG_MMC_SDMA
-#define CONFIG_GENERIC_MMC
-#define CONFIG_SDHCI
-#define CONFIG_MV_SDHCI
 #define CONFIG_SYS_MMC_BASE		MVEBU_SDIO_BASE
 
 /*
@@ -84,8 +55,6 @@
 					 CONFIG_SYS_SCSI_MAX_LUN)
 
 /* Partition support */
-#define CONFIG_DOS_PARTITION
-#define CONFIG_EFI_PARTITION
 
 /* Additional FS support/configuration */
 #define CONFIG_SUPPORT_VFAT
@@ -100,18 +69,14 @@
 #define CONFIG_ENV_SECT_SIZE		(256 << 10) /* 256KiB sectors */
 
 #define CONFIG_PHY_MARVELL		/* there is a marvell phy */
-#define CONFIG_PHY_ADDR			{ 1, 0 }
-#define CONFIG_SYS_NETA_INTERFACE_TYPE	PHY_INTERFACE_MODE_RGMII
 #define PHY_ANEG_TIMEOUT	8000	/* PHY needs a longer aneg time */
 
 /* PCIe support */
-#define CONFIG_PCI
+#ifndef CONFIG_SPL_BUILD
 #define CONFIG_PCI_MVEBU
-#define CONFIG_PCI_PNP
 #define CONFIG_PCI_SCAN_SHOW
-#define CONFIG_E1000	/* enable Intel E1000 support for testing */
+#endif
 
-#define CONFIG_SYS_CONSOLE_INFO_QUIET	/* don't print console @ startup */
 #define CONFIG_SYS_ALT_MEMTEST
 
 /* Keep device tree and initrd in lower memory so the kernel can access them */
@@ -140,46 +105,28 @@
 #define CONFIG_SPL_BSS_START_ADDR	(0x40000000 + CONFIG_SPL_SIZE)
 #define CONFIG_SPL_BSS_MAX_SIZE		(16 << 10)
 
-#define CONFIG_SYS_SPL_MALLOC_START	(CONFIG_SPL_BSS_START_ADDR + \
-					 CONFIG_SPL_BSS_MAX_SIZE)
-#define CONFIG_SYS_SPL_MALLOC_SIZE	(16 << 10)
+#ifdef CONFIG_SPL_BUILD
+#define CONFIG_SYS_MALLOC_SIMPLE
+#endif
 
 #define CONFIG_SPL_STACK		(0x40000000 + ((192 - 16) << 10))
 #define CONFIG_SPL_BOOTROM_SAVE		(CONFIG_SPL_STACK + 4)
 
-#define CONFIG_SPL_LIBCOMMON_SUPPORT
-#define CONFIG_SPL_LIBGENERIC_SUPPORT
-#define CONFIG_SPL_SERIAL_SUPPORT
-#define CONFIG_SPL_I2C_SUPPORT
-
 #if CONFIG_SPL_BOOT_DEVICE == SPL_BOOT_SPI_NOR_FLASH
 /* SPL related SPI defines */
-#define CONFIG_SPL_SPI_SUPPORT
-#define CONFIG_SPL_SPI_FLASH_SUPPORT
 #define CONFIG_SPL_SPI_LOAD
-#define CONFIG_SPL_SPI_BUS		0
-#define CONFIG_SPL_SPI_CS		0
-#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
+#define CONFIG_SYS_SPI_U_BOOT_OFFS	0x24000
 #define CONFIG_SYS_U_BOOT_OFFS		CONFIG_SYS_SPI_U_BOOT_OFFS
 #endif
 
 #if CONFIG_SPL_BOOT_DEVICE == SPL_BOOT_SDIO_MMC_CARD
 /* SPL related MMC defines */
-#define CONFIG_SPL_MMC_SUPPORT
-#define CONFIG_SPL_LIBDISK_SUPPORT
-#define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_PARTITION 1
 #define CONFIG_SYS_MMC_U_BOOT_OFFS		(160 << 10)
 #define CONFIG_SYS_U_BOOT_OFFS			CONFIG_SYS_MMC_U_BOOT_OFFS
-#define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR	(CONFIG_SYS_U_BOOT_OFFS / 512)
-#define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS	((512 << 10) / 512) /* 512KiB */
 #ifdef CONFIG_SPL_BUILD
 #define CONFIG_FIXED_SDHCI_ALIGNED_BUFFER	0x00180000	/* in SDRAM */
 #endif
 #endif
-
-/* Enable DDR support in SPL (DDR3 training from Marvell bin_hdr) */
-#define CONFIG_SYS_MVEBU_DDR_A38X
-#define CONFIG_DDR3
 
 /*
  * mv-common.h should be defined after CMD configs since it used them

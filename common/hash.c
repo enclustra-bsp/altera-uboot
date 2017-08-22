@@ -17,7 +17,7 @@
 #include <mapmem.h>
 #include <hw_sha.h>
 #include <asm/io.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #else
 #include "mkimage.h"
 #include <time.h>
@@ -178,16 +178,9 @@ static struct hash_algo hash_algo[] = {
 	},
 };
 
-#if defined(CONFIG_SHA256) || defined(CONFIG_CMD_SHA1SUM)
-#define MULTI_HASH
-#endif
-
-#if defined(CONFIG_HASH_VERIFY) || defined(CONFIG_CMD_HASH)
-#define MULTI_HASH
-#endif
-
 /* Try to minimize code size for boards that don't want much hashing */
-#ifdef MULTI_HASH
+#if defined(CONFIG_SHA256) || defined(CONFIG_CMD_SHA1SUM) || \
+	defined(CONFIG_CRC32_VERIFY) || defined(CONFIG_CMD_HASH)
 #define multi_hash()	1
 #else
 #define multi_hash()	0
@@ -247,6 +240,29 @@ int hash_parse_string(const char *algo_name, const char *str, uint8_t *result)
 	return 0;
 }
 
+int hash_block(const char *algo_name, const void *data, unsigned int len,
+	       uint8_t *output, int *output_size)
+{
+	struct hash_algo *algo;
+	int ret;
+
+	ret = hash_lookup_algo(algo_name, &algo);
+	if (ret)
+		return ret;
+
+	if (output_size && *output_size < algo->digest_size) {
+		debug("Output buffer size %d too small (need %d bytes)",
+		      *output_size, algo->digest_size);
+		return -ENOSPC;
+	}
+	if (output_size)
+		*output_size = algo->digest_size;
+	algo->hash_func_ws(data, len, output, algo->chunk_size);
+
+	return 0;
+}
+
+#if defined(CONFIG_CMD_HASH) || defined(CONFIG_CMD_SHA1SUM) || defined(CONFIG_CMD_CRC32)
 /**
  * store_result: Store the resulting sum to an address or variable
  *
@@ -359,35 +375,13 @@ static int parse_verify_sum(struct hash_algo *algo, char *verify_str,
 	return 0;
 }
 
-void hash_show(struct hash_algo *algo, ulong addr, ulong len, uint8_t *output)
+static void hash_show(struct hash_algo *algo, ulong addr, ulong len, uint8_t *output)
 {
 	int i;
 
 	printf("%s for %08lx ... %08lx ==> ", algo->name, addr, addr + len - 1);
 	for (i = 0; i < algo->digest_size; i++)
 		printf("%02x", output[i]);
-}
-
-int hash_block(const char *algo_name, const void *data, unsigned int len,
-	       uint8_t *output, int *output_size)
-{
-	struct hash_algo *algo;
-	int ret;
-
-	ret = hash_lookup_algo(algo_name, &algo);
-	if (ret)
-		return ret;
-
-	if (output_size && *output_size < algo->digest_size) {
-		debug("Output buffer size %d too small (need %d bytes)",
-		      *output_size, algo->digest_size);
-		return -ENOSPC;
-	}
-	if (output_size)
-		*output_size = algo->digest_size;
-	algo->hash_func_ws(data, len, output, algo->chunk_size);
-
-	return 0;
 }
 
 int hash_command(const char *algo_name, int flags, cmd_tbl_t *cmdtp, int flag,
@@ -423,7 +417,8 @@ int hash_command(const char *algo_name, int flags, cmd_tbl_t *cmdtp, int flag,
 		unmap_sysmem(buf);
 
 		/* Try to avoid code bloat when verify is not needed */
-#ifdef CONFIG_HASH_VERIFY
+#if defined(CONFIG_CRC32_VERIFY) || defined(CONFIG_SHA1SUM_VERIFY) || \
+	defined(CONFIG_HASH_VERIFY)
 		if (flags & HASH_FLAG_VERIFY) {
 #else
 		if (0) {
@@ -472,4 +467,5 @@ int hash_command(const char *algo_name, int flags, cmd_tbl_t *cmdtp, int flag,
 
 	return 0;
 }
-#endif
+#endif /* CONFIG_CMD_HASH || CONFIG_CMD_SHA1SUM || CONFIG_CMD_CRC32) */
+#endif /* !USE_HOSTCC */

@@ -6,7 +6,5 @@
 #
 
 extra-y := start.o
-obj-y += cpu.o
-
-obj-$(CONFIG_STM32F1) += stm32f1/
-obj-$(CONFIG_STM32F4) += stm32f4/
+obj-y += cpu.o cache.o mpu.o
+obj-$(CONFIG_SYS_ARCH_TIMER) += systick-timer.o

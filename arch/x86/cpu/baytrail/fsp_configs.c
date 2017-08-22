@@ -121,15 +121,22 @@ const struct pch_azalia_config azalia_config = {
 };
 
 /**
- * Override the FSP's UPD.
+ * Override the FSP's configuration data.
  * If the device tree does not specify an integer setting, use the default
  * provided in Intel's Baytrail_FSP_Gold4.tgz release FSP/BayleyBayFsp.bsf file.
  */
-void update_fsp_upd(struct upd_region *fsp_upd)
+void update_fsp_configs(struct fsp_config_data *config,
+			struct fspinit_rtbuf *rt_buf)
 {
+	struct upd_region *fsp_upd = &config->fsp_upd;
 	struct memory_down_data *mem;
 	const void *blob = gd->fdt_blob;
 	int node;
+
+	/* Initialize runtime buffer for fsp_init() */
+	rt_buf->common.stack_top = config->common.stack_top - 32;
+	rt_buf->common.boot_mode = config->common.boot_mode;
+	rt_buf->common.upd_data = &config->fsp_upd;
 
 	fsp_upd->azalia_config_ptr = (uint32_t)&azalia_config;
 
@@ -141,10 +148,10 @@ void update_fsp_upd(struct upd_region *fsp_upd)
 
 	fsp_upd->mrc_init_tseg_size = fdtdec_get_int(blob, node,
 						     "fsp,mrc-init-tseg-size",
-						     0);
+						     MRC_INIT_TSEG_SIZE_1MB);
 	fsp_upd->mrc_init_mmio_size = fdtdec_get_int(blob, node,
 						     "fsp,mrc-init-mmio-size",
-						     0x800);
+						     MRC_INIT_MMIO_SIZE_2048MB);
 	fsp_upd->mrc_init_spd_addr1 = fdtdec_get_int(blob, node,
 						     "fsp,mrc-init-spd-addr1",
 						     0xa0);
@@ -152,7 +159,8 @@ void update_fsp_upd(struct upd_region *fsp_upd)
 						     "fsp,mrc-init-spd-addr2",
 						     0xa2);
 	fsp_upd->emmc_boot_mode = fdtdec_get_int(blob, node,
-						 "fsp,emmc-boot-mode", 2);
+						 "fsp,emmc-boot-mode",
+						 EMMC_BOOT_MODE_EMMC41);
 	fsp_upd->enable_sdio = fdtdec_get_bool(blob, node, "fsp,enable-sdio");
 	fsp_upd->enable_sdcard = fdtdec_get_bool(blob, node,
 						 "fsp,enable-sdcard");
@@ -162,13 +170,15 @@ void update_fsp_upd(struct upd_region *fsp_upd)
 						  "fsp,enable-hsuart1");
 	fsp_upd->enable_spi = fdtdec_get_bool(blob, node, "fsp,enable-spi");
 	fsp_upd->enable_sata = fdtdec_get_bool(blob, node, "fsp,enable-sata");
-	fsp_upd->sata_mode = fdtdec_get_int(blob, node, "fsp,sata-mode", 1);
+	fsp_upd->sata_mode = fdtdec_get_int(blob, node, "fsp,sata-mode",
+					    SATA_MODE_AHCI);
 	fsp_upd->enable_azalia = fdtdec_get_bool(blob, node,
 						 "fsp,enable-azalia");
 	fsp_upd->enable_xhci = fdtdec_get_bool(blob, node, "fsp,enable-xhci");
-	fsp_upd->enable_lpe = fdtdec_get_bool(blob, node, "fsp,enable-lpe");
-	fsp_upd->lpss_sio_enable_pci_mode = fdtdec_get_bool(blob, node,
-			"fsp,lpss-sio-enable-pci-mode");
+	fsp_upd->lpe_mode = fdtdec_get_int(blob, node, "fsp,lpe-mode",
+					   LPE_MODE_PCI);
+	fsp_upd->lpss_sio_mode = fdtdec_get_int(blob, node, "fsp,lpss-sio-mode",
+					   LPSS_SIO_MODE_PCI);
 	fsp_upd->enable_dma0 = fdtdec_get_bool(blob, node, "fsp,enable-dma0");
 	fsp_upd->enable_dma1 = fdtdec_get_bool(blob, node, "fsp,enable-dma1");
 	fsp_upd->enable_i2_c0 = fdtdec_get_bool(blob, node, "fsp,enable-i2c0");
@@ -182,25 +192,22 @@ void update_fsp_upd(struct upd_region *fsp_upd)
 	fsp_upd->enable_pwm1 = fdtdec_get_bool(blob, node, "fsp,enable-pwm1");
 	fsp_upd->enable_hsi = fdtdec_get_bool(blob, node, "fsp,enable-hsi");
 	fsp_upd->igd_dvmt50_pre_alloc = fdtdec_get_int(blob, node,
-			"fsp,igd-dvmt50-pre-alloc", 2);
+			"fsp,igd-dvmt50-pre-alloc", IGD_DVMT50_PRE_ALLOC_64MB);
 	fsp_upd->aperture_size = fdtdec_get_int(blob, node, "fsp,aperture-size",
-						2);
-	fsp_upd->gtt_size = fdtdec_get_int(blob, node, "fsp,gtt-size", 2);
-	fsp_upd->serial_debug_port_address = fdtdec_get_int(blob, node,
-			"fsp,serial-debug-port-address", 0x3f8);
-	fsp_upd->serial_debug_port_type = fdtdec_get_int(blob, node,
-			"fsp,serial-debug-port-type", 1);
+						APERTURE_SIZE_256MB);
+	fsp_upd->gtt_size = fdtdec_get_int(blob, node, "fsp,gtt-size",
+					   GTT_SIZE_2MB);
 	fsp_upd->mrc_debug_msg = fdtdec_get_bool(blob, node,
 						 "fsp,mrc-debug-msg");
 	fsp_upd->isp_enable = fdtdec_get_bool(blob, node, "fsp,isp-enable");
-	fsp_upd->scc_enable_pci_mode = fdtdec_get_bool(blob, node,
-			"fsp,scc-enable-pci-mode");
+	fsp_upd->scc_mode = fdtdec_get_int(blob, node, "fsp,scc-mode",
+					   SCC_MODE_PCI);
 	fsp_upd->igd_render_standby = fdtdec_get_bool(blob, node,
 						      "fsp,igd-render-standby");
 	fsp_upd->txe_uma_enable = fdtdec_get_bool(blob, node,
 						  "fsp,txe-uma-enable");
 	fsp_upd->os_selection = fdtdec_get_int(blob, node, "fsp,os-selection",
-					       4);
+					       OS_SELECTION_LINUX);
 	fsp_upd->emmc45_ddr50_enabled = fdtdec_get_bool(blob, node,
 			"fsp,emmc45-ddr50-enabled");
 	fsp_upd->emmc45_hs200_enabled = fdtdec_get_bool(blob, node,
@@ -221,30 +228,32 @@ void update_fsp_upd(struct upd_region *fsp_upd)
 		} else {
 			mem->dram_speed = fdtdec_get_int(blob, node,
 							 "fsp,dram-speed",
-							 0x02);
+							 DRAM_SPEED_1333MTS);
 			mem->dram_type = fdtdec_get_int(blob, node,
-							"fsp,dram-type", 0x01);
+							"fsp,dram-type",
+							DRAM_TYPE_DDR3L);
 			mem->dimm_0_enable = fdtdec_get_bool(blob, node,
 					"fsp,dimm-0-enable");
 			mem->dimm_1_enable = fdtdec_get_bool(blob, node,
 					"fsp,dimm-1-enable");
 			mem->dimm_width = fdtdec_get_int(blob, node,
 							 "fsp,dimm-width",
-							 0x00);
+							 DIMM_WIDTH_X8);
 			mem->dimm_density = fdtdec_get_int(blob, node,
 							   "fsp,dimm-density",
-							   0x01);
+							   DIMM_DENSITY_2GBIT);
 			mem->dimm_bus_width = fdtdec_get_int(blob, node,
-					"fsp,dimm-bus-width", 0x03);
+					"fsp,dimm-bus-width",
+					DIMM_BUS_WIDTH_64BITS);
 			mem->dimm_sides = fdtdec_get_int(blob, node,
 							 "fsp,dimm-sides",
-							 0x00);
+							 DIMM_SIDES_1RANKS);
 			mem->dimm_tcl = fdtdec_get_int(blob, node,
 						       "fsp,dimm-tcl", 0x09);
 			mem->dimm_trpt_rcd = fdtdec_get_int(blob, node,
 					"fsp,dimm-trpt-rcd", 0x09);
 			mem->dimm_twr = fdtdec_get_int(blob, node,
-						       "fsp,dimm-twr", 0x0A);
+						       "fsp,dimm-twr", 0x0a);
 			mem->dimm_twtr = fdtdec_get_int(blob, node,
 							"fsp,dimm-twtr", 0x05);
 			mem->dimm_trrd = fdtdec_get_int(blob, node,

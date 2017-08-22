@@ -16,12 +16,6 @@
 
 #include <configs/ti_omap5_common.h>
 
-#undef CONFIG_SPL_OS_BOOT
-
-/* Device Tree defines */
-#define CONFIG_OF_LIBFDT
-#define CONFIG_OF_BOARD_SETUP
-
 /* EEPROM related defines */
 #define CONFIG_SYS_I2C_OMAP34XX
 #define CONFIG_SYS_I2C_EEPROM_ADDR	0x50
@@ -34,14 +28,6 @@
 /* UART setup */
 #define CONFIG_CONS_INDEX		4
 #define CONFIG_SYS_NS16550_COM4		UART4_BASE
-#define CONFIG_BAUDRATE			115200
-
-/* SD/MMC RAW boot */
-#undef CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR
-#undef CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS
-
-#define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR	0x200 /* 0x40000 - 256 KB */
-#define CONFIG_SYS_U_BOOT_MAX_SIZE_SECTORS	0x300 /* 384 KB */
 
 /* MMC ENV related defines */
 #undef CONFIG_ENV_OFFSET
@@ -60,11 +46,10 @@
 #define CONFIG_SUPPORT_EMMC_BOOT
 
 /* SATA Boot related defines */
-#define CONFIG_SPL_SATA_SUPPORT
 #define CONFIG_SPL_SATA_BOOT_DEVICE		0
 #define CONFIG_SYS_SATA_FAT_BOOT_PARTITION	1
 
-#define CONFIG_CMD_SCSI
+#define CONFIG_SCSI
 #define CONFIG_LIBATA
 #define CONFIG_SCSI_AHCI
 #define CONFIG_SCSI_AHCI_PLAT
@@ -73,11 +58,6 @@
 #define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * \
 						CONFIG_SYS_SCSI_MAX_LUN)
 /* USB UHH support options */
-#define CONFIG_CMD_USB
-#define CONFIG_USB_HOST
-#define CONFIG_USB_EHCI
-#define CONFIG_USB_EHCI_OMAP
-#define CONFIG_USB_STORAGE
 #define CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS	3
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET
 
@@ -85,8 +65,13 @@
 #define CONFIG_OMAP_EHCI_PHY3_RESET_GPIO	83 /* HSIC3 ETH #RESET */
 
 /* Enabled commands */
-#define CONFIG_CMD_DHCP		/* DHCP Support			*/
-#define CONFIG_CMD_PING
+
+/* EEPROM */
+#define CONFIG_ENV_EEPROM_IS_ON_I2C
+#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN		1
+#define CONFIG_SYS_EEPROM_PAGE_WRITE_BITS	4
+#define CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS	5
+#define CONFIG_SYS_EEPROM_SIZE			256
 
 /* USB Networking options */
 #define CONFIG_USB_HOST_ETHER
@@ -95,18 +80,13 @@
 #define CONFIG_USB_ETHER_ASIX
 #define CONFIG_USB_ETHER_MCS7830
 
-/* Max time to hold reset on this board, see doc/README.omap-reset-time */
-#define CONFIG_OMAP_PLATFORM_RESET_TIME_MAX_USEC	16296
-
 /*
  * Miscellaneous configurable options
  */
 #undef CONFIG_SYS_AUTOLOAD
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #undef CONFIG_BOOTCOMMAND
-#undef CONFIG_BOOTDELAY
 
-#define CONFIG_BOOTDELAY		3
 #define CONFIG_SYS_AUTOLOAD		"no"
 
 #define CONFIG_EXTRA_ENV_SETTINGS \

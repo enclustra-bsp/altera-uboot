@@ -91,7 +91,7 @@ void env_relocate_spec(void)
 	uchar rdbuf[64], flags[2];
 	int i, crc_ok[2] = {0, 0};
 
-	eeprom_init();	/* prepare for EEPROM read/write */
+	eeprom_init(-1);	/* prepare for EEPROM read/write */
 
 	off_env[0] = CONFIG_ENV_OFFSET;
 	off_env[1] = CONFIG_ENV_OFFSET_REDUND;
@@ -145,16 +145,11 @@ void env_relocate_spec(void)
 			gd->env_valid = 1;
 	}
 
-	if (gd->env_valid == 2)
-		gd->env_addr = off_env[1] + offsetof(env_t, data);
-	else if (gd->env_valid == 1)
-		gd->env_addr = off_env[0] + offsetof(env_t, data);
-
 #else /* CONFIG_ENV_OFFSET_REDUND */
 	ulong crc, len, new;
 	uchar rdbuf[64];
 
-	eeprom_init();	/* prepare for EEPROM read/write */
+	eeprom_init(-1);	/* prepare for EEPROM read/write */
 
 	/* read old CRC */
 	eeprom_bus_read(CONFIG_SYS_DEF_EEPROM_ADDR,
@@ -175,10 +170,8 @@ void env_relocate_spec(void)
 	}
 
 	if (crc == new) {
-		gd->env_addr	= offsetof(env_t, data);
 		gd->env_valid	= 1;
 	} else {
-		gd->env_addr	= 0;
 		gd->env_valid	= 0;
 	}
 #endif /* CONFIG_ENV_OFFSET_REDUND */

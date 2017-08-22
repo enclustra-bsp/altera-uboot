@@ -117,9 +117,24 @@
 	};
 
 	lcd {
+		u-boot,dm-pre-reloc;
 		compatible = "sandbox,lcd-sdl";
 		xres = <1366>;
 		yres = <768>;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		iracibble {
+			gpios = <&gpio_a 1 0>;
+			label = "sandbox:red";
+		};
+
+		martinet {
+			gpios = <&gpio_a 2 0>;
+			label = "sandbox:green";
+		};
 	};
 
 	pci: pci-controller {
@@ -171,10 +186,51 @@
 		};
 	};
 
+	spl-test {
+		u-boot,dm-pre-reloc;
+		compatible = "sandbox,spl-test";
+		boolval;
+		intval = <1>;
+		intarray = <2 3 4>;
+		byteval = [05];
+		bytearray = [06];
+		longbytearray = [09 0a 0b 0c 0d 0e 0f 10 11];
+		stringval = "message";
+		stringarray = "multi-word", "message";
+	};
+
+	spl-test2 {
+		u-boot,dm-pre-reloc;
+		compatible = "sandbox,spl-test";
+		intval = <3>;
+		intarray = <5>;
+		byteval = [08];
+		bytearray = [01 23 34];
+		longbytearray = [09 0a 0b 0c];
+		stringval = "message2";
+		stringarray = "another", "multi-word", "message";
+	};
+
+	spl-test3 {
+		u-boot,dm-pre-reloc;
+		compatible = "sandbox,spl-test";
+		stringarray = "one";
+	};
+
+	spl-test4 {
+		u-boot,dm-pre-reloc;
+		compatible = "sandbox,spl-test.2";
+	};
+
 	square {
 		compatible = "demo-shape";
 		colour = "blue";
 		sides = <4>;
+	};
+
+	timer {
+		compatible = "sandbox,timer";
+		clock-frequency = <1000000>;
 	};
 
 	tpm {
@@ -234,6 +290,26 @@
 		status = "disabled";
 	};
 
+	spmi: spmi@0 {
+		compatible = "sandbox,spmi";
+		#address-cells = <0x1>;
+		#size-cells = <0x1>;
+		pm8916@0 {
+			compatible = "qcom,spmi-pmic";
+			reg = <0x0 0x1>;
+			#address-cells = <0x1>;
+			#size-cells = <0x1>;
+
+			spmi_gpios: gpios@c000 {
+				compatible = "qcom,pm8916-gpio";
+				reg = <0xc000 0x400>;
+				gpio-controller;
+				gpio-count = <4>;
+				#gpio-cells = <2>;
+				gpio-bank-name="spmi";
+			};
+		};
+	};
 };
 
 #include "cros-ec-keyboard.dtsi"

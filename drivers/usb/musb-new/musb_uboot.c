@@ -1,9 +1,10 @@
 #include <common.h>
+#include <console.h>
 #include <watchdog.h>
 #ifdef CONFIG_ARCH_SUNXI
 #include <asm/arch/usb_phy.h>
 #endif
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 
@@ -236,8 +237,10 @@ int musb_lowlevel_init(struct musb_host_data *host)
 		if (musb_readb(mbase, MUSB_DEVCTL) & MUSB_DEVCTL_HM)
 			break;
 	} while (get_timer(0) < timeout);
-	if (get_timer(0) >= timeout)
+	if (get_timer(0) >= timeout) {
+		musb_stop(host->host);
 		return -ENODEV;
+	}
 
 	_musb_reset_root_port(host, NULL);
 	host->host->is_active = 1;
@@ -443,7 +446,7 @@ int musb_register(struct musb_hdrc_platform_data *plat, void *bdata,
 	}
 
 	*musbp = musb_init_controller(plat, (struct device *)bdata, ctl_regs);
-	if (!musbp) {
+	if (!*musbp) {
 		printf("Failed to init the controller\n");
 		return -EIO;
 	}

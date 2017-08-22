@@ -24,7 +24,7 @@
 #include <linux/compiler.h>
 
 #include <asm/io.h>
-#include <asm/errno.h>
+#include <linux/errno.h>
 #include <asm/arch/mem.h>
 #include <asm/arch/mux.h>
 #include <asm/arch/mmc_host_def.h>
@@ -64,6 +64,7 @@ struct splash_location splash_locations[] = {
 	{
 		.name = "nand",
 		.storage = SPLASH_STORAGE_NAND,
+		.flags = SPLASH_STORAGE_RAW,
 		.offset = 0x100000,
 	},
 };
@@ -91,8 +92,8 @@ int board_init(void)
 	/* boot param addr */
 	gd->bd->bi_boot_params = (OMAP34XX_SDRC_CS0 + 0x100);
 
-#if defined(CONFIG_STATUS_LED) && defined(STATUS_LED_BOOT)
-	status_led_set(STATUS_LED_BOOT, STATUS_LED_ON);
+#if defined(CONFIG_LED_STATUS) && defined(CONFIG_LED_STATUS_BOOT_ENABLE)
+	status_led_set(CONFIG_LED_STATUS_BOOT, CONFIG_LED_STATUS_ON);
 #endif
 
 	return 0;
@@ -371,7 +372,7 @@ void set_muxconf_regs(void)
 		cm_t3730_set_muxconf();
 }
 
-#if defined(CONFIG_GENERIC_MMC) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_MMC)
 #define SB_T35_WP_GPIO 59
 
 int board_mmc_getcd(struct mmc *mmc)
@@ -390,7 +391,7 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
-#if defined(CONFIG_GENERIC_MMC)
+#if defined(CONFIG_MMC)
 void board_mmc_power_init(void)
 {
 	twl4030_power_mmc_init(0);

@@ -23,6 +23,37 @@ unsigned int external_clk[ext_clk_count] = {
 	[ddr3b_clk]	=	100000000,
 };
 
+unsigned int get_external_clk(u32 clk)
+{
+	unsigned int clk_freq;
+
+	switch (clk) {
+	case sys_clk:
+		clk_freq = 122880000;
+		break;
+	case alt_core_clk:
+		clk_freq = 125000000;
+		break;
+	case pa_clk:
+		clk_freq = 122880000;
+		break;
+	case tetris_clk:
+		clk_freq = 125000000;
+		break;
+	case ddr3a_clk:
+		clk_freq = 100000000;
+		break;
+	case ddr3b_clk:
+		clk_freq = 100000000;
+		break;
+	default:
+		clk_freq = 0;
+		break;
+	}
+
+	return clk_freq;
+}
+
 static struct pll_init_data core_pll_config[NUM_SPDS] = {
 	[SPD800]	= CORE_PLL_799,
 	[SPD1000]	= CORE_PLL_999,
@@ -51,11 +82,11 @@ struct pll_init_data *get_pll_init_data(int pll)
 
 	switch (pll) {
 	case MAIN_PLL:
-		speed = get_max_dev_speed();
+		speed = get_max_dev_speed(speeds);
 		data = &core_pll_config[speed];
 		break;
 	case TETRIS_PLL:
-		speed = get_max_arm_speed();
+		speed = get_max_arm_speed(speeds);
 		data = &tetris_pll_config[speed];
 		break;
 	case PASS_PLL:

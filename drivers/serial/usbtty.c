@@ -434,10 +434,11 @@ void usbtty_putc(struct stdio_dev *dev, const char c)
 	if (!usbtty_configured ())
 		return;
 
-	buf_push (&usbtty_output, &c, 1);
 	/* If \n, also do \r */
 	if (c == '\n')
 		buf_push (&usbtty_output, "\r", 1);
+
+	buf_push(&usbtty_output, &c, 1);
 
 	/* Poll at end to handle new data... */
 	if ((usbtty_output.size + 2) >= usbtty_output.totalsize) {
@@ -498,8 +499,8 @@ void usbtty_puts(struct stdio_dev *dev, const char *str)
 		n = next_nl_pos (str);
 
 		if (str[n] == '\n') {
-			__usbtty_puts (str, n + 1);
-			__usbtty_puts ("\r", 1);
+			__usbtty_puts("\r", 1);
+			__usbtty_puts(str, n + 1);
 			str += (n + 1);
 			len -= (n + 1);
 		} else {
@@ -849,6 +850,13 @@ static int write_buffer (circbuf_t * buf)
 	struct urb *current_urb = NULL;
 
 	current_urb = next_urb (device_instance, endpoint);
+
+	if (!current_urb) {
+		TTYERR ("current_urb is NULL, buf->size %d\n",
+		buf->size);
+		return 0;
+	}
+
 	/* TX data still exists - send it now
 	 */
 	if(endpoint->sent < current_urb->actual_length){
@@ -869,12 +877,6 @@ static int write_buffer (circbuf_t * buf)
 		 * and link each to the endpoint
 		 */
 		while (buf->size > 0) {
-
-			if (!current_urb) {
-				TTYERR ("current_urb is NULL, buf->size %d\n",
-					buf->size);
-				return total;
-			}
 
 			dest = (char*)current_urb->buffer +
 				current_urb->actual_length;

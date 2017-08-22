@@ -14,13 +14,11 @@
 
 #undef DEBUG
 #define CONFIG_R8A7790
-#define CONFIG_RMOBILE_BOARD_STRING "Stout"
+#define CONFIG_ARCH_RMOBILE_BOARD_STRING "Stout"
 
 #include "rcar-gen2-common.h"
 
-/* #define CONFIG_BOARD_LATE_INIT */
-
-#if defined(CONFIG_RMOBILE_EXTRAM_BOOT)
+#if defined(CONFIG_ARCH_RMOBILE_EXTRAM_BOOT)
 #define CONFIG_SYS_TEXT_BASE	0xB0000000
 #else
 #define CONFIG_SYS_TEXT_BASE	0xE8080000
@@ -48,9 +46,7 @@
 /* SPI */
 #define CONFIG_SPI
 #define CONFIG_SH_QSPI
-#define CONFIG_SPI_FLASH_SPANSION
 #define CONFIG_SPI_FLASH_QUAD
-#define CONFIG_SYS_NO_FLASH
 
 /* SH Ether */
 #define CONFIG_SH_ETHER
@@ -88,15 +84,8 @@
 #define CONFIG_SYS_TMU_CLK_DIV	4
 
 /* USB */
-#define CONFIG_USB_EHCI
 #define CONFIG_USB_EHCI_RMOBILE
 #define CONFIG_USB_MAX_CONTROLLER_COUNT	3
-#define CONFIG_USB_STORAGE
-
-/* MMC */
-#define CONFIG_MMC
-#define CONFIG_CMD_MMC
-#define CONFIG_GENERIC_MMC
 
 /* Module stop status bits */
 /* INTC-RT */

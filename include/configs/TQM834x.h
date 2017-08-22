@@ -12,8 +12,6 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define CONFIG_DISPLAY_BOARDINFO
-
 /*
  * High Level Configuration Options
  */
@@ -43,7 +41,6 @@
 #define CONFIG_SYS_LCRR_CLKDIV	LCRR_CLKDIV_8
 
 /* board pre init: do not call, nothing to do */
-#undef CONFIG_BOARD_EARLY_INIT_F
 
 /* detect the number of flash banks */
 #define CONFIG_BOARD_EARLY_INIT_R
@@ -158,7 +155,6 @@
  * Serial Port
  */
 #define CONFIG_CONS_INDEX	1
-#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_bus_freq(0)
@@ -183,18 +179,10 @@
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN		2	/* 16 bit */
 #define CONFIG_SYS_EEPROM_PAGE_WRITE_BITS	5	/* 32 bytes/write */
 #define CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS	12	/* 10ms +/- 20% */
-#define CONFIG_SYS_I2C_MULTI_EEPROMS		/* more than one eeprom */
 
 /* I2C RTC */
 #define CONFIG_RTC_DS1337			/* use ds1337 rtc via i2c */
 #define CONFIG_SYS_I2C_RTC_ADDR		0x68	/* at address 0x68 */
-
-/* I2C SYSMON (LM75) */
-#define CONFIG_DTT_LM75			1	/* ON Semi's LM75 */
-#define CONFIG_DTT_SENSORS		{0}	/* Sensor addresses */
-#define CONFIG_SYS_DTT_MAX_TEMP		70
-#define CONFIG_SYS_DTT_LOW_TEMP		-30
-#define CONFIG_SYS_DTT_HYSTERESIS	3
 
 /*
  * TSEC
@@ -229,11 +217,9 @@
  * General PCI
  * Addresses are mapped 1-1.
  */
-#define CONFIG_PCI
 
 #if defined(CONFIG_PCI)
 
-#define CONFIG_PCI_PNP			/* do pci plug-and-play */
 #define CONFIG_PCI_SCAN_SHOW		/* show pci devices on startup */
 
 /* PCI1 host bridge */
@@ -284,21 +270,10 @@
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_HOSTNAME
 
-
 /*
  * Command line configuration.
  */
-#define CONFIG_CMD_ASKENV
-#define CONFIG_CMD_DATE
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_DTT
-#define CONFIG_CMD_EEPROM
-#define CONFIG_CMD_I2C
-#define CONFIG_CMD_JFFS2
-#define CONFIG_CMD_MII
-#define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
-#define CONFIG_CMD_SNTP
 
 #if defined(CONFIG_PCI)
     #define CONFIG_CMD_PCI
@@ -313,8 +288,6 @@
 #define CONFIG_CMDLINE_EDITING	1	/* add command line history */
 #define CONFIG_AUTO_COMPLETE		/* add autocompletion support */
 
-#define CONFIG_SYS_HUSH_PARSER		1	/* Use the HUSH parser */
-
 #if defined(CONFIG_CMD_KGDB)
 	#define CONFIG_SYS_CBSIZE	1024	/* Console I/O Buffer Size */
 #else
@@ -328,11 +301,6 @@
 #define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE
 
 #undef CONFIG_WATCHDOG		/* watchdog disabled */
-
-/* pass open firmware flat tree */
-#define CONFIG_OF_LIBFDT	1
-#define CONFIG_OF_BOARD_SETUP	1
-#define CONFIG_OF_STDOUT_VIA_ALIAS	1
 
 /*
  * For booting Linux, the board info and command line data
@@ -497,10 +465,7 @@
 				/* default location for tftp and bootm */
 #define CONFIG_LOADADDR		400000
 
-#define CONFIG_BOOTDELAY	6	/* -1 disables auto-boot */
 #undef  CONFIG_BOOTARGS		/* the boot command will set bootargs */
-
-#define CONFIG_BAUDRATE		115200
 
 #define CONFIG_PREBOOT	"echo;"	\
 	"echo Type \\\"run flash_nfs\\\" to mount root filesystem over NFS;" \

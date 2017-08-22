@@ -141,13 +141,16 @@ enum sunxi_gpio_number {
 /* GPIO pin function config */
 #define SUNXI_GPIO_INPUT	0
 #define SUNXI_GPIO_OUTPUT	1
+#define SUNXI_GPIO_DISABLE	7
 
 #define SUNXI_GPA_EMAC		2
 #define SUN6I_GPA_GMAC		2
 #define SUN7I_GPA_GMAC		5
 #define SUN6I_GPA_SDC2		5
 #define SUN6I_GPA_SDC3		4
+#define SUN8I_H3_GPA_UART0	2
 
+#define SUN4I_GPB_PWM		2
 #define SUN4I_GPB_TWI0		2
 #define SUN4I_GPB_TWI1		2
 #define SUN5I_GPB_TWI1		2
@@ -157,10 +160,15 @@ enum sunxi_gpio_number {
 #define SUN5I_GPB_UART0		2
 #define SUN8I_GPB_UART2		2
 #define SUN8I_A33_GPB_UART0	3
+#define SUN8I_A83T_GPB_UART0	2
+#define SUN8I_V3S_GPB_UART0	3
+#define SUN50I_GPB_UART0	4
 
 #define SUNXI_GPC_NAND		2
+#define SUNXI_GPC_SPI0		3
 #define SUNXI_GPC_SDC2		3
 #define SUN6I_GPC_SDC3		4
+#define SUN50I_GPC_SPI0		4
 
 #define SUN8I_GPD_SDC1		3
 #define SUNXI_GPD_LCD0		2
@@ -180,6 +188,8 @@ enum sunxi_gpio_number {
 #define SUN6I_GPG_TWI3		2
 #define SUN5I_GPG_UART1		4
 
+#define SUN6I_GPH_PWM		2
+#define SUN8I_GPH_PWM		2
 #define SUN4I_GPH_SDC1		5
 #define SUN6I_GPH_TWI0		2
 #define SUN8I_GPH_TWI0		2
@@ -197,6 +207,8 @@ enum sunxi_gpio_number {
 #define SUN6I_GPL1_R_P2WI_SDA	3
 
 #define SUN8I_GPL_R_RSB		2
+#define SUN8I_H3_GPL_R_TWI	2
+#define SUN8I_A23_GPL_R_TWI	3
 #define SUN8I_GPL_R_UART	2
 
 #define SUN9I_GPN_R_RSB		3

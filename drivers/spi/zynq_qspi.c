@@ -30,6 +30,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define ZYNQ_QSPI_IXR_TXOW_MASK		BIT(2)	/* TX_FIFO_not_full */
 #define ZYNQ_QSPI_IXR_ALL_MASK		GENMASK(6, 0)	/* All IXR bits */
 #define ZYNQ_QSPI_ENR_SPI_EN_MASK	BIT(0)	/* SPI Enable */
+#define ZYNQ_QSPI_LQSPICFG_LQMODE_MASK	BIT(31) /* Linear QSPI Mode */
 
 /* zynq qspi Transmit Data Register */
 #define ZYNQ_QSPI_TXD_00_00_OFFSET	0x1C	/* Transmit 4-byte inst */
@@ -68,6 +69,9 @@ struct zynq_qspi_regs {
 	u32 txd1r;	/* 0x80 */
 	u32 txd2r;	/* 0x84 */
 	u32 txd3r;	/* 0x88 */
+	u32 reserved1[5];
+	u32 lqspicfg;	/* 0xA0 */
+	u32 lqspists;	/* 0xA4 */
 };
 
 /* zynq qspi platform data */
@@ -97,7 +101,7 @@ static int zynq_qspi_ofdata_to_platdata(struct udevice *bus)
 {
 	struct zynq_qspi_platdata *plat = bus->platdata;
 	const void *blob = gd->fdt_blob;
-	int node = bus->of_offset;
+	int node = dev_of_offset(bus);
 
 	plat->regs = (struct zynq_qspi_regs *)fdtdec_get_addr(blob,
 							      node, "reg");
@@ -142,6 +146,11 @@ static void zynq_qspi_init_hw(struct zynq_qspi_priv *priv)
 		ZYNQ_QSPI_CR_PCS_MASK | ZYNQ_QSPI_CR_FW_MASK |
 		ZYNQ_QSPI_CR_MSTREN_MASK;
 	writel(confr, &regs->cr);
+
+	/* Disable the LQSPI feature */
+	confr = readl(&regs->lqspicfg);
+	confr &= ~ZYNQ_QSPI_LQSPICFG_LQMODE_MASK;
+	writel(confr, &regs->lqspicfg);
 
 	/* Enable SPI */
 	writel(ZYNQ_QSPI_ENR_SPI_EN_MASK, &regs->enr);

@@ -16,12 +16,7 @@
 #include <linux/list.h>
 #include <linux/compiler.h>
 
-#ifndef	CONFIG_ARCH_DMA_PIO_WORDS
-#define	DMA_PIO_WORDS		15
-#else
-#define	DMA_PIO_WORDS		CONFIG_ARCH_DMA_PIO_WORDS
-#endif
-
+#define DMA_PIO_WORDS		15
 #define MXS_DMA_ALIGNMENT	ARCH_DMA_MINALIGN
 
 /*
@@ -59,7 +54,7 @@ enum {
 	MXS_DMA_CHANNEL_AHB_APBH_RESERVED1,
 	MXS_MAX_DMA_CHANNELS,
 };
-#elif defined(CONFIG_MX6)
+#elif defined(CONFIG_MX6) || defined(CONFIG_MX7)
 enum {
 	MXS_DMA_CHANNEL_AHB_APBH_GPMI0 = 0,
 	MXS_DMA_CHANNEL_AHB_APBH_GPMI1,

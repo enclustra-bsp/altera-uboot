@@ -145,14 +145,10 @@
 					 (void *)CONFIG_SYS_SERIAL1}
 #define CONFIG_CONS_INDEX		0
 
-#define CONFIG_BAUDRATE			38400
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 #define CONFIG_SYS_SERIAL0		V2M_UART0
 #define CONFIG_SYS_SERIAL1		V2M_UART1
 
-#define CONFIG_MMC			1
-#define CONFIG_CMD_MMC
-#define CONFIG_GENERIC_MMC
 #define CONFIG_ARM_PL180_MMCI
 #define CONFIG_ARM_PL180_MMCI_BASE	V2M_MMCI
 #define CONFIG_SYS_MMC_MAX_BLK_COUNT	127
@@ -167,7 +163,6 @@
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LOAD_ADDR		(V2M_BASE + 0x8000)
 #define LINUX_BOOT_PARAM_ADDR		(V2M_BASE + 0x2000)
-#define CONFIG_BOOTDELAY		2
 
 /* Physical Memory Map */
 #define CONFIG_NR_DRAM_BANKS		2
@@ -184,7 +179,6 @@
 					 CONFIG_SYS_INIT_RAM_SIZE - \
 					 GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_INIT_SP_ADDR		CONFIG_SYS_GBL_DATA_OFFSET
-#define CONFIG_CMD_ECHO
 
 #include <config_distro_defaults.h>
 
@@ -282,7 +276,6 @@
 #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
 					sizeof(CONFIG_SYS_PROMPT) + 16)
-#define CONFIG_SYS_HUSH_PARSER
 
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE /* Boot args buffer */
 #define CONFIG_SYS_LONGHELP

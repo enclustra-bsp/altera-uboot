@@ -18,6 +18,10 @@
 /* #define DEBUG	*/
 
 #include <common.h>
+#include <console.h>
+#include <dm.h>
+#include <errno.h>
+#include <fdt_support.h>
 #include <asm/processor.h>
 #include <asm/io.h>
 #include <asm/byteorder.h>
@@ -46,6 +50,8 @@
  * Define CONFIG_SYS_WRITE_SWAPPED_DATA, if you have to swap the Bytes between
  * reading and writing ... (yes there is such a Hardware).
  */
+
+DECLARE_GLOBAL_DATA_PTR;
 
 static uint flash_offset_cfi[2] = { FLASH_OFFSET_CFI, FLASH_OFFSET_CFI_ALT };
 #ifdef CONFIG_FLASH_CFI_MTD
@@ -87,10 +93,36 @@ static u16 cfi_flash_config_reg(int i)
 int cfi_flash_num_flash_banks = CONFIG_SYS_MAX_FLASH_BANKS_DETECT;
 #endif
 
+#ifdef CONFIG_CFI_FLASH /* for driver model */
+static void cfi_flash_init_dm(void)
+{
+	struct udevice *dev;
+
+	cfi_flash_num_flash_banks = 0;
+	/*
+	 * The uclass_first_device() will probe the first device and
+	 * uclass_next_device() will probe the rest if they exist. So
+	 * that cfi_flash_probe() will get called assigning the base
+	 * addresses that are available.
+	 */
+	for (uclass_first_device(UCLASS_MTD, &dev);
+	     dev;
+	     uclass_next_device(&dev)) {
+	}
+}
+
+static phys_addr_t cfi_flash_base[CFI_MAX_FLASH_BANKS];
+
+phys_addr_t cfi_flash_bank_addr(int i)
+{
+	return cfi_flash_base[i];
+}
+#else
 __weak phys_addr_t cfi_flash_bank_addr(int i)
 {
 	return ((phys_addr_t [])CONFIG_SYS_FLASH_BANKS_LIST)[i];
 }
+#endif
 
 __weak unsigned long cfi_flash_bank_size(int i)
 {
@@ -576,7 +608,7 @@ static int flash_full_status_check (flash_info_t * info, flash_sect_t sector,
 	case CFI_CMDSET_INTEL_EXTENDED:
 	case CFI_CMDSET_INTEL_STANDARD:
 		if ((retcode == ERR_OK)
-		    && !flash_isequal (info, sector, 0, FLASH_STATUS_DONE)) {
+		    && !flash_isset(info, sector, 0, FLASH_STATUS_DONE)) {
 			retcode = ERR_INVAL;
 			printf ("Flash %s error at address %lx\n", prompt,
 				info->start[sector]);
@@ -947,7 +979,7 @@ static int flash_write_cfibuffer (flash_info_t * info, ulong dest, uchar * cp,
 
 	case CFI_CMDSET_AMD_STANDARD:
 	case CFI_CMDSET_AMD_EXTENDED:
-		flash_unlock_seq(info,0);
+		flash_unlock_seq(info, sector);
 
 #ifdef CONFIG_FLASH_SPANSION_S29WS_N
 		offset = ((unsigned long)dst - info->start[sector]) >> shift;
@@ -1424,8 +1456,8 @@ static int cfi_protect_bugfix(flash_info_t *info, long sector, int prot)
 				cmd = FLASH_CMD_PROTECT_SET;
 			else
 				cmd = FLASH_CMD_PROTECT_CLEAR;
-				flash_write_cmd(info, sector, 0,
-					  FLASH_CMD_PROTECT);
+
+			flash_write_cmd(info, sector, 0, FLASH_CMD_PROTECT);
 			flash_write_cmd(info, sector, 0, cmd);
 			/* re-enable interrupts if necessary */
 			if (flag)
@@ -2171,6 +2203,8 @@ ulong flash_get_size (phys_addr_t base, int banknum)
 						flash_isset (info, sect_cnt,
 							     FLASH_OFFSET_PROTECT,
 							     FLASH_STATUS_PROTECT);
+					flash_write_cmd(info, sect_cnt, 0,
+							FLASH_CMD_RESET);
 					break;
 				case CFI_CMDSET_AMD_EXTENDED:
 				case CFI_CMDSET_AMD_STANDARD:
@@ -2322,6 +2356,10 @@ unsigned long flash_init (void)
 	getenv_f("unlock", s, sizeof(s));
 #endif
 
+#ifdef CONFIG_CFI_FLASH /* for driver model */
+	cfi_flash_init_dm();
+#endif
+
 	/* Init: no FLASHes known */
 	for (i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; ++i) {
 		flash_info[i].flash_id = FLASH_UNKNOWN;
@@ -2398,3 +2436,46 @@ unsigned long flash_init (void)
 
 	return (size);
 }
+
+#ifdef CONFIG_CFI_FLASH /* for driver model */
+static int cfi_flash_probe(struct udevice *dev)
+{
+	void *blob = (void *)gd->fdt_blob;
+	int node = dev_of_offset(dev);
+	const fdt32_t *cell;
+	phys_addr_t addr;
+	int parent, addrc, sizec;
+	int len, idx;
+
+	parent = fdt_parent_offset(blob, node);
+	fdt_support_default_count_cells(blob, parent, &addrc, &sizec);
+	/* decode regs, there may be multiple reg tuples. */
+	cell = fdt_getprop(blob, node, "reg", &len);
+	if (!cell)
+		return -ENOENT;
+	idx = 0;
+	len /= sizeof(fdt32_t);
+	while (idx < len) {
+		addr = fdt_translate_address((void *)blob,
+					     node, cell + idx);
+		cfi_flash_base[cfi_flash_num_flash_banks++] = addr;
+		idx += addrc + sizec;
+	}
+	gd->bd->bi_flashstart = cfi_flash_base[0];
+
+	return 0;
+}
+
+static const struct udevice_id cfi_flash_ids[] = {
+	{ .compatible = "cfi-flash" },
+	{ .compatible = "jedec-flash" },
+	{}
+};
+
+U_BOOT_DRIVER(cfi_flash) = {
+	.name	= "cfi_flash",
+	.id	= UCLASS_MTD,
+	.of_match = cfi_flash_ids,
+	.probe = cfi_flash_probe,
+};
+#endif /* CONFIG_CFI_FLASH */

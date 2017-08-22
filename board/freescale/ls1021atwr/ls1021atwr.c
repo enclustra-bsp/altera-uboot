@@ -10,8 +10,8 @@
 #include <asm/arch/immap_ls102xa.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/fsl_serdes.h>
-#include <asm/arch/ls102xa_stream_id.h>
 #include <asm/arch/ls102xa_devdis.h>
+#include <asm/arch/ls102xa_soc.h>
 #include <asm/arch/ls102xa_sata.h>
 #include <hwconfig.h>
 #include <mmc.h>
@@ -27,8 +27,9 @@
 #include <spl.h>
 #include "../common/sleep.h"
 #ifdef CONFIG_U_QE
-#include "../../../drivers/qe/qe.h"
+#include <fsl_qe.h>
 #endif
+#include <fsl_validate.h>
 
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -138,21 +139,10 @@ int checkboard(void)
 	return 0;
 }
 
-unsigned int get_soc_major_rev(void)
-{
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
-	unsigned int svr, major;
-
-	svr = in_be32(&gur->svr);
-	major = SVR_MAJ(svr);
-
-	return major;
-}
-
 void ddrmc_init(void)
 {
 	struct ccsr_ddr *ddr = (struct ccsr_ddr *)CONFIG_SYS_FSL_DDR_ADDR;
-	u32 temp_sdram_cfg;
+	u32 temp_sdram_cfg, tmp;
 
 	out_be32(&ddr->sdram_cfg, DDR_SDRAM_CFG);
 
@@ -199,6 +189,11 @@ void ddrmc_init(void)
 	out_be32(&ddr->ddr_zq_cntl, DDR_DDR_ZQ_CNTL);
 
 	out_be32(&ddr->cs0_config_2, DDR_CS0_CONFIG_2);
+
+	/* DDR erratum A-009942 */
+	tmp = in_be32(&ddr->debug[28]);
+	out_be32(&ddr->debug[28], tmp | 0x0070006f);
+
 	udelay(1);
 
 #ifdef CONFIG_DEEP_SLEEP
@@ -253,9 +248,9 @@ int board_mmc_init(bd_t *bis)
 }
 #endif
 
-#ifdef CONFIG_TSEC_ENET
 int board_eth_init(bd_t *bis)
 {
+#ifdef CONFIG_TSEC_ENET
 	struct fsl_pq_mdio_info mdio_info;
 	struct tsec_info_struct tsec_info[4];
 	int num = 0;
@@ -278,6 +273,7 @@ int board_eth_init(bd_t *bis)
 #endif
 #ifdef CONFIG_TSEC3
 	SET_STD_TSEC_INFO(tsec_info[num], 3);
+	tsec_info[num].interface = PHY_INTERFACE_MODE_RGMII_ID;
 	num++;
 #endif
 	if (!num) {
@@ -290,10 +286,10 @@ int board_eth_init(bd_t *bis)
 	fsl_pq_mdio_init(bis, &mdio_info);
 
 	tsec_eth_init(bis, tsec_info, num);
+#endif
 
 	return pci_eth_init(bis);
 }
-#endif
 
 #if !defined(CONFIG_QSPI_BOOT) && !defined(CONFIG_SD_BOOT_QSPI)
 int config_serdes_mux(void)
@@ -394,8 +390,6 @@ conflict:
 int board_early_init_f(void)
 {
 	struct ccsr_scfg *scfg = (struct ccsr_scfg *)CONFIG_SYS_FSL_SCFG_ADDR;
-	struct ccsr_cci400 *cci = (struct ccsr_cci400 *)CONFIG_SYS_CCI400_ADDR;
-	unsigned int major;
 
 #ifdef CONFIG_TSEC_ENET
 	/* clear BD & FR bits for BE BD's and frame data */
@@ -407,33 +401,7 @@ int board_early_init_f(void)
 	init_early_memctl_regs();
 #endif
 
-#ifdef CONFIG_FSL_DCU_FB
-	out_be32(&scfg->pixclkcr, SCFG_PIXCLKCR_PXCKEN);
-#endif
-
-#ifdef CONFIG_FSL_QSPI
-	out_be32(&scfg->qspi_cfg, SCFG_QSPI_CLKSEL);
-#endif
-
-	/* Configure Little endian for SAI, ASRC and SPDIF */
-	out_be32(&scfg->endiancr, SCFG_ENDIANCR_LE);
-
-	/*
-	 * Enable snoop requests and DVM message requests for
-	 * Slave insterface S4 (A7 core cluster)
-	 */
-	out_le32(&cci->slave[4].snoop_ctrl,
-		 CCI400_DVM_MESSAGE_REQ_EN | CCI400_SNOOP_REQ_EN);
-
-	major = get_soc_major_rev();
-	if (major == SOC_MAJOR_VER_1_0) {
-		/*
-		 * Set CCI-400 Slave interface S1, S2 Shareable Override
-		 * Register All transactions are treated as non-shareable
-		 */
-		out_le32(&cci->slave[1].sha_ord, CCI400_SHAORD_NON_SHAREABLE);
-		out_le32(&cci->slave[2].sha_ord, CCI400_SHAORD_NON_SHAREABLE);
-	}
+	arch_soc_init();
 
 #if defined(CONFIG_DEEP_SLEEP)
 	if (is_warm_boot()) {
@@ -485,43 +453,6 @@ void board_init_f(ulong dummy)
 }
 #endif
 
-
-struct liodn_id_table sec_liodn_tbl[] = {
-	SET_SEC_JR_LIODN_ENTRY(0, 0x10, 0x10),
-	SET_SEC_JR_LIODN_ENTRY(1, 0x10, 0x10),
-	SET_SEC_JR_LIODN_ENTRY(2, 0x10, 0x10),
-	SET_SEC_JR_LIODN_ENTRY(3, 0x10, 0x10),
-	SET_SEC_RTIC_LIODN_ENTRY(a, 0x10),
-	SET_SEC_RTIC_LIODN_ENTRY(b, 0x10),
-	SET_SEC_RTIC_LIODN_ENTRY(c, 0x10),
-	SET_SEC_RTIC_LIODN_ENTRY(d, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(0, 0x10, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(1, 0x10, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(2, 0x10, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(3, 0x10, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(4, 0x10, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(5, 0x10, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(6, 0x10, 0x10),
-	SET_SEC_DECO_LIODN_ENTRY(7, 0x10, 0x10),
-};
-
-struct smmu_stream_id dev_stream_id[] = {
-	{ 0x100, 0x01, "ETSEC MAC1" },
-	{ 0x104, 0x02, "ETSEC MAC2" },
-	{ 0x108, 0x03, "ETSEC MAC3" },
-	{ 0x10c, 0x04, "PEX1" },
-	{ 0x110, 0x05, "PEX2" },
-	{ 0x114, 0x06, "qDMA" },
-	{ 0x118, 0x07, "SATA" },
-	{ 0x11c, 0x08, "USB3" },
-	{ 0x120, 0x09, "QE" },
-	{ 0x124, 0x0a, "eSDHC" },
-	{ 0x128, 0x0b, "eMA" },
-	{ 0x14c, 0x0c, "2D-ACE" },
-	{ 0x150, 0x0d, "USB2" },
-	{ 0x18c, 0x0e, "DEBUG" },
-};
-
 #ifdef CONFIG_DEEP_SLEEP
 /* program the regulator (MC34VR500) to support deep sleep */
 void ls1twr_program_regulator(void)
@@ -555,6 +486,10 @@ void ls1twr_program_regulator(void)
 
 int board_init(void)
 {
+#ifdef CONFIG_SYS_FSL_ERRATUM_A010315
+	erratum_a010315();
+#endif
+
 #ifndef CONFIG_SYS_FSL_NO_SERDES
 	fsl_serdes_init();
 #if !defined(CONFIG_QSPI_BOOT) && !defined(CONFIG_SD_BOOT_QSPI)
@@ -562,14 +497,7 @@ int board_init(void)
 #endif
 #endif
 
-	ls1021x_config_caam_stream_id(sec_liodn_tbl,
-				      ARRAY_SIZE(sec_liodn_tbl));
-	ls102xa_config_smmu_stream_id(dev_stream_id,
-				      ARRAY_SIZE(dev_stream_id));
-
-#ifdef CONFIG_LAYERSCAPE_NS_ACCESS
-	enable_layerscape_ns_access();
-#endif
+	ls102xa_smmu_stream_id_init();
 
 #ifdef CONFIG_U_QE
 	u_qe_init();
@@ -581,11 +509,21 @@ int board_init(void)
 	return 0;
 }
 
+#if defined(CONFIG_SPL_BUILD)
+void spl_board_init(void)
+{
+	ls102xa_smmu_stream_id_init();
+}
+#endif
+
 #ifdef CONFIG_BOARD_LATE_INIT
 int board_late_init(void)
 {
 #ifdef CONFIG_SCSI_AHCI_PLAT
 	ls1021a_sata_init();
+#endif
+#ifdef CONFIG_CHAIN_OF_TRUST
+	fsl_setenv_chain_of_trust();
 #endif
 
 	return 0;

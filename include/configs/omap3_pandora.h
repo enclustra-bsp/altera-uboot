@@ -18,18 +18,11 @@
 
 #include <configs/ti_omap3_common.h>
 
-/*
- * Display CPU and Board information
- */
-#define CONFIG_DISPLAY_CPUINFO		1
-#define CONFIG_DISPLAY_BOARDINFO	1
-
 #define CONFIG_MISC_INIT_R
 #define CONFIG_REVISION_TAG		1
 
 #define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB */
 
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV	1
 #define CONFIG_SYS_DEVICE_NULLDEV	1
 
 /*
@@ -42,14 +35,10 @@
 /* TWL4030 LED */
 #define CONFIG_TWL4030_LED
 
-/* Initialize GPIOs by default */
-#define CONFIG_OMAP3_GPIO_4	/* GPIO96..127 is in GPIO Bank 4 */
-#define CONFIG_OMAP3_GPIO_6	/* GPIO160..191 is in GPIO Bank 6 */
-
 /*
  * NS16550 Configuration
  */
-#undef CONFIG_OMAP_SERIAL
+#undef CONFIG_SYS_NS16550_CLK
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	(-4)
 #define CONFIG_SYS_NS16550_CLK		V_NS16550_CLK
@@ -57,7 +46,6 @@
 #define CONFIG_SERIAL3			3
 
 /* commands to include */
-#define CONFIG_CMD_CACHE	/* Cache control		*/
 
 /*
  * Board NAND Info.
@@ -70,7 +58,6 @@
 #define CONFIG_SYS_NAND_OOBSIZE		64
 
 #ifdef CONFIG_NAND
-#define CONFIG_CMD_UBI		/* UBI-formated MTD partition support */
 #define CONFIG_CMD_UBIFS	/* Read-only UBI volume operations */
 
 #define CONFIG_RBTREE		/* required by CONFIG_CMD_UBI */
@@ -86,20 +73,28 @@
 #define MTDPARTS_DEFAULT
 #endif
 
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	DEFAULT_LINUX_BOOT_ENV \
-	"usbtty=cdc_acm\0" \
-	"bootargs=ubi.mtd=4 ubi.mtd=3 root=ubi0:rootfs rootfstype=ubifs " \
-		"rw rootflags=bulk_read vram=6272K omapfb.vram=0:3000K\0" \
-	"mtdparts=" MTDPARTS_DEFAULT "\0" \
 
 #define CONFIG_BOOTCOMMAND \
-	"if mmc rescan && fatload mmc1 0 ${loadaddr} autoboot.scr || " \
-			"ext2load mmc1 0 ${loadaddr} autoboot.scr; then " \
+	"run distro_bootcmd; " \
+	"setenv bootargs ${bootargs_ubi}; " \
+	"if mmc rescan && load mmc 0:1 ${loadaddr} autoboot.scr; then " \
 		"source ${loadaddr}; " \
 	"fi; " \
 	"ubi part boot && ubifsmount ubi:boot && " \
 		"ubifsload ${loadaddr} uImage && bootm ${loadaddr}"
+
+#define BOOT_TARGET_DEVICES(func) \
+	func(MMC, mmc, 0) \
+
+#include <config_distro_bootcmd.h>
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	DEFAULT_LINUX_BOOT_ENV \
+	"usbtty=cdc_acm\0" \
+	"bootargs_ubi=ubi.mtd=4 ubi.mtd=3 root=ubi0:rootfs rootfstype=ubifs " \
+		"rw rootflags=bulk_read vram=6272K omapfb.vram=0:3000K\0" \
+	"mtdparts=" MTDPARTS_DEFAULT "\0" \
+	BOOTENV \
 
 /* memtest works on */
 #define CONFIG_SYS_MEMTEST_START	(OMAP34XX_SDRC_CS0)
@@ -119,7 +114,5 @@
 #define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB */
 #define CONFIG_ENV_OFFSET		SMNAND_ENV_OFFSET
 #define CONFIG_ENV_ADDR			SMNAND_ENV_OFFSET
-
-#define CONFIG_SYS_CACHELINE_SIZE	64
 
 #endif				/* __CONFIG_H */

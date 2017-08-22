@@ -9,6 +9,8 @@
 #include <command.h>
 #include <asm/system.h>
 
+DECLARE_GLOBAL_DATA_PTR;
+
 /*
  * Generic timer implementation of get_tbclk()
  */
@@ -39,4 +41,24 @@ unsigned long timer_read_counter(void)
 	}
 #endif
 	return cntpct;
+}
+
+uint64_t get_ticks(void)
+{
+	unsigned long ticks = timer_read_counter();
+
+	gd->arch.tbl = ticks;
+
+	return ticks;
+}
+
+unsigned long usec2ticks(unsigned long usec)
+{
+	ulong ticks;
+	if (usec < 1000)
+		ticks = ((usec * (get_tbclk()/1000)) + 500) / 1000;
+	else
+		ticks = ((usec / 10) * (get_tbclk() / 100000));
+
+	return ticks;
 }

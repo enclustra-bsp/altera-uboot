@@ -4,8 +4,14 @@ choice
 	prompt "Marvell Kirkwood board select"
 	optional
 
+config TARGET_OPENRD
+	bool "Marvell OpenRD Board"
+
 config TARGET_DREAMPLUG
 	bool "DreamPlug Board"
+
+config TARGET_DS109
+	bool "Synology DS109"
 
 config TARGET_GURUPLUG
 	bool "GuruPlug Board"
@@ -27,6 +33,10 @@ config TARGET_ICONNECT
 
 config TARGET_KM_KIRKWOOD
 	bool "KM_KIRKWOOD Board"
+	select BOARD_LATE_INIT
+	imply CMD_CRAMFS
+	imply CMD_DIAG
+	imply FS_CRAMFS
 
 config TARGET_NET2BIG_V2
 	bool "LaCie 2Big Network v2 NAS Board"
@@ -46,12 +56,17 @@ config TARGET_GOFLEXHOME
 config TARGET_NAS220
 	bool "BlackArmor NAS220"
 
+config TARGET_NSA310S
+	bool "Zyxel NSA310S"
+
 endchoice
 
 config SYS_SOC
 	default "kirkwood"
 
+source "board/Marvell/openrd/Kconfig"
 source "board/Marvell/dreamplug/Kconfig"
+source "board/Synology/ds109/Kconfig"
 source "board/Marvell/guruplug/Kconfig"
 source "board/Marvell/sheevaplug/Kconfig"
 source "board/buffalo/lsxl/Kconfig"
@@ -65,5 +80,6 @@ source "board/raidsonic/ib62x0/Kconfig"
 source "board/Seagate/dockstar/Kconfig"
 source "board/Seagate/goflexhome/Kconfig"
 source "board/Seagate/nas220/Kconfig"
+source "board/zyxel/nsa310s/Kconfig"
 
 endif

@@ -13,27 +13,15 @@
 /*
  * Command line configuration.
  */
-#define CONFIG_CMD_ASKENV
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_DEFAULTENV_VARS
-#define CONFIG_CMD_GREPENV
-#define CONFIG_CMD_IMMAP
-#define CONFIG_CMD_MII
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_EEPROM
-#define CONFIG_CMD_I2C
-#define CONFIG_CMD_JFFS2
 #define CONFIG_CMD_MTDPARTS
 
 #undef	CONFIG_WATCHDOG		/* disable platform specific watchdog */
 
-#define CONFIG_BOOTDELAY	2 /* autoboot after 2 seconds */
 #undef	CONFIG_BOOTARGS		/* the boot command will set bootargs */
 
 /*
  * Miscellaneous configurable options
  */
-#define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_LONGHELP			/* undef to save memory	  */
 #if defined(CONFIG_CMD_KGDB)
 #define CONFIG_SYS_CBSIZE		1024	/* Console I/O Buffer Size */
@@ -50,11 +38,11 @@
 
 #define CONFIG_SYS_ALT_MEMTEST		/* memory test, takes time */
 
-#define CONFIG_BAUDRATE			115200
 #define CONFIG_SYS_BAUDRATE_TABLE { 9600, 19200, 38400, 57600, 115200, 230400 }
 
 #define CONFIG_LOADS_ECHO
 #define CONFIG_SYS_LOADS_BAUD_CHANGE
+
 
 /* Support the IVM EEprom */
 #define	CONFIG_SYS_IVM_EEPROM_ADR	0x50
@@ -72,14 +60,10 @@
 #define CONFIG_BOOTP_HOSTNAME
 
 /* UBI Support for all Keymile boards */
-#define CONFIG_CMD_UBI
 #define CONFIG_RBTREE
 #define CONFIG_MTD_PARTITIONS
 #define CONFIG_MTD_DEVICE
 #define CONFIG_MTD_CONCAT
-
-#define CONFIG_CMD_CRAMFS
-#define CONFIG_CRAMFS_CMDLINE
 
 #ifndef CONFIG_KM_DEF_ENV_BOOTPARAMS
 #define CONFIG_KM_DEF_ENV_BOOTPARAMS \
@@ -137,8 +121,9 @@
  * - 'release': for a standalone system		kernel/rootfs from flash
  */
 #define CONFIG_KM_DEF_ENV_BOOTTARGETS					\
-	"subbootcmds=ubiattach ubicopy cramfsloadfdt set_fdthigh "	\
-		"cramfsloadkernel flashargs add_default addpanic boot\0"\
+	"subbootcmds=ubiattach ubicopy checkfdt cramfsloadfdt "		\
+		"set_fdthigh cramfsloadkernel flashargs add_default "	\
+		"addpanic boot\0"					\
 	"develop="							\
 		"tftp 200000 scripts/develop-${arch}.txt && "		\
 		"env import -t 200000 ${filesize} && "			\
@@ -243,7 +228,5 @@
 	"mtdparts=" MTDPARTS_DEFAULT "\0"				\
 	""
 #endif /* CONFIG_KM_DEF_ENV */
-
-#define CONFIG_VERSION_VARIABLE	/* include version env variable */
 
 #endif /* __CONFIG_KEYMILE_H */

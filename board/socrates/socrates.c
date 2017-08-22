@@ -217,7 +217,7 @@ int board_early_init_r (void)
 }
 #endif /* CONFIG_BOARD_EARLY_INIT_R */
 
-#if defined(CONFIG_OF_LIBFDT) && defined(CONFIG_OF_BOARD_SETUP)
+#ifdef CONFIG_OF_BOARD_SETUP
 int ft_board_setup(void *blob, bd_t *bd)
 {
 	u32 val[12];
@@ -253,7 +253,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 
 	return 0;
 }
-#endif /* defined(CONFIG_OF_LIBFDT) && defined(CONFIG_OF_BOARD_SETUP) */
+#endif /* CONFIG_OF_BOARD_SETUP */
 
 #define DEFAULT_BRIGHTNESS	25
 #define BACKLIGHT_ENABLE	(1 << 31)
@@ -378,7 +378,7 @@ static void board_backlight_brightness(int br)
 
 		/* LEDs on */
 		reg = in_be32((void *)(CONFIG_SYS_FPGA_BASE + 0x0c));
-		if (!(reg & BACKLIGHT_ENABLE));
+		if (!(reg & BACKLIGHT_ENABLE))
 			out_be32((void *)(CONFIG_SYS_FPGA_BASE + 0x0c),
 				 reg | BACKLIGHT_ENABLE);
 	} else {

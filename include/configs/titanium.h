@@ -17,20 +17,18 @@
 
 #define CONFIG_MX6Q
 
-#define MACH_TYPE_TITANIUM		3769
-#define CONFIG_MACH_TYPE		MACH_TYPE_TITANIUM
+/* Provide the MACH_TYPE value that the vendor kernel requires. */
+#define CONFIG_MACH_TYPE		3769
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(2 * 1024 * 1024)
 
-#define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_MISC_INIT_R
 
 #define CONFIG_MXC_UART
 #define CONFIG_MXC_UART_BASE		UART1_BASE
 
 /* I2C Configs */
-#define CONFIG_CMD_I2C
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MXC
 #define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
@@ -42,9 +40,6 @@
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
 #define CONFIG_SYS_FSL_USDHC_NUM	1
 
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_MII
 #define CONFIG_FEC_MXC
 #define CONFIG_MII
 #define IMX_FEC_BASE			ENET_BASE_ADDR
@@ -55,16 +50,9 @@
 #define CONFIG_PHY_MICREL_KSZ9021
 
 /* USB Configs */
-#define CONFIG_CMD_USB
-#define CONFIG_USB_EHCI
-#define CONFIG_USB_EHCI_MX6
-#define CONFIG_USB_STORAGE
 #define CONFIG_MXC_USB_PORT	1
 #define CONFIG_MXC_USB_PORTSC	(PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_MXC_USB_FLAGS	0
-
-/* Miscellaneous commands */
-#define CONFIG_CMD_BMODE
 
 #define CONFIG_SYS_MEMTEST_START	0x10000000
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + (500 << 20))
@@ -164,7 +152,6 @@
 /* Enable NAND support */
 #define CONFIG_CMD_NAND
 #define CONFIG_CMD_NAND_TRIMFFS
-#define CONFIG_CMD_TIME
 
 #ifdef CONFIG_CMD_NAND
 
@@ -204,7 +191,6 @@
 #define CONFIG_MTD_PARTITIONS
 #define CONFIG_RBTREE
 #define CONFIG_CMD_MTDPARTS
-#define CONFIG_CMD_UBI
 #define CONFIG_CMD_UBIFS
 
 #endif			       /* __CONFIG_H */

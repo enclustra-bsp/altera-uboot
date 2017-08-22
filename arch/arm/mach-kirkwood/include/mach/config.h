@@ -24,9 +24,6 @@
 #endif /* CONFIG_KW88F6281 */
 
 #include <asm/arch/soc.h>
-#define CONFIG_SYS_CACHELINE_SIZE	32
-				/* default Dcache Line length for kirkwood */
-#define CONFIG_MD5	/* get_random_hex on krikwood needs MD5 support */
 #define CONFIG_KIRKWOOD_EGIGA_INIT	/* Enable GbePort0/1 for kernel */
 #define CONFIG_KIRKWOOD_RGMII_PAD_1V8	/* Set RGMII Pad voltage to 1.8V */
 #define CONFIG_KIRKWOOD_PCIE_INIT       /* Enable PCIE Port0 for kernel */
@@ -80,7 +77,6 @@
  * Ethernet Driver configuration
  */
 #ifdef CONFIG_CMD_NET
-#define CONFIG_CMD_MII
 #define CONFIG_NETCONSOLE	/* include NetConsole support   */
 #define CONFIG_MII		/* expose smi ove miiphy interface */
 #define CONFIG_MVGBE		/* Enable Marvell Gbe Controller Driver */
@@ -93,16 +89,14 @@
  * USB/EHCI
  */
 #ifdef CONFIG_CMD_USB
-#define CONFIG_USB_EHCI_MARVELL
 #define CONFIG_EHCI_IS_TDI
 #endif /* CONFIG_CMD_USB */
 
 /*
  * IDE Support on SATA ports
  */
-#ifdef CONFIG_CMD_IDE
+#ifdef CONFIG_IDE
 #define __io
-#define CONFIG_CMD_EXT2
 #define CONFIG_MVSATA_IDE
 #define CONFIG_IDE_PREINIT
 #define CONFIG_MVSATA_IDE_USE_PORT1
@@ -116,12 +110,12 @@
 #define CONFIG_SYS_ATA_STRIDE		4
 /* Controller supports 48-bits LBA addressing */
 #define CONFIG_LBA48
-/* CONFIG_CMD_IDE requires some #defines for ATA registers */
+/* CONFIG_IDE requires some #defines for ATA registers */
 #define CONFIG_SYS_IDE_MAXBUS		2
 #define CONFIG_SYS_IDE_MAXDEVICE	2
 /* ATA registers base is at SATA controller base */
 #define CONFIG_SYS_ATA_BASE_ADDR	MV_SATA_BASE
-#endif /* CONFIG_CMD_IDE */
+#endif /* CONFIG_IDE */
 
 /*
  * I2C related stuff
@@ -134,5 +128,10 @@
 #define CONFIG_SYS_I2C_SLAVE		0x0
 #define CONFIG_SYS_I2C_SPEED		100000
 #endif
+
+/* Use common timer */
+#define CONFIG_SYS_TIMER_COUNTS_DOWN
+#define CONFIG_SYS_TIMER_COUNTER	(MVEBU_TIMER_BASE + 0x14)
+#define CONFIG_SYS_TIMER_RATE		CONFIG_SYS_TCLK
 
 #endif /* _KW_CONFIG_H */

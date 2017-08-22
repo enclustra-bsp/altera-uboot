@@ -89,14 +89,23 @@ int board_init(void)
 	/* boot param addr */
 	gd->bd->bi_boot_params = (OMAP34XX_SDRC_CS0 + 0x100);
 
-#if defined(CONFIG_STATUS_LED) && defined(STATUS_LED_BOOT)
-	status_led_set(STATUS_LED_BOOT, STATUS_LED_ON);
+#if defined(CONFIG_LED_STATUS) && defined(CONFIG_LED_STATUS_BOOT_ENABLE)
+	status_led_set(CONFIG_LED_STATUS_BOOT, CONFIG_LED_STATUS_ON);
 #endif
 
 	cm_t3517_musb_init();
 
 	return 0;
 }
+
+/*
+ * Routine: get_board_rev
+ * Description: read system revision
+ */
+u32 get_board_rev(void)
+{
+	return cl_eeprom_get_board_rev(CONFIG_SYS_I2C_EEPROM_BUS);
+};
 
 int misc_init_r(void)
 {
@@ -106,7 +115,7 @@ int misc_init_r(void)
 	return 0;
 }
 
-#if defined(CONFIG_GENERIC_MMC) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_MMC)
 #define SB_T35_CD_GPIO 144
 #define SB_T35_WP_GPIO 59
 

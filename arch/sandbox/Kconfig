@@ -7,14 +7,15 @@ config SYS_ARCH
 config SYS_BOARD
 	default "sandbox"
 
-config SYS_CONFIG_NAME
+config SYS_CPU
 	default "sandbox"
 
-config PCI
-	bool "PCI support"
-	help
-	  Enable support for PCI (Peripheral Interconnect Bus), a type of bus
-	  used on some devices to allow the CPU to communicate with its
-	  peripherals.
+config SANDBOX_SPL
+	bool "Enable SPL for sandbox"
+	select SUPPORT_SPL
+
+config SYS_CONFIG_NAME
+	default "sandbox_spl" if SANDBOX_SPL
+	default "sandbox" if !SANDBOX_SPL
 
 endmenu

@@ -8,9 +8,15 @@
 #include <common.h>
 #include <dm.h>
 #include <errno.h>
-#include <asm/io.h>
-#include <linux/compiler.h>
 #include <serial.h>
+#include <asm/io.h>
+
+DECLARE_GLOBAL_DATA_PTR;
+
+/* status register */
+#define ALTERA_UART_TMT		BIT(5)	/* tx empty */
+#define ALTERA_UART_TRDY	BIT(6)	/* tx ready */
+#define ALTERA_UART_RRDY	BIT(7)	/* rx ready */
 
 struct altera_uart_regs {
 	u32	rxdata;		/* Rx data reg */
@@ -25,13 +31,6 @@ struct altera_uart_platdata {
 	struct altera_uart_regs *regs;
 	unsigned int uartclk;
 };
-
-/* status register */
-#define ALTERA_UART_TMT		(1 << 5)	/* tx empty */
-#define ALTERA_UART_TRDY	(1 << 6)	/* tx ready */
-#define ALTERA_UART_RRDY	(1 << 7)	/* rx ready */
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static int altera_uart_setbrg(struct udevice *dev, int baudrate)
 {
@@ -90,9 +89,10 @@ static int altera_uart_ofdata_to_platdata(struct udevice *dev)
 {
 	struct altera_uart_platdata *plat = dev_get_platdata(dev);
 
-	plat->regs = ioremap(dev_get_addr(dev),
-		sizeof(struct altera_uart_regs));
-	plat->uartclk = fdtdec_get_int(gd->fdt_blob, dev->of_offset,
+	plat->regs = map_physmem(devfdt_get_addr(dev),
+				 sizeof(struct altera_uart_regs),
+				 MAP_NOCACHE);
+	plat->uartclk = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
 		"clock-frequency", 0);
 
 	return 0;
@@ -106,8 +106,8 @@ static const struct dm_serial_ops altera_uart_ops = {
 };
 
 static const struct udevice_id altera_uart_ids[] = {
-	{ .compatible = "altr,uart-1.0", },
-	{ }
+	{ .compatible = "altr,uart-1.0" },
+	{}
 };
 
 U_BOOT_DRIVER(altera_uart) = {
@@ -125,7 +125,7 @@ U_BOOT_DRIVER(altera_uart) = {
 
 #include <debug_uart.h>
 
-void debug_uart_init(void)
+static inline void _debug_uart_init(void)
 {
 	struct altera_uart_regs *regs = (void *)CONFIG_DEBUG_UART_BASE;
 	u32 div;

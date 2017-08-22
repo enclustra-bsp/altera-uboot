@@ -27,7 +27,10 @@
 #include <power/pmic.h>
 #include <power/max77686_pmic.h>
 #include <power/regulator.h>
+#include <power/s2mps11.h>
 #include <power/s5m8767.h>
+#include <samsung/exynos5-dt-types.h>
+#include <samsung/misc.h>
 #include <tmu.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -42,7 +45,7 @@ static void board_enable_audio_codec(void)
 	if (node <= 0)
 		return;
 
-	ret = gpio_request_by_name_nodev(gd->fdt_blob, node,
+	ret = gpio_request_by_name_nodev(offset_to_ofnode(node),
 					 "codec-enable-gpio", 0, &en_gpio,
 					 GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
 	if (ret == -FDT_ERR_NOTFOUND)
@@ -120,13 +123,7 @@ int exynos_power_init(void)
 	if (ret)
 		return ret;
 
-	/*
-	 * This would normally be 1.3V, but since we are running slowly 1.1V
-	 * is enough. For spring it helps reduce CPU temperature and avoid
-	 * hangs with the case open. 1.1V is minimum voltage borderline for
-	 * chained bootloaders.
-	 */
-	ret = exynos_set_regulator("vdd_arm", 1100000);
+	ret = exynos_set_regulator("vdd_arm", 1300000);
 	if (ret)
 		return ret;
 	ret = exynos_set_regulator("vdd_int", 1012500);
@@ -143,164 +140,6 @@ int board_get_revision(void)
 {
 	return 0;
 }
-
-#ifdef CONFIG_LCD
-
-static int board_dp_bridge_init(struct udevice *dev)
-{
-	const int max_tries = 10;
-	int num_tries;
-	int ret;
-
-	debug("%s\n", __func__);
-	ret = video_bridge_attach(dev);
-	if (ret) {
-		debug("video bridge init failed: %d\n", ret);
-		return ret;
-	}
-
-	/*
-	 * We need to wait for 90ms after bringing up the bridge since there
-	 * is a phantom "high" on the HPD chip during its bootup.  The phantom
-	 * high comes within 7ms of de-asserting PD and persists for at least
-	 * 15ms.  The real high comes roughly 50ms after PD is de-asserted. The
-	 * phantom high makes it hard for us to know when the NXP chip is up.
-	 */
-	mdelay(90);
-
-	for (num_tries = 0; num_tries < max_tries; num_tries++) {
-		/* Check HPD. If it's high, or we don't have it, all is well */
-		ret = video_bridge_check_attached(dev);
-		if (!ret || ret == -ENOENT)
-			return 0;
-
-		debug("%s: eDP bridge failed to come up; try %d of %d\n",
-		      __func__, num_tries, max_tries);
-	}
-
-	/* Immediately go into bridge reset if the hp line is not high */
-	return -EIO;
-}
-
-static int board_dp_bridge_setup(const void *blob)
-{
-	const int max_tries = 2;
-	int num_tries;
-	struct udevice *dev;
-	int ret;
-
-	/* Configure I2C registers for Parade bridge */
-	ret = uclass_get_device(UCLASS_VIDEO_BRIDGE, 0, &dev);
-	if (ret) {
-		debug("video bridge init failed: %d\n", ret);
-		return ret;
-	}
-
-	if (strncmp(dev->driver->name, "parade", 6)) {
-		/* Mux HPHPD to the special hotplug detect mode */
-		exynos_pinmux_config(PERIPH_ID_DPHPD, 0);
-	}
-
-	for (num_tries = 0; num_tries < max_tries; num_tries++) {
-		ret = board_dp_bridge_init(dev);
-		if (!ret)
-			return 0;
-		if (num_tries == max_tries - 1)
-			break;
-
-		/*
-		* If we're here, the bridge chip failed to initialise.
-		* Power down the bridge in an attempt to reset.
-		*/
-		video_bridge_set_active(dev, false);
-
-		/*
-		* Arbitrarily wait 300ms here with DP_N low.  Don't know for
-		* sure how long we should wait, but we're being paranoid.
-		*/
-		mdelay(300);
-	}
-
-	return ret;
-}
-
-void exynos_cfg_lcd_gpio(void)
-{
-	/* For Backlight */
-	gpio_request(EXYNOS5_GPIO_B20, "lcd_backlight");
-	gpio_cfg_pin(EXYNOS5_GPIO_B20, S5P_GPIO_OUTPUT);
-	gpio_set_value(EXYNOS5_GPIO_B20, 1);
-}
-
-void exynos_set_dp_phy(unsigned int onoff)
-{
-	set_dp_phy_ctrl(onoff);
-}
-
-static int board_dp_set_backlight(int percent)
-{
-	struct udevice *dev;
-	int ret;
-
-	ret = uclass_get_device(UCLASS_VIDEO_BRIDGE, 0, &dev);
-	if (!ret)
-		ret = video_bridge_set_backlight(dev, percent);
-
-	return ret;
-}
-
-void exynos_backlight_on(unsigned int on)
-{
-	struct udevice *dev;
-	int ret;
-
-	debug("%s(%u)\n", __func__, on);
-	if (!on)
-		return;
-
-	ret = regulator_get_by_platname("vcd_led", &dev);
-	if (!ret)
-		ret = regulator_set_enable(dev, true);
-	if (ret)
-		debug("Failed to enable backlight: ret=%d\n", ret);
-
-	/* T5 in the LCD timing spec (defined as > 10ms) */
-	mdelay(10);
-
-	/* board_dp_backlight_pwm */
-	gpio_direction_output(EXYNOS5_GPIO_B20, 1);
-
-	/* T6 in the LCD timing spec (defined as > 10ms) */
-	mdelay(10);
-
-	/* try to set the backlight in the bridge registers */
-	ret = board_dp_set_backlight(80);
-
-	/* if we have no bridge or it does not support backlight, use a GPIO */
-	if (ret == -ENODEV || ret == -ENOSYS) {
-		gpio_request(EXYNOS5_GPIO_X30, "board_dp_backlight_en");
-		gpio_direction_output(EXYNOS5_GPIO_X30, 1);
-	}
-}
-
-void exynos_lcd_power_on(void)
-{
-	struct udevice *dev;
-	int ret;
-
-	debug("%s\n", __func__);
-	ret = regulator_get_by_platname("lcd_vdd", &dev);
-	if (!ret)
-		ret = regulator_set_enable(dev, true);
-	if (ret)
-		debug("Failed to enable LCD panel: ret=%d\n", ret);
-
-	ret = board_dp_bridge_setup(gd->fdt_blob);
-	if (ret && ret != -ENODEV)
-		printf("LCD bridge failed to enable: %d\n", ret);
-}
-
-#endif
 
 #ifdef CONFIG_USB_DWC3
 static struct dwc3_device dwc3_device_data = {
@@ -335,14 +174,23 @@ int board_usb_init(int index, enum usb_init_type init)
 #ifdef CONFIG_SET_DFU_ALT_INFO
 char *get_dfu_alt_system(char *interface, char *devstr)
 {
+	char *info = "Not supported!";
+
+	if (board_is_odroidxu4())
+		return info;
+
 	return getenv("dfu_alt_system");
 }
 
 char *get_dfu_alt_boot(char *interface, char *devstr)
 {
+	char *info = "Not supported!";
 	struct mmc *mmc;
 	char *alt_boot;
 	int dev_num;
+
+	if (board_is_odroidxu4())
+		return info;
 
 	dev_num = simple_strtoul(devstr, NULL, 10);
 

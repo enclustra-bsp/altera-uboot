@@ -3,22 +3,7 @@
  *
  * Copyright (c) 2010-2013 NVIDIA Corporation
  *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
+ * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -116,9 +101,9 @@ static int tegra114_spi_ofdata_to_platdata(struct udevice *bus)
 {
 	struct tegra_spi_platdata *plat = bus->platdata;
 	const void *blob = gd->fdt_blob;
-	int node = bus->of_offset;
+	int node = dev_of_offset(bus);
 
-	plat->base = dev_get_addr(bus);
+	plat->base = devfdt_get_addr(bus);
 	plat->periph_id = clock_decode_periph_id(blob, node);
 
 	if (plat->periph_id == PERIPH_ID_NONE) {
@@ -167,6 +152,7 @@ static int tegra114_spi_probe(struct udevice *bus)
 			       bus->name, priv->freq, rate);
 		}
 	}
+	udelay(plat->deactivate_delay_us);
 
 	/* Clear stale status here */
 	setbits_le32(&regs->fifo_status,

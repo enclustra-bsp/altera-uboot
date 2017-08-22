@@ -2,20 +2,7 @@
  * (C) Copyright 2013
  * Reinhard Pfau, Guntermann & Drunck GmbH, reinhard.pfau@gdsys.cc
  *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 2 of the License, or (at your option)
- * any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
+ * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* TODO: some more #ifdef's to avoid unneeded code for stage 1 / stage 2 */
@@ -55,15 +42,6 @@
 	!defined(CCCM_FIRST_STAGE)
 #define CCDM_AUTO_FIRST_STAGE
 #endif
-
-/* enums from TCG specs */
-enum {
-	/* capability areas */
-	TPM_CAP_NV_INDEX	= 0x00000011,
-	TPM_CAP_HANDLE		= 0x00000014,
-	/* resource types */
-	TPM_RT_KEY	= 0x00000001,
-};
 
 /* CCDM specific contants */
 enum {
@@ -164,46 +142,7 @@ static int hre_err = HRE_E_OK;
 #define IS_VAR_HREG(spec) (((spec) & 0x38) == 0x10)
 #define HREG_IDX(spec) ((spec) & (IS_PCR_HREG(spec) ? 0x1f : 0x7))
 
-
-static const uint8_t prg_stage1_prepare[] = {
-	0x00, 0x20, 0x00, 0x00, /* opcode: SYNC f0 */
-	0x00, 0x24, 0x00, 0x00, /* opcode: SYNC f1 */
-	0x01, 0x80, 0x00, 0x00, /* opcode: CHECK0 PCR0 */
-	0x81, 0x22, 0x00, 0x00, /* opcode: LOAD PCR0, f0 */
-	0x01, 0x84, 0x00, 0x00, /* opcode: CHECK0 PCR1 */
-	0x81, 0x26, 0x10, 0x00, /* opcode: LOAD PCR1, f1 */
-	0x01, 0x88, 0x00, 0x00, /* opcode: CHECK0 PCR2 */
-	0x81, 0x2a, 0x20, 0x00, /* opcode: LOAD PCR2, f2 */
-	0x01, 0x8c, 0x00, 0x00, /* opcode: CHECK0 PCR3 */
-	0x81, 0x2e, 0x30, 0x00, /* opcode: LOAD PCR3, f3 */
-};
-
-static const uint8_t prg_stage2_prepare[] = {
-	0x00, 0x80, 0x00, 0x00, /* opcode: SYNC PCR0 */
-	0x00, 0x84, 0x00, 0x00, /* opcode: SYNC PCR1 */
-	0x00, 0x88, 0x00, 0x00, /* opcode: SYNC PCR2 */
-	0x00, 0x8c, 0x00, 0x00, /* opcode: SYNC PCR3 */
-	0x00, 0x90, 0x00, 0x00, /* opcode: SYNC PCR4 */
-};
-
-static const uint8_t prg_stage2_success[] = {
-	0x81, 0x02, 0x40, 0x14, /* opcode: LOAD PCR4, #<20B data> */
-	0x48, 0xfd, 0x95, 0x17, 0xe7, 0x54, 0x6b, 0x68, /* data */
-	0x92, 0x31, 0x18, 0x05, 0xf8, 0x58, 0x58, 0x3c, /* data */
-	0xe4, 0xd2, 0x81, 0xe0, /* data */
-};
-
-static const uint8_t prg_stage_fail[] = {
-	0x81, 0x01, 0x00, 0x14, /* opcode: LOAD v0, #<20B data> */
-	0xc0, 0x32, 0xad, 0xc1, 0xff, 0x62, 0x9c, 0x9b, /* data */
-	0x66, 0xf2, 0x27, 0x49, 0xad, 0x66, 0x7e, 0x6b, /* data */
-	0xea, 0xdf, 0x14, 0x4b, /* data */
-	0x81, 0x42, 0x30, 0x00, /* opcode: LOAD PCR3, v0 */
-	0x81, 0x42, 0x40, 0x00, /* opcode: LOAD PCR4, v0 */
-};
-
 static const uint8_t vendor[] = "Guntermann & Drunck";
-
 
 /**
  * @brief read a bunch of data from MMC into memory.
@@ -232,7 +171,7 @@ static int ccdm_mmc_read(struct mmc *mmc, u64 src, u8 *dst, int size)
 	ofs = src % blk_len;
 
 	if (ofs) {
-		n = mmc->block_dev.block_read(mmc->block_dev.dev, block_no++, 1,
+		n = mmc->block_dev.block_read(&mmc->block_dev, block_no++, 1,
 			tmp_buf);
 		if (!n)
 			goto failure;
@@ -243,7 +182,7 @@ static int ccdm_mmc_read(struct mmc *mmc, u64 src, u8 *dst, int size)
 	}
 	cnt = size / blk_len;
 	if (cnt) {
-		n = mmc->block_dev.block_read(mmc->block_dev.dev, block_no, cnt,
+		n = mmc->block_dev.block_read(&mmc->block_dev, block_no, cnt,
 			dst);
 		if (n != cnt)
 			goto failure;
@@ -253,7 +192,7 @@ static int ccdm_mmc_read(struct mmc *mmc, u64 src, u8 *dst, int size)
 		block_no += cnt;
 	}
 	if (size) {
-		n = mmc->block_dev.block_read(mmc->block_dev.dev, block_no++, 1,
+		n = mmc->block_dev.block_read(&mmc->block_dev, block_no++, 1,
 			tmp_buf);
 		if (!n)
 			goto failure;
@@ -978,6 +917,19 @@ end:
 #endif
 
 #if defined(CCDM_FIRST_STAGE) || (defined CCDM_AUTO_FIRST_STAGE)
+static const uint8_t prg_stage1_prepare[] = {
+	0x00, 0x20, 0x00, 0x00, /* opcode: SYNC f0 */
+	0x00, 0x24, 0x00, 0x00, /* opcode: SYNC f1 */
+	0x01, 0x80, 0x00, 0x00, /* opcode: CHECK0 PCR0 */
+	0x81, 0x22, 0x00, 0x00, /* opcode: LOAD PCR0, f0 */
+	0x01, 0x84, 0x00, 0x00, /* opcode: CHECK0 PCR1 */
+	0x81, 0x26, 0x10, 0x00, /* opcode: LOAD PCR1, f1 */
+	0x01, 0x88, 0x00, 0x00, /* opcode: CHECK0 PCR2 */
+	0x81, 0x2a, 0x20, 0x00, /* opcode: LOAD PCR2, f2 */
+	0x01, 0x8c, 0x00, 0x00, /* opcode: CHECK0 PCR3 */
+	0x81, 0x2e, 0x30, 0x00, /* opcode: LOAD PCR3, f3 */
+};
+
 static int first_stage_actions(void)
 {
 	int result = 0;
@@ -1035,6 +987,30 @@ static int first_stage_init(void)
 #endif
 
 #ifdef CCDM_SECOND_STAGE
+static const uint8_t prg_stage2_prepare[] = {
+	0x00, 0x80, 0x00, 0x00, /* opcode: SYNC PCR0 */
+	0x00, 0x84, 0x00, 0x00, /* opcode: SYNC PCR1 */
+	0x00, 0x88, 0x00, 0x00, /* opcode: SYNC PCR2 */
+	0x00, 0x8c, 0x00, 0x00, /* opcode: SYNC PCR3 */
+	0x00, 0x90, 0x00, 0x00, /* opcode: SYNC PCR4 */
+};
+
+static const uint8_t prg_stage2_success[] = {
+	0x81, 0x02, 0x40, 0x14, /* opcode: LOAD PCR4, #<20B data> */
+	0x48, 0xfd, 0x95, 0x17, 0xe7, 0x54, 0x6b, 0x68, /* data */
+	0x92, 0x31, 0x18, 0x05, 0xf8, 0x58, 0x58, 0x3c, /* data */
+	0xe4, 0xd2, 0x81, 0xe0, /* data */
+};
+
+static const uint8_t prg_stage_fail[] = {
+	0x81, 0x01, 0x00, 0x14, /* opcode: LOAD v0, #<20B data> */
+	0xc0, 0x32, 0xad, 0xc1, 0xff, 0x62, 0x9c, 0x9b, /* data */
+	0x66, 0xf2, 0x27, 0x49, 0xad, 0x66, 0x7e, 0x6b, /* data */
+	0xea, 0xdf, 0x14, 0x4b, /* data */
+	0x81, 0x42, 0x30, 0x00, /* opcode: LOAD PCR3, v0 */
+	0x81, 0x42, 0x40, 0x00, /* opcode: LOAD PCR4, v0 */
+};
+
 static int second_stage_init(void)
 {
 	static const char mac_suffix[] = ".mac";

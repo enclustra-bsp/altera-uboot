@@ -8,7 +8,6 @@
 #include <common.h>
 #include <dm.h>
 #include <usb.h>
-#include <dm/root.h>
 #include <dm/device-internal.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -108,9 +107,8 @@ static int usb_emul_get_descriptor(struct usb_dev_platdata *plat, int value,
 	return upto ? upto : length ? -EIO : 0;
 }
 
-int usb_emul_find(struct udevice *bus, ulong pipe, struct udevice **emulp)
+static int usb_emul_find_devnum(int devnum, struct udevice **emulp)
 {
-	int devnum = usb_pipedevice(pipe);
 	struct udevice *dev;
 	struct uclass *uc;
 	int ret;
@@ -132,6 +130,20 @@ int usb_emul_find(struct udevice *bus, ulong pipe, struct udevice **emulp)
 
 	debug("%s: No emulator found, addr %d\n", __func__, devnum);
 	return -ENOENT;
+}
+
+int usb_emul_find(struct udevice *bus, ulong pipe, struct udevice **emulp)
+{
+	int devnum = usb_pipedevice(pipe);
+
+	return usb_emul_find_devnum(devnum, emulp);
+}
+
+int usb_emul_find_for_dev(struct udevice *dev, struct udevice **emulp)
+{
+	struct usb_dev_platdata *udev = dev_get_parent_platdata(dev);
+
+	return usb_emul_find_devnum(udev->devnum, emulp);
 }
 
 int usb_emul_control(struct udevice *emul, struct usb_device *udev,
@@ -205,6 +217,18 @@ int usb_emul_bulk(struct udevice *emul, struct usb_device *udev,
 	return ops->bulk(emul, udev, pipe, buffer, length);
 }
 
+int usb_emul_int(struct udevice *emul, struct usb_device *udev,
+		  unsigned long pipe, void *buffer, int length, int interval)
+{
+	struct dm_usb_ops *ops = usb_get_emul_ops(emul);
+
+	if (!ops->interrupt)
+		return -ENOSYS;
+	debug("%s: dev=%s\n", __func__, emul->name);
+
+	return ops->interrupt(emul, udev, pipe, buffer, length, interval);
+}
+
 int usb_emul_setup_device(struct udevice *dev, int maxpacketsize,
 			  struct usb_string *strings, void **desc_list)
 {
@@ -240,12 +264,6 @@ int usb_emul_setup_device(struct udevice *dev, int maxpacketsize,
 	return 0;
 }
 
-int usb_emul_post_bind(struct udevice *dev)
-{
-	/* Scan the bus for devices */
-	return dm_scan_fdt_node(dev, gd->fdt_blob, dev->of_offset, false);
-}
-
 void usb_emul_reset(struct udevice *dev)
 {
 	struct usb_dev_platdata *plat = dev_get_parent_platdata(dev);
@@ -257,7 +275,7 @@ void usb_emul_reset(struct udevice *dev)
 UCLASS_DRIVER(usb_emul) = {
 	.id		= UCLASS_USB_EMUL,
 	.name		= "usb_emul",
-	.post_bind	= usb_emul_post_bind,
+	.post_bind	= dm_scan_fdt_dev,
 	.per_child_auto_alloc_size = sizeof(struct usb_device),
 	.per_child_platdata_auto_alloc_size = sizeof(struct usb_dev_platdata),
 };

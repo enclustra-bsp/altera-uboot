@@ -14,7 +14,6 @@
 #include <usb.h>
 #include <dm/device-internal.h>
 #include <dm/lists.h>
-#include <dm/root.h>
 #include <dm/uclass-internal.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -155,14 +154,15 @@ int usb_stop(void)
 	uc_priv = uc->priv;
 
 	uclass_foreach_dev(bus, uc) {
-		ret = device_remove(bus);
-		if (ret && !err)
-			err = ret;
-		ret = device_unbind_children(bus);
+		ret = device_remove(bus, DM_REMOVE_NORMAL);
 		if (ret && !err)
 			err = ret;
 	}
-
+#ifdef CONFIG_BLK
+	ret = blk_unbind_all(IF_TYPE_USB);
+	if (ret && !err)
+		err = ret;
+#endif
 #ifdef CONFIG_SANDBOX
 	struct udevice *dev;
 
@@ -203,6 +203,20 @@ static void usb_scan_bus(struct udevice *bus, bool recurse)
 		printf("No USB Device found\n");
 	else
 		printf("%d USB Device(s) found\n", priv->next_addr);
+}
+
+static void remove_inactive_children(struct uclass *uc, struct udevice *bus)
+{
+	uclass_foreach_dev(bus, uc) {
+		struct udevice *dev, *next;
+
+		if (!device_active(bus))
+			continue;
+		device_foreach_child_safe(dev, next, bus) {
+			if (!device_active(dev))
+				device_unbind(dev);
+		}
+	}
 }
 
 int usb_init(void)
@@ -273,6 +287,15 @@ int usb_init(void)
 	}
 
 	debug("scan end\n");
+
+	/* Remove any devices that were not found on this scan */
+	remove_inactive_children(uc, bus);
+
+	ret = uclass_get(UCLASS_USB_HUB, &uc);
+	if (ret)
+		return ret;
+	remove_inactive_children(uc, bus);
+
 	/* if we were not able to find at least one working bus, bail out */
 	if (!count)
 		printf("No controllers found\n");
@@ -282,6 +305,14 @@ int usb_init(void)
 	return usb_started ? 0 : -1;
 }
 
+/*
+ * TODO(sjg@chromium.org): Remove this legacy function. At present it is needed
+ * to support boards which use driver model for USB but not Ethernet, and want
+ * to use USB Ethernet.
+ *
+ * The #if clause is here to ensure that remains the only case.
+ */
+#if !defined(CONFIG_DM_ETH) && defined(CONFIG_USB_HOST_ETHER)
 static struct usb_device *find_child_devnum(struct udevice *parent, int devnum)
 {
 	struct usb_device *udev;
@@ -315,12 +346,7 @@ struct usb_device *usb_get_dev_index(struct udevice *bus, int index)
 
 	return find_child_devnum(dev, devnum);
 }
-
-int usb_post_bind(struct udevice *dev)
-{
-	/* Scan the bus for devices */
-	return dm_scan_fdt_node(dev, gd->fdt_blob, dev->of_offset, false);
-}
+#endif
 
 int usb_setup_ehci_gadget(struct ehci_ctrl **ctlrp)
 {
@@ -332,7 +358,7 @@ int usb_setup_ehci_gadget(struct ehci_ctrl **ctlrp)
 	ret = uclass_find_device_by_seq(UCLASS_USB, 0, true, &dev);
 	if (ret)
 		return ret;
-	ret = device_remove(dev);
+	ret = device_remove(dev, DM_REMOVE_NORMAL);
 	if (ret)
 		return ret;
 
@@ -494,14 +520,15 @@ error:
 }
 
 /**
- * usb_find_emul_child() - Find an existing device for emulated devices
+ * usb_find_child() - Find an existing device which matches our needs
+ *
+ *
  */
-static int usb_find_emul_child(struct udevice *parent,
-			       struct usb_device_descriptor *desc,
-			       struct usb_interface_descriptor *iface,
-			       struct udevice **devp)
+static int usb_find_child(struct udevice *parent,
+			  struct usb_device_descriptor *desc,
+			  struct usb_interface_descriptor *iface,
+			  struct udevice **devp)
 {
-#ifdef CONFIG_SANDBOX
 	struct udevice *dev;
 
 	*devp = NULL;
@@ -520,7 +547,7 @@ static int usb_find_emul_child(struct udevice *parent,
 			return 0;
 		}
 	}
-#endif
+
 	return -ENOENT;
 }
 
@@ -580,8 +607,8 @@ int usb_scan_device(struct udevice *parent, int port,
 	debug("read_descriptor for '%s': ret=%d\n", parent->name, ret);
 	if (ret)
 		return ret;
-	ret = usb_find_emul_child(parent, &udev->descriptor, iface, &dev);
-	debug("** usb_find_emul_child returns %d\n", ret);
+	ret = usb_find_child(parent, &udev->descriptor, iface, &dev);
+	debug("** usb_find_child returns %d\n", ret);
 	if (ret) {
 		if (ret != -ENOENT)
 			return ret;
@@ -656,19 +683,18 @@ int usb_detect_change(void)
 int usb_child_post_bind(struct udevice *dev)
 {
 	struct usb_dev_platdata *plat = dev_get_parent_platdata(dev);
-	const void *blob = gd->fdt_blob;
 	int val;
 
-	if (dev->of_offset == -1)
+	if (!dev_of_valid(dev))
 		return 0;
 
 	/* We only support matching a few things */
-	val = fdtdec_get_int(blob, dev->of_offset, "usb,device-class", -1);
+	val = dev_read_u32_default(dev, "usb,device-class", -1);
 	if (val != -1) {
 		plat->id.match_flags |= USB_DEVICE_ID_MATCH_DEV_CLASS;
 		plat->id.bDeviceClass = val;
 	}
-	val = fdtdec_get_int(blob, dev->of_offset, "usb,interface-class", -1);
+	val = dev_read_u32_default(dev, "usb,interface-class", -1);
 	if (val != -1) {
 		plat->id.match_flags |= USB_DEVICE_ID_MATCH_INT_CLASS;
 		plat->id.bInterfaceClass = val;
@@ -734,7 +760,7 @@ UCLASS_DRIVER(usb) = {
 	.id		= UCLASS_USB,
 	.name		= "usb",
 	.flags		= DM_UC_FLAG_SEQ_ALIAS,
-	.post_bind	= usb_post_bind,
+	.post_bind	= dm_scan_fdt_dev,
 	.priv_auto_alloc_size = sizeof(struct usb_uclass_priv),
 	.per_child_auto_alloc_size = sizeof(struct usb_device),
 	.per_device_auto_alloc_size = sizeof(struct usb_bus_priv),

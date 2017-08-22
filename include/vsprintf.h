@@ -8,6 +8,8 @@
 #ifndef __VSPRINTF_H
 #define __VSPRINTF_H
 
+#include <stdarg.h>
+
 ulong simple_strtoul(const char *cp, char **endp, unsigned int base);
 
 /**
@@ -70,7 +72,7 @@ long trailing_strtoln(const char *str, const char *end);
  * panic() - Print a message and reset/hang
  *
  * Prints a message on the console(s) and then resets. If CONFIG_PANIC_HANG is
- * defined, then it will hang instead of reseting.
+ * defined, then it will hang instead of resetting.
  *
  * @param fmt:	printf() format string for message, which should not include
  *		\n, followed by arguments
@@ -82,7 +84,7 @@ void panic(const char *fmt, ...)
  * panic_str() - Print a message and reset/hang
  *
  * Prints a message on the console(s) and then resets. If CONFIG_PANIC_HANG is
- * defined, then it will hang instead of reseting.
+ * defined, then it will hang instead of resetting.
  *
  * This function can be used instead of panic() when your board does not
  * already use printf(), * to keep code size small.
@@ -124,7 +126,6 @@ int sprintf(char *buf, const char *fmt, ...)
 int vsprintf(char *buf, const char *fmt, va_list args);
 char *simple_itoa(ulong i);
 
-#ifdef CONFIG_SYS_VSNPRINTF
 /**
  * Format a string and place it in a buffer
  *
@@ -199,17 +200,6 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args);
  * See the vsprintf() documentation for format string extensions over C99.
  */
 int vscnprintf(char *buf, size_t size, const char *fmt, va_list args);
-#else
-/*
- * Use macros to silently drop the size parameter. Note that the 'cn'
- * versions are the same as the 'n' versions since the functions assume
- * there is always enough buffer space when !CONFIG_SYS_VSNPRINTF
- */
-#define snprintf(buf, size, fmt, args...) sprintf(buf, fmt, ##args)
-#define scnprintf(buf, size, fmt, args...) sprintf(buf, fmt, ##args)
-#define vsnprintf(buf, size, fmt, args...) vsprintf(buf, fmt, ##args)
-#define vscnprintf(buf, size, fmt, args...) vsprintf(buf, fmt, ##args)
-#endif /* CONFIG_SYS_VSNPRINTF */
 
 /**
  * print_grouped_ull() - print a value with digits grouped by ','

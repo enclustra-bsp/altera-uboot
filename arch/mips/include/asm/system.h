@@ -1,8 +1,4 @@
 /*
- * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file "COPYING" in the main directory of this archive
- * for more details.
- *
  * Copyright (C) 1994 - 1999 by Ralf Baechle
  * Copyright (C) 1996 by Paul M. Antoine
  * Copyright (C) 1994 - 1999 by Ralf Baechle
@@ -12,6 +8,8 @@
  *
  * Kevin D. Kissell, kevink@mips.org and Carsten Langgaard, carstenl@mips.com
  * Copyright (C) 2000 MIPS Technologies, Inc.
+ *
+ * SPDX-License-Identifier:	GPL-2.0
  */
 #ifndef _ASM_SYSTEM_H
 #define _ASM_SYSTEM_H
@@ -263,5 +261,13 @@ extern void __die_if_kernel(const char *, struct pt_regs *, const char *where,
 	__die(msg, regs, __FILE__ ":"__FUNCTION__, __LINE__)
 #define die_if_kernel(msg, regs)					\
 	__die_if_kernel(msg, regs, __FILE__ ":"__FUNCTION__, __LINE__)
+
+static inline void execution_hazard_barrier(void)
+{
+	__asm__ __volatile__(
+		".set noreorder\n"
+		"ehb\n"
+		".set reorder");
+}
 
 #endif /* _ASM_SYSTEM_H */

@@ -15,8 +15,6 @@ struct p_current{
 
 extern struct p_current *current;
 
-#define ndelay(x)	udelay(1)
-
 #define dev_dbg(dev, fmt, args...)		\
 	debug(fmt, ##args)
 #define dev_vdbg(dev, fmt, args...)		\
@@ -24,6 +22,8 @@ extern struct p_current *current;
 #define dev_info(dev, fmt, args...)		\
 	printf(fmt, ##args)
 #define dev_err(dev, fmt, args...)		\
+	printf(fmt, ##args)
+#define dev_warn(dev, fmt, args...)		\
 	printf(fmt, ##args)
 #define printk	printf
 #define printk_once	printf
@@ -106,8 +106,12 @@ static inline void kmem_cache_destroy(struct kmem_cache *cachep)
 #define BUG_ON(condition) do { if (condition) BUG(); } while(0)
 #endif /* BUG */
 
-#define WARN_ON(x) if (x) {printf("WARNING in %s line %d\n" \
-				  , __FILE__, __LINE__); }
+#define WARN_ON(condition) ({						\
+	int __ret_warn_on = !!(condition);				\
+	if (unlikely(__ret_warn_on))					\
+		printf("WARNING in %s line %d\n", __FILE__, __LINE__);	\
+	unlikely(__ret_warn_on);					\
+})
 
 #define PAGE_SIZE	4096
 
@@ -130,12 +134,6 @@ static inline void led_trigger_unregister_simple(struct led_trigger *trigger) {}
 static inline void led_trigger_event(struct led_trigger *trigger,
 					enum led_brightness event) {}
 
-/* include/linux/log2.h */
-static inline int is_power_of_2(unsigned long n)
-{
-	return (n != 0 && ((n & (n - 1)) == 0));
-}
-
 /* uapi/linux/limits.h */
 #define XATTR_LIST_MAX 65536	/* size of extended attribute namelist (64k) */
 
@@ -154,8 +152,6 @@ typedef u64 blkcnt_t;
 typedef unsigned long sector_t;
 typedef unsigned long blkcnt_t;
 #endif
-
-#define ENOTSUPP	524	/* Operation is not supported */
 
 /* module */
 #define THIS_MODULE		0

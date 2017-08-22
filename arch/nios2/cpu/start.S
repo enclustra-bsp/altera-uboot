@@ -81,6 +81,7 @@ _cur:	movhi	r5, %hi(_cur - _start)
 	mov	r8, r4
 	movhi	r5, %hi(_start)
 	ori	r5, r5, %lo(_start)	/* r5 <- linked _start */
+	mov	sp, r5		/* initial stack below u-boot code */
 	beq	r4, r5, 3f
 
 	movhi	r6, %hi(CONFIG_SYS_MONITOR_LEN)
@@ -100,21 +101,30 @@ _cur:	movhi	r5, %hi(_cur - _start)
 _reloc:
 
 	/* STACK INIT -- zero top two words for call back chain. */
-	movhi	sp, %hi(CONFIG_SYS_INIT_SP)
-	ori	sp, sp, %lo(CONFIG_SYS_INIT_SP)
 	addi	sp, sp, -8
 	stw	r0, 0(sp)
 	stw	r0, 4(sp)
 	mov	fp, sp
 
-	/* Allocate and zero GD, update SP */
+#ifdef CONFIG_DEBUG_UART
+	/* Set up the debug UART */
+	movhi	r2, %hi(debug_uart_init@h)
+	ori	r2, r2, %lo(debug_uart_init@h)
+	callr	r2
+#endif
+
+	/* Allocate and initialize reserved area, update SP */
 	mov	r4, sp
-	movhi	r2, %hi(board_init_f_mem@h)
-	ori	r2, r2, %lo(board_init_f_mem@h)
+	movhi	r2, %hi(board_init_f_alloc_reserve@h)
+	ori	r2, r2, %lo(board_init_f_alloc_reserve@h)
+	callr	r2
+	mov	sp, r2
+	mov	r4, sp
+	movhi	r2, %hi(board_init_f_init_reserve@h)
+	ori	r2, r2, %lo(board_init_f_init_reserve@h)
 	callr	r2
 
-	/* Update stack- and frame-pointers */
-	mov	sp, r2
+	/* Update frame-pointer */
 	mov	fp, sp
 
 	/* Call board_init_f -- never returns */
@@ -159,7 +169,7 @@ relocate_code:
 	ori	r6, r6, %lo(__bss_end)
 	beq	r5, r6, 5f
 
-4:	stwio	r0, 0(r5)
+4:	stw	r0, 0(r5)
 	addi	r5, r5, 4
 	bne	r5, r6, 4b
 5:

@@ -2,76 +2,109 @@ U-Boot for UniPhier SoC family
 ==============================
 
 
-Tested toolchains
------------------
+Recommended toolchains
+----------------------
 
- (a) Ubuntu packages  (CROSS_COMPILE=arm-linux-gnueabi-)
-
-  If you are building U-Boot on Ubuntu, its standard package is recommended.
-  You can install it as follows:
-
-    $ sudo apt-get install gcc-arm-linux-gnueabi-
-
- (b) Linaro compilers  (CROSS_COMPILE=arm-linux-gnueabihf-)
-
-  You can download pre-built toolchains from:
+The UniPhir platform is well tested with Linaro toolchanis.
+You can download pre-built toolchains from:
 
     http://www.linaro.org/downloads/
-
- (c) kernel.org compilers  (CROSS_COMPILE=arm-unknown-linux-gnueabi-)
-
-  You can download pre-built toolchains from:
-
-    ftp://www.kernel.org/pub/tools/crosstool/files/bin/
 
 
 Compile the source
 ------------------
 
-PH1-sLD3:
-    $ make ph1_sld3_defconfig
-    $ make CROSS_COMPILE=arm-linux-gnueabi-
+sLD3 reference board:
+    $ make uniphier_sld3_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf-
 
-PH1-LD4:
-    $ make ph1_ld4_defconfig
-    $ make CROSS_COMPILE=arm-linux-gnueabi-
+LD4 reference board:
+    $ make uniphier_ld4_sld8_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf-
 
-PH1-Pro4:
-    $ make ph1_pro4_defconfig
-    $ make CROSS_COMPILE=arm-linux-gnueabi-
+sLD8 reference board:
+    $ make uniphier_ld4_sld8_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_TREE=uniphier-sld8-ref
 
-PH1-sLD8:
-    $ make ph1_sld8_defconfig
-    $ make CROSS_COMPILE=arm-linux-gnueabi-
+Pro4 reference board:
+    $ make uniphier_pro4_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf-
 
-PH1-Pro5:
-    $ make ph1_pro5_defconfig
-    $ make CROSS_COMPILE=arm-linux-gnueabi-
+Pro4 Ace board:
+    $ make uniphier_pro4_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_TREE=uniphier-pro4-ace
 
-ProXstream2:
-    $ make pxs2_defconfig
-    $ make CROSS_COMPILE=arm-linux-gnueabi-
+Pro4 Sanji board:
+    $ make uniphier_pro4_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_TREE=uniphier-pro4-sanji
 
-PH1-LD6b:
-    $ make ph1_ld6b_defconfig
-    $ make CROSS_COMPILE=arm-linux-gnueabi-
+Pro5 4KBOX Board:
+    $ make uniphier_pxs2_ld6b_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_TREE=uniphier-pro5-4kbox
 
-You may wish to change the "CROSS_COMPILE=arm-linux-gnueabi-"
-to use your favorite compiler.
+PXs2 Gentil board:
+    $ make uniphier_pxs2_ld6b_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_TREE=uniphier-pxs2-gentil
+
+PXs2 Vodka board:
+    $ make uniphier_pxs2_ld6b_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf-
+
+LD6b reference board:
+    $ make uniphier_pxs2_ld6b_defconfig
+    $ make CROSS_COMPILE=arm-linux-gnueabihf- DEVICE_TREE=uniphier-ld6b-ref
+
+LD11 reference board:
+    $ make uniphier_ld11_defconfig
+    $ make CROSS_COMPILE=aarch64-linux-gnu-
+
+LD20 reference board:
+    $ make uniphier_ld20_defconfig
+    $ make CROSS_COMPILE=aarch64-linux-gnu-
+
+PXs3 reference board:
+    $ make uniphier_v8_defconfig
+    $ make CROSS_COMPILE=aarch64-linux-gnu- DEVICE_TREE=uniphier-pxs3-ref
+
+You may wish to change the "CROSS_COMPILE=..." to use your favorite compiler.
 
 
 Burn U-Boot images to NAND
 --------------------------
 
-Write two files to the NAND device as follows:
- - spl/u-boot-spl-dtb.bin at the offset address 0x00000000
- - u-boot-dtb.img         at the offset address 0x00010000
+Write the following to the NAND device:
+
+ - spl/u-boot-spl.bin at the offset address 0x00000000
+ - u-boot.bin         at the offset address 0x00020000
+
+or
+
+ - u-boot-with-spl.bin at the offset address 0x00000000
 
 If a TFTP server is available, the images can be easily updated.
-Just copy the u-boot-spl-dtb.bin and u-boot-dtb.img to the TFTP public
-directory, and then run the following command at the U-Boot command line:
+Just copy the u-boot-spl.bin and u-boot.bin to the TFTP public directory,
+and then run the following command at the U-Boot command line:
 
   => run nandupdate
+
+
+Burn U-Boot images to eMMC
+--------------------------
+
+Write the following to the Boot partition 1 of the eMMC device:
+
+ - spl/u-boot-spl.bin at the offset address 0x00000000
+ - u-boot.bin         at the offset address 0x00020000
+
+or
+
+ - u-boot-with-spl.bin at the offset address 0x00000000
+
+If a TFTP server is available, the images can be easily updated.
+Just copy the u-boot-spl.bin and u-boot.bin to the TFTP public directory,
+and then run the following command at the U-Boot command line:
+
+  => run emmcupdate
 
 
 UniPhier specific commands
@@ -83,14 +116,19 @@ UniPhier specific commands
  - ddrphy (enabled by CONFIG_CMD_DDRPHY_DUMP)
      shows the DDR PHY parameters set by the PHY training
 
+ - ddrmphy (enabled by CONFIG_CMD_DDRMPHY_DUMP)
+     shows the DDR Multi PHY parameters set by the PHY training
+
 
 Supported devices
 -----------------
 
  - UART (on-chip)
  - NAND
+ - SD/eMMC
  - USB 2.0 (EHCI)
  - USB 3.0 (xHCI)
+ - GPIO
  - LAN (on-board SMSC9118)
  - I2C
  - EEPROM (connected to the on-board I2C bus)
@@ -115,7 +153,7 @@ The recommended bit switch settings are as follows:
 
  SW8    OFF(1)/ON(0)   Description
  ------------------------------------------
- bit 1    ---->        CS1_SPLIT
+ bit 1    <----        CS1_SPLIT
  bit 2    <----        CASE9_ON
  bit 3    <----        CASE10_ON
  bit 4  Don't Care     Reserve
@@ -141,4 +179,4 @@ newer SoCs.  Even if it is, EA[25] is not connected on most of the boards.
 
 --
 Masahiro Yamada <yamada.masahiro@socionext.com>
-Aug. 2015
+Jan. 2017

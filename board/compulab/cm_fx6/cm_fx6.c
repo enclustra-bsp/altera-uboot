@@ -12,6 +12,7 @@
 #include <dm.h>
 #include <fsl_esdhc.h>
 #include <miiphy.h>
+#include <mtd_node.h>
 #include <netdev.h>
 #include <errno.h>
 #include <usb.h>
@@ -28,6 +29,7 @@
 #include <asm/io.h>
 #include <asm/gpio.h>
 #include <dm/platform_data/serial_mxc.h>
+#include <jffs2/load_kernel.h>
 #include "common.h"
 #include "../common/eeprom.h"
 #include "../common/common.h"
@@ -39,7 +41,26 @@ static struct splash_location cm_fx6_splash_locations[] = {
 	{
 		.name = "sf",
 		.storage = SPLASH_STORAGE_SF,
+		.flags = SPLASH_STORAGE_RAW,
 		.offset = 0x100000,
+	},
+	{
+		.name = "mmc_fs",
+		.storage = SPLASH_STORAGE_MMC,
+		.flags = SPLASH_STORAGE_FS,
+		.devpart = "2:1",
+	},
+	{
+		.name = "usb_fs",
+		.storage = SPLASH_STORAGE_USB,
+		.flags = SPLASH_STORAGE_FS,
+		.devpart = "0:1",
+	},
+	{
+		.name = "sata_fs",
+		.storage = SPLASH_STORAGE_SATA,
+		.flags = SPLASH_STORAGE_FS,
+		.devpart = "0:1",
 	},
 };
 
@@ -562,6 +583,17 @@ int cm_fx6_setup_ecspi(void) { return 0; }
 
 #ifdef CONFIG_OF_BOARD_SETUP
 #define USDHC3_PATH	"/soc/aips-bus@02100000/usdhc@02198000/"
+
+struct node_info nodes[] = {
+	/*
+	 * Both entries target the same flash chip. The st,m25p compatible
+	 * is used in the vendor device trees, while upstream uses (the
+	 * documented) jedec,spi-nor compatible.
+	 */
+	{ "st,m25p",	MTD_DEV_TYPE_NOR,	},
+	{ "jedec,spi-nor",	MTD_DEV_TYPE_NOR,	},
+};
+
 int ft_board_setup(void *blob, bd_t *bd)
 {
 	u32 baseboard_rev;
@@ -569,6 +601,8 @@ int ft_board_setup(void *blob, bd_t *bd)
 	uint8_t enetaddr[6];
 	char baseboard_name[16];
 	int err;
+
+	fdt_shrink_to_minimum(blob, 0); /* Make room for new properties */
 
 	/* MAC addr */
 	if (eth_getenv_enetaddr("ethaddr", enetaddr)) {
@@ -582,16 +616,17 @@ int ft_board_setup(void *blob, bd_t *bd)
 				     enetaddr, 6, 1);
 	}
 
+	fdt_fixup_mtdparts(blob, nodes, ARRAY_SIZE(nodes));
+
 	baseboard_rev = cl_eeprom_get_board_rev(0);
 	err = cl_eeprom_get_product_name((uchar *)baseboard_name, 0);
 	if (err || baseboard_rev == 0)
 		return 0; /* Assume not an early revision SB-FX6m baseboard */
 
 	if (!strncmp("SB-FX6m", baseboard_name, 7) && baseboard_rev <= 120) {
-		fdt_shrink_to_minimum(blob); /* Make room for new properties */
 		nodeoffset = fdt_path_offset(blob, USDHC3_PATH);
 		fdt_delprop(blob, nodeoffset, "cd-gpios");
-		fdt_find_and_setprop(blob, USDHC3_PATH, "non-removable",
+		fdt_find_and_setprop(blob, USDHC3_PATH, "broken-cd",
 				     NULL, 0, 1);
 		fdt_find_and_setprop(blob, USDHC3_PATH, "keep-power-in-suspend",
 				     NULL, 0, 1);
@@ -653,7 +688,7 @@ int misc_init_r(void)
 	return 0;
 }
 
-void dram_init_banksize(void)
+int dram_init_banksize(void)
 {
 	gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
 	gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
@@ -685,6 +720,8 @@ void dram_init_banksize(void)
 		gd->bd->bi_dram[1].size = 0x7FF00000;
 		break;
 	}
+
+	return 0;
 }
 
 int dram_init(void)

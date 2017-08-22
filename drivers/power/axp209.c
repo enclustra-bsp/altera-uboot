@@ -6,6 +6,7 @@
  */
 
 #include <common.h>
+#include <command.h>
 #include <asm/arch/pmic_bus.h>
 #include <axp_pmic.h>
 
@@ -157,7 +158,7 @@ int axp_init(void)
 	ver &= 0x0f;
 
 	if (ver != 0x1)
-		return -1;
+		return -EINVAL;
 
 	/* Mask all interrupts */
 	for (i = AXP209_IRQ_ENABLE1; i <= AXP209_IRQ_ENABLE5; i++) {
@@ -166,5 +167,32 @@ int axp_init(void)
 			return rc;
 	}
 
+	/*
+	 * Turn off LDOIO regulators / tri-state GPIO pins, when rebooting
+	 * from android these are sometimes on.
+	 */
+	rc = pmic_bus_write(AXP_GPIO0_CTRL, AXP_GPIO_CTRL_INPUT);
+	if (rc)
+		return rc;
+
+	rc = pmic_bus_write(AXP_GPIO1_CTRL, AXP_GPIO_CTRL_INPUT);
+	if (rc)
+		return rc;
+
+	rc = pmic_bus_write(AXP_GPIO2_CTRL, AXP_GPIO_CTRL_INPUT);
+	if (rc)
+		return rc;
+
+	return 0;
+}
+
+int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	pmic_bus_write(AXP209_SHUTDOWN, AXP209_POWEROFF);
+
+	/* infinite loop during shutdown */
+	while (1) {}
+
+	/* not reached */
 	return 0;
 }

@@ -13,11 +13,6 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-/*
- * High Level Configuration Options
- */
-#define CONFIG_OMAP3_ZOOM1	1	/* working with Zoom MDK Rev1 */
-
 #define CONFIG_NAND
 #define CONFIG_NR_DRAM_BANKS	2	/* CS1 may or may not be populated */
 #include <asm/arch/cpu.h>		/* get chip and board defs */
@@ -26,16 +21,9 @@
 
 /* Remove SPL boot option - we do not support that on LDP yet */
 #undef CONFIG_SPL_FRAMEWORK
-#undef CONFIG_SPL_OS_BOOT
 
 /* Generic NAND definition conflicts with debug_base */
 #undef CONFIG_SYS_NAND_BASE
-
-/*
- * Display CPU and Board information
- */
-#define CONFIG_DISPLAY_CPUINFO		1
-#define CONFIG_DISPLAY_BOARDINFO	1
 
 #define CONFIG_MISC_INIT_R
 
@@ -55,7 +43,6 @@
 /* USB device configuration */
 #define CONFIG_USB_DEVICE		1
 #define CONFIG_USB_TTY			1
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV	1
 /* Change these to suit your needs */
 #define CONFIG_USBD_VENDORID		0x0451
 #define CONFIG_USBD_PRODUCTID		0x5678
@@ -76,9 +63,6 @@
 #endif
 #define CONFIG_CMD_NAND_LOCK_UNLOCK /* Enable lock/unlock support */
 #endif
-
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_DHCP
 
 #undef CONFIG_SYS_I2C_OMAP24XX
 #define CONFIG_SYS_I2C_OMAP34XX
@@ -178,8 +162,6 @@
 #define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB */
 #define CONFIG_ENV_OFFSET		SMNAND_ENV_OFFSET
 #define CONFIG_ENV_ADDR			SMNAND_ENV_OFFSET
-
-#define CONFIG_SYS_CACHELINE_SIZE	64
 
 #ifdef CONFIG_CMD_NET
 /* Ethernet (LAN9211 from SMSC9118 family) */

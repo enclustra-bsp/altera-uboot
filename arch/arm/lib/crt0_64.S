@@ -75,8 +75,12 @@ ENTRY(_main)
 	ldr	x0, =(CONFIG_SYS_INIT_SP_ADDR)
 #endif
 	bic	sp, x0, #0xf	/* 16-byte alignment for ABI compliance */
-	bl	board_init_f_mem
+	mov	x0, sp
+	bl	board_init_f_alloc_reserve
 	mov	sp, x0
+	/* set up gd here, outside any C code */
+	mov	x18, x0
+	bl	board_init_f_init_reserve
 
 	mov	x0, #0
 	bl	board_init_f
@@ -104,18 +108,27 @@ relocation_return:
  * Set up final (full) environment
  */
 	bl	c_runtime_cpu_setup		/* still call old routine */
-
-/* TODO: For SPL, call spl_relocate_stack_gd() to alloc stack relocation */
+#endif /* !CONFIG_SPL_BUILD */
+#if defined(CONFIG_SPL_BUILD)
+	bl	spl_relocate_stack_gd           /* may return NULL */
+	/*
+	 * Perform 'sp = (x0 != NULL) ? x0 : sp' while working
+	 * around the constraint that conditional moves can not
+	 * have 'sp' as an operand
+	 */
+	mov	x1, sp
+	cmp	x0, #0
+	csel	x0, x0, x1, ne
+	mov	sp, x0
+#endif
 
 /*
  * Clear BSS section
  */
 	ldr	x0, =__bss_start		/* this is auto-relocated! */
 	ldr	x1, =__bss_end			/* this is auto-relocated! */
-	mov	x2, #0
 clear_loop:
-	str	x2, [x0]
-	add	x0, x0, #8
+	str	xzr, [x0], #8
 	cmp	x0, x1
 	b.lo	clear_loop
 
@@ -125,7 +138,5 @@ clear_loop:
 	b	board_init_r			/* PC relative jump */
 
 	/* NOTREACHED - board_init_r() does not return */
-
-#endif /* !CONFIG_SPL_BUILD */
 
 ENDPROC(_main)

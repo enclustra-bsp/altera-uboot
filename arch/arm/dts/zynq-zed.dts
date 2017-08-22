@@ -17,15 +17,16 @@
 		ethernet0 = &gem0;
 		serial0 = &uart1;
 		spi0 = &qspi;
+		mmc0 = &sdhci0;
 	};
 
-	memory {
+	memory@0 {
 		device_type = "memory";
 		reg = <0x0 0x20000000>;
 	};
 
 	chosen {
-		bootargs = "earlyprintk";
+		bootargs = "";
 		stdout-path = "serial0:115200n8";
 	};
 
@@ -49,15 +50,18 @@
 	};
 };
 
+&qspi {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
+
 &sdhci0 {
+	u-boot,dm-pre-reloc;
 	status = "okay";
 };
 
 &uart1 {
-	status = "okay";
-};
-
-&qspi {
+	u-boot,dm-pre-reloc;
 	status = "okay";
 };
 

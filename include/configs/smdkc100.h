@@ -25,9 +25,6 @@
 
 #define CONFIG_ARCH_CPU_INIT
 
-#define CONFIG_DISPLAY_CPUINFO
-#define CONFIG_DISPLAY_BOARDINFO
-
 /* input clock of PLL: SMDKC100 has 12MHz input clock */
 #define CONFIG_SYS_CLK_FREQ		12000000
 
@@ -58,22 +55,15 @@
 
 /* allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
-#define CONFIG_BAUDRATE			115200
 
 /***********************************************************
  * Command definition
  ***********************************************************/
 #undef CONFIG_CMD_NAND
 
-#define CONFIG_CMD_CACHE
 #define CONFIG_CMD_REGINFO
 #define CONFIG_CMD_ONENAND
-#define CONFIG_CMD_FAT
 #define CONFIG_CMD_MTDPARTS
-
-#define CONFIG_BOOTDELAY	3
-
-#define CONFIG_ZERO_BOOTDELAY_CHECK
 
 #define CONFIG_MTD_DEVICE
 #define CONFIG_MTD_PARTITIONS
@@ -150,7 +140,6 @@
  * Miscellaneous configurable options
  */
 #define CONFIG_SYS_LONGHELP		/* undef to save memory */
-#define CONFIG_SYS_HUSH_PARSER		/* use "hush" command parser	*/
 #define CONFIG_SYS_CBSIZE	256	/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	384	/* Print Buffer Size */
 #define CONFIG_SYS_MAXARGS	16	/* max number of command args */
@@ -171,10 +160,8 @@
 /*-----------------------------------------------------------------------
  * FLASH and environment organization
  */
-#define CONFIG_SYS_NO_FLASH		1
 
 #define CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* 256 KiB */
-#define CONFIG_IDENT_STRING		" for SMDKC100"
 
 #if !defined(CONFIG_NAND_SPL) && (CONFIG_SYS_TEXT_BASE >= 0xc0000000)
 #define CONFIG_ENABLE_MMU
@@ -198,8 +185,6 @@
 #define CONFIG_SAMSUNG_ONENAND		1
 #define CONFIG_SYS_ONENAND_BASE		0xE7100000
 
-#define CONFIG_DOS_PARTITION		1
-
 #define CONFIG_SYS_INIT_SP_ADDR	(CONFIG_SYS_LOAD_ADDR - 0x1000000)
 
 /*
@@ -211,8 +196,5 @@
 #define CONFIG_SMC911X_BASE    0x98800300      /* SMC911X Drive Base   */
 #define CONFIG_ENV_SROM_BANK   3       /* Select SROM Bank-3 for Ethernet*/
 #endif /* CONFIG_CMD_NET */
-
-#define CONFIG_OF_LIBFDT
-
 
 #endif	/* __CONFIG_H */

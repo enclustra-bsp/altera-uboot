@@ -174,8 +174,9 @@ static int altera_spi_ofdata_to_platdata(struct udevice *bus)
 {
 	struct altera_spi_platdata *plat = dev_get_platdata(bus);
 
-	plat->regs = ioremap(dev_get_addr(bus),
-		sizeof(struct altera_spi_regs));
+	plat->regs = map_physmem(devfdt_get_addr(bus),
+				 sizeof(struct altera_spi_regs),
+				 MAP_NOCACHE);
 
 	return 0;
 }
@@ -193,8 +194,8 @@ static const struct dm_spi_ops altera_spi_ops = {
 };
 
 static const struct udevice_id altera_spi_ids[] = {
-	{ .compatible = "altr,spi-1.0", },
-	{ }
+	{ .compatible = "altr,spi-1.0" },
+	{}
 };
 
 U_BOOT_DRIVER(altera_spi) = {

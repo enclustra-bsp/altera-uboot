@@ -133,7 +133,6 @@ serial_initfunc(marvell_serial_initialize);
 serial_initfunc(max3100_serial_initialize);
 serial_initfunc(mcf_serial_initialize);
 serial_initfunc(ml2_serial_initialize);
-serial_initfunc(mpc512x_serial_initialize);
 serial_initfunc(mpc5xx_serial_initialize);
 serial_initfunc(mpc8260_scc_serial_initialize);
 serial_initfunc(mpc8260_smc_serial_initialize);
@@ -224,10 +223,6 @@ void serial_initialize(void)
 	max3100_serial_initialize();
 	mcf_serial_initialize();
 	ml2_serial_initialize();
-	mpc512x_serial_initialize();
-	mpc5xx_serial_initialize();
-	mpc8260_scc_serial_initialize();
-	mpc8260_smc_serial_initialize();
 	mpc85xx_serial_initialize();
 	mpc8xx_serial_initialize();
 	mxc_serial_initialize();
@@ -278,14 +273,14 @@ static void serial_stub_puts(struct stdio_dev *sdev, const char *str)
 	dev->puts(str);
 }
 
-int serial_stub_getc(struct stdio_dev *sdev)
+static int serial_stub_getc(struct stdio_dev *sdev)
 {
 	struct serial_device *dev = sdev->priv;
 
 	return dev->getc();
 }
 
-int serial_stub_tstc(struct stdio_dev *sdev)
+static int serial_stub_tstc(struct stdio_dev *sdev)
 {
 	struct serial_device *dev = sdev->priv;
 
@@ -527,7 +522,7 @@ static const int bauds[] = CONFIG_SYS_BAUDRATE_TABLE;
  *
  * Do a loopback test of the currently selected serial port. This
  * function is only useful in the context of the POST testing framwork.
- * The serial port is firstly configured into loopback mode and then
+ * The serial port is first configured into loopback mode and then
  * characters are sent through it.
  *
  * Returns 0 on success, value otherwise.

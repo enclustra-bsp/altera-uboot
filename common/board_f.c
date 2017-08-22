@@ -11,53 +11,36 @@
  */
 
 #include <common.h>
-#include <linux/compiler.h>
-#include <version.h>
+#include <console.h>
 #include <environment.h>
 #include <dm.h>
 #include <fdtdec.h>
 #include <fs.h>
-#if defined(CONFIG_CMD_IDE)
-#include <ide.h>
-#endif
 #include <i2c.h>
 #include <initcall.h>
+#include <init_helpers.h>
 #include <logbuff.h>
 #include <malloc.h>
 #include <mapmem.h>
-
-/* TODO: Can we move these into arch/ headers? */
-#ifdef CONFIG_8xx
-#include <mpc8xx.h>
-#endif
-#ifdef CONFIG_5xx
-#include <mpc5xx.h>
-#endif
-#ifdef CONFIG_MPC5xxx
-#include <mpc5xxx.h>
-#endif
-#if defined(CONFIG_MP) && (defined(CONFIG_MPC86xx) || defined(CONFIG_E500))
-#include <asm/mp.h>
-#endif
-
 #include <os.h>
 #include <post.h>
+#include <relocate.h>
 #include <spi.h>
 #include <status_led.h>
+#include <timer.h>
 #include <trace.h>
+#include <video.h>
 #include <watchdog.h>
-#include <asm/errno.h>
+#ifdef CONFIG_MACH_TYPE
+#include <asm/mach-types.h>
+#endif
+#if defined(CONFIG_MP) && defined(CONFIG_PPC)
+#include <asm/mp.h>
+#endif
 #include <asm/io.h>
 #include <asm/sections.h>
-#if defined(CONFIG_X86) || defined(CONFIG_ARC)
-#include <asm/init_helpers.h>
-#include <asm/relocate.h>
-#endif
-#ifdef CONFIG_SANDBOX
-#include <asm/state.h>
-#endif
 #include <dm/root.h>
-#include <linux/compiler.h>
+#include <linux/errno.h>
 
 /*
  * Pointer to initial global data area
@@ -104,20 +87,17 @@ __weak void blue_led_off(void) {}
  * a structure...
  */
 
-/*
- * Could the CONFIG_SPL_BUILD infection become a flag in gd?
- */
-
 #if defined(CONFIG_WATCHDOG) || defined(CONFIG_HW_WATCHDOG)
 static int init_func_watchdog_init(void)
 {
-# if defined(CONFIG_HW_WATCHDOG) && (defined(CONFIG_BLACKFIN) || \
-	defined(CONFIG_M68K) || defined(CONFIG_MICROBLAZE) || \
+# if defined(CONFIG_HW_WATCHDOG) && \
+	(defined(CONFIG_M68K) || defined(CONFIG_MICROBLAZE) || \
 	defined(CONFIG_SH) || defined(CONFIG_AT91SAM9_WATCHDOG) || \
+	defined(CONFIG_DESIGNWARE_WATCHDOG) || \
 	defined(CONFIG_IMX_WATCHDOG))
 	hw_watchdog_init();
-# endif
 	puts("       Watchdog enabled\n");
+# endif
 	WATCHDOG_RESET();
 
 	return 0;
@@ -160,14 +140,6 @@ static int display_text_info(void)
 		text_base, bss_start, bss_end);
 #endif
 
-#ifdef CONFIG_MODEM_SUPPORT
-	debug("Modem Support enabled\n");
-#endif
-#ifdef CONFIG_USE_IRQ
-	debug("IRQ Stack: %08lx\n", IRQ_STACK_START);
-	debug("FIQ Stack: %08lx\n", FIQ_STACK_START);
-#endif
-
 	return 0;
 }
 
@@ -176,25 +148,6 @@ static int announce_dram_init(void)
 	puts("DRAM:  ");
 	return 0;
 }
-
-#if defined(CONFIG_MIPS) || defined(CONFIG_PPC) || defined(CONFIG_M68K)
-static int init_func_ram(void)
-{
-#ifdef	CONFIG_BOARD_TYPES
-	int board_type = gd->board_type;
-#else
-	int board_type = 0;	/* use dummy arg */
-#endif
-
-	gd->ram_size = initdram(board_type);
-
-	if (gd->ram_size > 0)
-		return 0;
-
-	puts("*** failed ***\n");
-	return 1;
-}
-#endif
 
 static int show_dram_config(void)
 {
@@ -224,15 +177,17 @@ static int show_dram_config(void)
 	return 0;
 }
 
-__weak void dram_init_banksize(void)
+__weak int dram_init_banksize(void)
 {
 #if defined(CONFIG_NR_DRAM_BANKS) && defined(CONFIG_SYS_SDRAM_BASE)
 	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
 	gd->bd->bi_dram[0].size = get_effective_memsize();
 #endif
+
+	return 0;
 }
 
-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
+#if defined(CONFIG_SYS_I2C)
 static int init_func_i2c(void)
 {
 	puts("I2C:   ");
@@ -270,11 +225,11 @@ static int setup_mon_len(void)
 	gd->mon_len = (ulong)&__bss_end - (ulong)_start;
 #elif defined(CONFIG_SANDBOX) || defined(CONFIG_EFI_APP)
 	gd->mon_len = (ulong)&_end - (ulong)_init;
-#elif defined(CONFIG_BLACKFIN) || defined(CONFIG_NIOS2)
+#elif defined(CONFIG_NIOS2) || defined(CONFIG_XTENSA)
 	gd->mon_len = CONFIG_SYS_MONITOR_LEN;
-#elif defined(CONFIG_NDS32)
+#elif defined(CONFIG_NDS32) || defined(CONFIG_SH)
 	gd->mon_len = (ulong)(&__bss_end) - (ulong)(&_start);
-#else
+#elif defined(CONFIG_SYS_MONITOR_BASE)
 	/* TODO: use (ulong)&__bss_end - (ulong)&__text_start; ? */
 	gd->mon_len = (ulong)&__bss_end - CONFIG_SYS_MONITOR_BASE;
 #endif
@@ -286,17 +241,10 @@ __weak int arch_cpu_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_SANDBOX
-static int setup_ram_buf(void)
+__weak int mach_cpu_init(void)
 {
-	struct sandbox_state *state = state_get_current();
-
-	gd->arch.ram_buf = state->ram_buf;
-	gd->ram_size = state->ram_size;
-
 	return 0;
 }
-#endif
 
 /* Get the top of usable RAM */
 __weak ulong board_get_usable_ram_top(ulong total_size)
@@ -356,13 +304,16 @@ static int setup_dest_addr(void)
 	return 0;
 }
 
-#if defined(CONFIG_LOGBUFFER) && !defined(CONFIG_ALT_LB_ADDR)
+#if defined(CONFIG_LOGBUFFER)
 static int reserve_logbuffer(void)
 {
+#ifndef CONFIG_ALT_LB_ADDR
 	/* reserve kernel log buffer */
 	gd->relocaddr -= LOGBUFF_RESERVE;
 	debug("Reserving %dk for kernel logbuffer at %08lx\n", LOGBUFF_LEN,
 		gd->relocaddr);
+#endif
+
 	return 0;
 }
 #endif
@@ -388,10 +339,10 @@ static int reserve_round_4k(void)
 	return 0;
 }
 
-#if !(defined(CONFIG_SYS_ICACHE_OFF) && defined(CONFIG_SYS_DCACHE_OFF)) && \
-		defined(CONFIG_ARM)
+#ifdef CONFIG_ARM
 static int reserve_mmu(void)
 {
+#if !(defined(CONFIG_SYS_ICACHE_OFF) && defined(CONFIG_SYS_DCACHE_OFF))
 	/* reserve TLB table */
 	gd->arch.tlb_size = PGTABLE_SIZE;
 	gd->relocaddr -= gd->arch.tlb_size;
@@ -402,23 +353,50 @@ static int reserve_mmu(void)
 	gd->arch.tlb_addr = gd->relocaddr;
 	debug("TLB table from %08lx to %08lx\n", gd->arch.tlb_addr,
 	      gd->arch.tlb_addr + gd->arch.tlb_size);
+
+#ifdef CONFIG_SYS_MEM_RESERVE_SECURE
+	/*
+	 * Record allocated tlb_addr in case gd->tlb_addr to be overwritten
+	 * with location within secure ram.
+	 */
+	gd->arch.tlb_allocated = gd->arch.tlb_addr;
+#endif
+#endif
+
 	return 0;
 }
 #endif
 
-#ifdef CONFIG_LCD
-static int reserve_lcd(void)
+static int reserve_video(void)
 {
-#ifdef CONFIG_FB_ADDR
+#ifdef CONFIG_DM_VIDEO
+	ulong addr;
+	int ret;
+
+	addr = gd->relocaddr;
+	ret = video_reserve(&addr);
+	if (ret)
+		return ret;
+	gd->relocaddr = addr;
+#elif defined(CONFIG_LCD)
+#  ifdef CONFIG_FB_ADDR
 	gd->fb_base = CONFIG_FB_ADDR;
-#else
+#  else
 	/* reserve memory for LCD display (always full pages) */
 	gd->relocaddr = lcd_setmem(gd->relocaddr);
 	gd->fb_base = gd->relocaddr;
-#endif /* CONFIG_FB_ADDR */
+#  endif /* CONFIG_FB_ADDR */
+#elif defined(CONFIG_VIDEO) && \
+		(!defined(CONFIG_PPC)) && \
+		!defined(CONFIG_ARM) && !defined(CONFIG_X86) && \
+		!defined(CONFIG_M68K)
+	/* reserve memory for video display (always full pages) */
+	gd->relocaddr = video_setmem(gd->relocaddr);
+	gd->fb_base = gd->relocaddr;
+#endif
+
 	return 0;
 }
-#endif /* CONFIG_LCD */
 
 static int reserve_trace(void)
 {
@@ -431,19 +409,6 @@ static int reserve_trace(void)
 
 	return 0;
 }
-
-#if defined(CONFIG_VIDEO) && (!defined(CONFIG_PPC) || defined(CONFIG_8xx)) && \
-		!defined(CONFIG_ARM) && !defined(CONFIG_X86) && \
-		!defined(CONFIG_BLACKFIN) && !defined(CONFIG_M68K)
-static int reserve_video(void)
-{
-	/* reserve memory for video display (always full pages) */
-	gd->relocaddr = video_setmem(gd->relocaddr);
-	gd->fb_base = gd->relocaddr;
-
-	return 0;
-}
-#endif
 
 static int reserve_uboot(void)
 {
@@ -466,7 +431,6 @@ static int reserve_uboot(void)
 	return 0;
 }
 
-#ifndef CONFIG_SPL_BUILD
 /* reserve memory for malloc() area */
 static int reserve_malloc(void)
 {
@@ -488,7 +452,6 @@ static int reserve_board(void)
 	}
 	return 0;
 }
-#endif
 
 static int setup_machine(void)
 {
@@ -509,6 +472,7 @@ static int reserve_global_data(void)
 
 static int reserve_fdt(void)
 {
+#ifndef CONFIG_OF_EMBED
 	/*
 	 * If the device tree is sitting immediately above our image then we
 	 * must relocate it. If it is embedded in the data section, then it
@@ -522,6 +486,21 @@ static int reserve_fdt(void)
 		debug("Reserving %lu Bytes for FDT at: %08lx\n",
 		      gd->fdt_size, gd->start_addr_sp);
 	}
+#endif
+
+	return 0;
+}
+
+static int reserve_bootstage(void)
+{
+#ifdef CONFIG_BOOTSTAGE
+	int size = bootstage_get_size();
+
+	gd->start_addr_sp -= size;
+	gd->new_bootstage = map_sysmem(gd->start_addr_sp, size);
+	debug("Reserving %#x Bytes for bootstage at: %08lx\n", size,
+	      gd->start_addr_sp);
+#endif
 
 	return 0;
 }
@@ -551,7 +530,8 @@ static int display_new_sp(void)
 	return 0;
 }
 
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#if defined(CONFIG_M68K) || defined(CONFIG_MIPS) || defined(CONFIG_PPC) || \
+	defined(CONFIG_SH)
 static int setup_board_part1(void)
 {
 	bd_t *bd = gd->bd;
@@ -567,11 +547,10 @@ static int setup_board_part1(void)
 	bd->bi_sramsize = CONFIG_SYS_SRAM_SIZE;		/* size  of SRAM */
 #endif
 
-#if defined(CONFIG_8xx) || defined(CONFIG_MPC8260) || defined(CONFIG_5xx) || \
-		defined(CONFIG_E500) || defined(CONFIG_MPC86xx)
+#if defined(CONFIG_E500) || defined(CONFIG_MPC86xx)
 	bd->bi_immr_base = CONFIG_SYS_IMMR;	/* base  of IMMR register     */
 #endif
-#if defined(CONFIG_MPC5xxx) || defined(CONFIG_M68K)
+#if defined(CONFIG_M68K)
 	bd->bi_mbar_base = CONFIG_SYS_MBAR;	/* base of internal registers */
 #endif
 #if defined(CONFIG_MPC83xx)
@@ -580,7 +559,9 @@ static int setup_board_part1(void)
 
 	return 0;
 }
+#endif
 
+#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
 static int setup_board_part2(void)
 {
 	bd_t *bd = gd->bd;
@@ -593,13 +574,6 @@ static int setup_board_part2(void)
 	bd->bi_sccfreq = gd->arch.scc_clk;
 	bd->bi_vco = gd->arch.vco_out;
 #endif /* CONFIG_CPM2 */
-#if defined(CONFIG_MPC512X)
-	bd->bi_ipsfreq = gd->arch.ips_clk;
-#endif /* CONFIG_MPC512X */
-#if defined(CONFIG_MPC5xxx)
-	bd->bi_ipbfreq = gd->arch.ipb_clk;
-	bd->bi_pcifreq = gd->pci_clk;
-#endif /* CONFIG_MPC5xxx */
 #if defined(CONFIG_M68K) && defined(CONFIG_PCI)
 	bd->bi_pcifreq = gd->pci_clk;
 #endif
@@ -607,30 +581,6 @@ static int setup_board_part2(void)
 	bd->bi_inpfreq = gd->arch.inp_clk;	/* input Freq in Hz */
 	bd->bi_vcofreq = gd->arch.vco_clk;	/* vco Freq in Hz */
 	bd->bi_flbfreq = gd->arch.flb_clk;	/* flexbus Freq in Hz */
-#endif
-
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_SYS_EXTBDINFO
-static int setup_board_extra(void)
-{
-	bd_t *bd = gd->bd;
-
-	strncpy((char *) bd->bi_s_version, "1.2", sizeof(bd->bi_s_version));
-	strncpy((char *) bd->bi_r_version, U_BOOT_VERSION,
-		sizeof(bd->bi_r_version));
-
-	bd->bi_procfreq = gd->cpu_clk;	/* Processor Speed, In Hz */
-	bd->bi_plb_busfreq = gd->bus_clk;
-#if defined(CONFIG_405GP) || defined(CONFIG_405EP) || \
-		defined(CONFIG_440EP) || defined(CONFIG_440GR) || \
-		defined(CONFIG_440EPX) || defined(CONFIG_440GRX)
-	bd->bi_pci_busfreq = get_PCI_freq();
-	bd->bi_opbfreq = get_OPB_freq();
-#elif defined(CONFIG_XILINX_405)
-	bd->bi_pci_busfreq = get_PCI_freq();
 #endif
 
 	return 0;
@@ -647,22 +597,34 @@ static int init_post(void)
 }
 #endif
 
-static int setup_dram_config(void)
-{
-	/* Ram is board specific, so move it to board code ... */
-	dram_init_banksize();
-
-	return 0;
-}
-
 static int reloc_fdt(void)
 {
+#ifndef CONFIG_OF_EMBED
 	if (gd->flags & GD_FLG_SKIP_RELOC)
 		return 0;
 	if (gd->new_fdt) {
 		memcpy(gd->new_fdt, gd->fdt_blob, gd->fdt_size);
 		gd->fdt_blob = gd->new_fdt;
 	}
+#endif
+
+	return 0;
+}
+
+static int reloc_bootstage(void)
+{
+#ifdef CONFIG_BOOTSTAGE
+	if (gd->flags & GD_FLG_SKIP_RELOC)
+		return 0;
+	if (gd->new_bootstage) {
+		int size = bootstage_get_size();
+
+		debug("Copying bootstage from %p to %p, size %x\n",
+		      gd->bootstage, gd->new_bootstage, size);
+		memcpy(gd->new_bootstage, gd->bootstage, size);
+		gd->bootstage = gd->new_bootstage;
+	}
+#endif
 
 	return 0;
 }
@@ -675,13 +637,16 @@ static int setup_reloc(void)
 	}
 
 #ifdef CONFIG_SYS_TEXT_BASE
-	gd->reloc_off = gd->relocaddr - CONFIG_SYS_TEXT_BASE;
-#ifdef CONFIG_M68K
+#ifdef ARM
+	gd->reloc_off = gd->relocaddr - (unsigned long)__image_copy_start;
+#elif defined(CONFIG_M68K)
 	/*
 	 * On all ColdFire arch cpu, monitor code starts always
 	 * just after the default vector table location, so at 0x400
 	 */
 	gd->reloc_off = gd->relocaddr - (CONFIG_SYS_TEXT_BASE + 0x400);
+#else
+	gd->reloc_off = gd->relocaddr - CONFIG_SYS_TEXT_BASE;
 #endif
 #endif
 	memcpy(gd->new_gd, (char *)gd, sizeof(gd_t));
@@ -694,8 +659,16 @@ static int setup_reloc(void)
 	return 0;
 }
 
+#ifdef CONFIG_OF_BOARD_FIXUP
+static int fix_fdt(void)
+{
+	return board_fix_fdt((void *)gd->fdt_blob);
+}
+#endif
+
 /* ARM calls relocate_code from its crt0.S */
-#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX)
+#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX) && \
+		!CONFIG_IS_ENABLED(X86_64)
 
 static int jump_to_copy(void)
 {
@@ -727,11 +700,38 @@ static int jump_to_copy(void)
 #endif
 
 /* Record the board_init_f() bootstage (after arch_cpu_init()) */
-static int mark_bootstage(void)
+static int initf_bootstage(void)
 {
+	bool from_spl = IS_ENABLED(CONFIG_SPL_BOOTSTAGE) &&
+			IS_ENABLED(CONFIG_BOOTSTAGE_STASH);
+	int ret;
+
+	ret = bootstage_init(!from_spl);
+	if (ret)
+		return ret;
+	if (from_spl) {
+		const void *stash = map_sysmem(CONFIG_BOOTSTAGE_STASH_ADDR,
+					       CONFIG_BOOTSTAGE_STASH_SIZE);
+
+		ret = bootstage_unstash(stash, CONFIG_BOOTSTAGE_STASH_SIZE);
+		if (ret && ret != -ENOENT) {
+			debug("Failed to unstash bootstage: err=%d\n", ret);
+			return ret;
+		}
+	}
+
 	bootstage_mark_name(BOOTSTAGE_ID_START_UBOOT_F, "board_init_f");
 
 	return 0;
+}
+
+static int initf_console_record(void)
+{
+#if defined(CONFIG_CONSOLE_RECORD) && defined(CONFIG_SYS_MALLOC_F_LEN)
+	return console_record_init();
+#else
+	return 0;
+#endif
 }
 
 static int initf_dm(void)
@@ -739,7 +739,14 @@ static int initf_dm(void)
 #if defined(CONFIG_DM) && defined(CONFIG_SYS_MALLOC_F_LEN)
 	int ret;
 
+	bootstage_start(BOOTSTATE_ID_ACCUM_DM_F, "dm_f");
 	ret = dm_init_and_scan(true);
+	bootstage_accum(BOOTSTATE_ID_ACCUM_DM_F);
+	if (ret)
+		return ret;
+#endif
+#ifdef CONFIG_TIMER_EARLY
+	ret = dm_timer_init();
 	if (ret)
 		return ret;
 #endif
@@ -758,10 +765,7 @@ __weak int arch_cpu_init_dm(void)
 	return 0;
 }
 
-static init_fnc_t init_sequence_f[] = {
-#ifdef CONFIG_SANDBOX
-	setup_ram_buf,
-#endif
+static const init_fnc_t init_sequence_f[] = {
 	setup_mon_len,
 #ifdef CONFIG_OF_CONTROL
 	fdtdec_setup,
@@ -770,81 +774,41 @@ static init_fnc_t init_sequence_f[] = {
 	trace_early_init,
 #endif
 	initf_malloc,
-#if defined(CONFIG_MPC85xx) || defined(CONFIG_MPC86xx)
-	/* TODO: can this go into arch_cpu_init()? */
-	probecpu,
-#endif
-#if defined(CONFIG_X86) && defined(CONFIG_HAVE_FSP)
-	x86_fsp_init,
+	initf_bootstage,	/* uses its own timer, so does not need DM */
+	initf_console_record,
+#if defined(CONFIG_HAVE_FSP)
+	arch_fsp_init,
 #endif
 	arch_cpu_init,		/* basic arch cpu dependent setup */
-	mark_bootstage,
+	mach_cpu_init,		/* SoC/machine dependent CPU setup */
 	initf_dm,
 	arch_cpu_init_dm,
 #if defined(CONFIG_BOARD_EARLY_INIT_F)
 	board_early_init_f,
 #endif
-	/* TODO: can any of this go into arch_cpu_init()? */
-#if defined(CONFIG_PPC) && !defined(CONFIG_8xx_CPUCLK_DEFAULT)
+#if defined(CONFIG_PPC) || defined(CONFIG_SYS_FSL_CLK) || defined(CONFIG_M68K)
+	/* get CPU and bus clocks according to the environment variable */
 	get_clocks,		/* get CPU and bus clocks (etc.) */
-#if defined(CONFIG_TQM8xxL) && !defined(CONFIG_TQM866M) \
-		&& !defined(CONFIG_TQM885D)
-	adjust_sdram_tbs_8xx,
 #endif
-	/* TODO: can we rename this to timer_init()? */
-	init_timebase,
-#endif
-#if defined(CONFIG_ARM) || defined(CONFIG_MIPS) || \
-		defined(CONFIG_BLACKFIN) || defined(CONFIG_NDS32)
+#if !defined(CONFIG_M68K)
 	timer_init,		/* initialize timer */
-#endif
-#ifdef CONFIG_SYS_ALLOC_DPRAM
-#if !defined(CONFIG_CPM2)
-	dpram_init,
-#endif
 #endif
 #if defined(CONFIG_BOARD_POSTCLK_INIT)
 	board_postclk_init,
 #endif
-#ifdef CONFIG_SYS_FSL_CLK
-	get_clocks,
-#endif
-#ifdef CONFIG_M68K
-	get_clocks,
-#endif
 	env_init,		/* initialize environment */
-#if defined(CONFIG_8xx_CPUCLK_DEFAULT)
-	/* get CPU and bus clocks according to the environment variable */
-	get_clocks_866,
-	/* adjust sdram refresh rate according to the new clock */
-	sdram_adjust_866,
-	init_timebase,
-#endif
 	init_baud_rate,		/* initialze baudrate settings */
 	serial_init,		/* serial communications setup */
 	console_init_f,		/* stage 1 init of console */
-#ifdef CONFIG_SANDBOX
-	sandbox_early_getopt_check,
-#endif
-#ifdef CONFIG_OF_CONTROL
-	fdtdec_prepare_fdt,
-#endif
 	display_options,	/* say that we are here */
 	display_text_info,	/* show debugging info if required */
-#if defined(CONFIG_MPC8260)
-	prt_8260_rsr,
-	prt_8260_clks,
-#endif /* CONFIG_MPC8260 */
-#if defined(CONFIG_MPC83xx)
-	prt_83xx_rsr,
-#endif
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#if defined(CONFIG_PPC) || defined(CONFIG_M68K) || defined(CONFIG_SH) || \
+		defined(CONFIG_X86)
 	checkcpu,
 #endif
+#if defined(CONFIG_DISPLAY_CPUINFO)
 	print_cpuinfo,		/* display cpu info (and speed) */
-#if defined(CONFIG_MPC5xxx)
-	prt_mpc5xxx_clks,
-#endif /* CONFIG_MPC5xxx */
+#endif
 #if defined(CONFIG_DISPLAY_BOARDINFO)
 	show_board_info,
 #endif
@@ -853,21 +817,14 @@ static init_fnc_t init_sequence_f[] = {
 	misc_init_f,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
-#if defined(CONFIG_HARD_I2C) || defined(CONFIG_SYS_I2C)
+#if defined(CONFIG_SYS_I2C)
 	init_func_i2c,
 #endif
 #if defined(CONFIG_HARD_SPI)
 	init_func_spi,
 #endif
 	announce_dram_init,
-	/* TODO: unify all these dram functions? */
-#if defined(CONFIG_ARM) || defined(CONFIG_X86) || defined(CONFIG_NDS32) || \
-		defined(CONFIG_MICROBLAZE) || defined(CONFIG_AVR32)
 	dram_init,		/* configure available RAM banks */
-#endif
-#if defined(CONFIG_MIPS) || defined(CONFIG_PPC) || defined(CONFIG_M68K)
-	init_func_ram,
-#endif
 #ifdef CONFIG_POST
 	post_init_f,
 #endif
@@ -894,63 +851,55 @@ static init_fnc_t init_sequence_f[] = {
 	 *  - board info struct
 	 */
 	setup_dest_addr,
-#if defined(CONFIG_BLACKFIN) || defined(CONFIG_NIOS2)
-	/* Blackfin u-boot monitor should be on top of the ram */
-	reserve_uboot,
-#endif
-#if defined(CONFIG_LOGBUFFER) && !defined(CONFIG_ALT_LB_ADDR)
+#if defined(CONFIG_LOGBUFFER)
 	reserve_logbuffer,
 #endif
 #ifdef CONFIG_PRAM
 	reserve_pram,
 #endif
 	reserve_round_4k,
-#if !(defined(CONFIG_SYS_ICACHE_OFF) && defined(CONFIG_SYS_DCACHE_OFF)) && \
-		defined(CONFIG_ARM)
+#ifdef CONFIG_ARM
 	reserve_mmu,
 #endif
-#ifdef CONFIG_LCD
-	reserve_lcd,
-#endif
-	reserve_trace,
-	/* TODO: Why the dependency on CONFIG_8xx? */
-#if defined(CONFIG_VIDEO) && (!defined(CONFIG_PPC) || defined(CONFIG_8xx)) && \
-		!defined(CONFIG_ARM) && !defined(CONFIG_X86) && \
-		!defined(CONFIG_BLACKFIN) && !defined(CONFIG_M68K)
 	reserve_video,
-#endif
-#if !defined(CONFIG_BLACKFIN) && !defined(CONFIG_NIOS2)
+	reserve_trace,
 	reserve_uboot,
-#endif
-#ifndef CONFIG_SPL_BUILD
 	reserve_malloc,
 	reserve_board,
-#endif
 	setup_machine,
 	reserve_global_data,
 	reserve_fdt,
+	reserve_bootstage,
 	reserve_arch,
 	reserve_stacks,
-	setup_dram_config,
+	dram_init_banksize,
 	show_dram_config,
-#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
+#if defined(CONFIG_M68K) || defined(CONFIG_MIPS) || defined(CONFIG_PPC) || \
+	defined(CONFIG_SH)
 	setup_board_part1,
+#endif
+#if defined(CONFIG_PPC) || defined(CONFIG_M68K)
 	INIT_FUNC_WATCHDOG_RESET
 	setup_board_part2,
 #endif
 	display_new_sp,
-#ifdef CONFIG_SYS_EXTBDINFO
-	setup_board_extra,
+#ifdef CONFIG_OF_BOARD_FIXUP
+	fix_fdt,
 #endif
 	INIT_FUNC_WATCHDOG_RESET
 	reloc_fdt,
+	reloc_bootstage,
 	setup_reloc,
 #if defined(CONFIG_X86) || defined(CONFIG_ARC)
 	copy_uboot_to_ram,
-	clear_bss,
 	do_elf_reloc_fixups,
+	clear_bss,
 #endif
-#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX)
+#if defined(CONFIG_XTENSA)
+	clear_bss,
+#endif
+#if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX) && \
+		!CONFIG_IS_ENABLED(X86_64)
 	jump_to_copy,
 #endif
 	NULL,
@@ -960,7 +909,7 @@ void board_init_f(ulong boot_flags)
 {
 #ifdef CONFIG_SYS_GENERIC_GLOBAL_DATA
 	/*
-	 * For some archtectures, global data is initialized and used before
+	 * For some architectures, global data is initialized and used before
 	 * calling this function. The data should be preserved. For others,
 	 * CONFIG_SYS_GENERIC_GLOBAL_DATA should be defined and use the stack
 	 * here to host global data until relocation.
@@ -972,7 +921,7 @@ void board_init_f(ulong boot_flags)
 	/*
 	 * Clear global data before it is accessed at debug print
 	 * in initcall_run_list. Otherwise the debug print probably
-	 * get the wrong vaule of gd->have_console.
+	 * get the wrong value of gd->have_console.
 	 */
 	zero_global_data();
 #endif
@@ -984,7 +933,7 @@ void board_init_f(ulong boot_flags)
 		hang();
 
 #if !defined(CONFIG_ARM) && !defined(CONFIG_SANDBOX) && \
-		!defined(CONFIG_EFI_APP)
+		!defined(CONFIG_EFI_APP) && !CONFIG_IS_ENABLED(X86_64)
 	/* NOTREACHED - jump_to_copy() does not return */
 	hang();
 #endif
@@ -1008,8 +957,10 @@ void board_init_f(ulong boot_flags)
  * NOTE: At present only x86 uses this route, but it is intended that
  * all archs will move to this when generic relocation is implemented.
  */
-static init_fnc_t init_sequence_f_r[] = {
+static const init_fnc_t init_sequence_f_r[] = {
+#if !CONFIG_IS_ENABLED(X86_64)
 	init_cache_f_r,
+#endif
 
 	NULL,
 };
@@ -1018,6 +969,13 @@ void board_init_f_r(void)
 {
 	if (initcall_run_list(init_sequence_f_r))
 		hang();
+
+	/*
+	 * The pre-relocation drivers may be using memory that has now gone
+	 * away. Mark serial as unavailable - this will fall back to the debug
+	 * UART if available.
+	 */
+	gd->flags &= ~GD_FLG_SERIAL_READY;
 
 	/*
 	 * U-Boot has been copied into SDRAM, the BSS has been cleared etc.

@@ -40,12 +40,6 @@
 
 #include <configs/ti_omap3_common.h>
 
-/*
- * Display CPU and Board information
- */
-#define CONFIG_DISPLAY_CPUINFO		1
-#define CONFIG_DISPLAY_BOARDINFO	1
-
 #define CONFIG_MISC_INIT_R
 
 #define CONFIG_REVISION_TAG		1
@@ -73,10 +67,6 @@
 #define CONFIG_NAND_OMAP_GPMC
 #define CONFIG_SYS_MAX_NAND_DEVICE	1		/* Max number of NAND */
 							/* devices */
-/* override default CONFIG_BOOTDELAY */
-#undef CONFIG_BOOTDELAY
-#define CONFIG_BOOTDELAY	0
-
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"machid=ffffffff\0" \
 	"fdt_high=0x87000000\0" \
@@ -196,8 +186,6 @@
 
 #define CONFIG_OMAP3_SPI
 
-#define CONFIG_SYS_CACHELINE_SIZE	64
-
 /* Defines for SPL */
 #define CONFIG_SPL_OMAP3_ID_NAND
 
@@ -240,9 +228,8 @@
 #define CONFIG_SERIAL2
 #endif
 
-/* Provide MACH_TYPE for compatibility with non-DT kernels */
-#define MACH_TYPE_OMAP3_CAIRO	3063
-#define CONFIG_MACH_TYPE	MACH_TYPE_OMAP3_CAIRO
+/* Provide the MACH_TYPE value the vendor kernel requires */
+#define CONFIG_MACH_TYPE	3063
 
 /*-----------------------------------------------------------------------
  * FLASH and environment organization

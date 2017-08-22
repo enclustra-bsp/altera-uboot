@@ -28,6 +28,8 @@
 
 #include "../common/common.h"
 
+DECLARE_GLOBAL_DATA_PTR;
+
 static uchar ivm_content[CONFIG_SYS_IVM_EEPROM_MAX_LEN];
 
 const qe_iop_conf_t qe_iop_conf_tab[] = {
@@ -328,13 +330,13 @@ static int fixed_sdram(void)
 	return msize;
 }
 
-phys_size_t initdram(int board_type)
+int dram_init(void)
 {
 	immap_t *im = (immap_t *)CONFIG_SYS_IMMR;
 	u32 msize = 0;
 
 	if ((in_be32(&im->sysconf.immrbar) & IMMRBAR_BASE_ADDR) != (u32)im)
-		return -1;
+		return -ENXIO;
 
 	out_be32(&im->sysconf.ddrlaw[0].bar,
 		CONFIG_SYS_DDR_BASE & LAWBAR_BAR);
@@ -348,7 +350,9 @@ phys_size_t initdram(int board_type)
 #endif
 
 	/* return total bus SDRAM size(bytes)  -- DDR */
-	return msize * 1024 * 1024;
+	gd->ram_size = msize * 1024 * 1024;
+
+	return 0;
 }
 
 int checkboard(void)
@@ -361,14 +365,12 @@ int checkboard(void)
 	return 0;
 }
 
-#if defined(CONFIG_OF_BOARD_SETUP)
 int ft_board_setup(void *blob, bd_t *bd)
 {
 	ft_cpu_setup(blob, bd);
 
 	return 0;
 }
-#endif
 
 #if defined(CONFIG_HUSH_INIT_VAR)
 int hush_init_var(void)

@@ -10,6 +10,26 @@
 #include <asm/arcregs.h>
 
 ENTRY(_start)
+; ARCompact devices are not supposed to be SMP so master/slave check
+; makes no sense.
+#ifdef CONFIG_ISA_ARCV2
+	; Non-masters will be halted immediately, they might be kicked later
+	; by platform code right before passing control to the Linux kernel
+	; in bootm.c:boot_jump_linux().
+	lr 	r5, [identity]
+	lsr	r5, r5, 8
+	bmsk	r5, r5, 7
+	cmp	r5, 0
+	mov.nz	r0, r5
+	bz	.Lmaster_proceed
+	flag	1
+	nop
+	nop
+	nop
+
+.Lmaster_proceed:
+#endif
+
 	/* Setup interrupt vector base that matches "__text_start" */
 	sr	__ivt_start, [ARC_AUX_INTR_VEC_BASE]
 
@@ -50,17 +70,19 @@ ENTRY(_start)
 1:
 #endif
 
-	/* Setup stack- and frame-pointers */
+	/* Establish C runtime stack and frame */
 	mov	%sp, CONFIG_SYS_INIT_SP_ADDR
 	mov	%fp, %sp
 
-	/* Allocate and zero GD, update SP */
+	/* Allocate reserved area from current top of stack */
 	mov	%r0, %sp
-	bl	board_init_f_mem
-
-	/* Update stack- and frame-pointers */
+	bl	board_init_f_alloc_reserve
+	/* Set stack below reserved area, adjust frame pointer accordingly */
 	mov	%sp, %r0
 	mov	%fp, %sp
+
+	/* Initialize reserved area - note: r0 already contains address */
+	bl	board_init_f_init_reserve
 
 	/* Zero the one and only argument of "board_init_f" */
 	mov_s	%r0, 0

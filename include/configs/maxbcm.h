@@ -10,10 +10,6 @@
 /*
  * High Level Configuration Options (easy to change)
  */
-#define CONFIG_ARMADA_XP		/* SOC Family Name */
-#ifdef CONFIG_SPL_BUILD
-#define CONFIG_SKIP_LOWLEVEL_INIT	/* disable board lowlevel_init */
-#endif
 #define CONFIG_DISPLAY_BOARDINFO_LATE
 
 /*
@@ -27,15 +23,6 @@
 /*
  * Commands configuration
  */
-#define CONFIG_SYS_NO_FLASH		/* Declare no flash (NOR/SPI) */
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_ENV
-#define CONFIG_CMD_I2C
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_SF
-#define CONFIG_CMD_SPI
-#define CONFIG_CMD_TFTPPUT
-#define CONFIG_CMD_TIME
 
 /* I2C */
 #define CONFIG_SYS_I2C
@@ -47,8 +34,6 @@
 /* SPI NOR flash default params, used by sf commands */
 #define CONFIG_SF_DEFAULT_SPEED		1000000
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_3
-#define CONFIG_SPI_FLASH_STMICRO
-#define CONFIG_SPI_FLASH_SPANSION
 
 /* Environment in SPI NOR flash */
 #define CONFIG_ENV_IS_IN_SPI_FLASH
@@ -57,12 +42,8 @@
 #define CONFIG_ENV_SECT_SIZE		(64 << 10) /* 64KiB sectors */
 
 #define CONFIG_PHY_MARVELL		/* there is a marvell phy */
-#define CONFIG_PHY_ADDR			{ 0x0, 0x1, 0x2, 0x3 }
-#define CONFIG_SYS_NETA_INTERFACE_TYPE	PHY_INTERFACE_MODE_SGMII
 #define PHY_ANEG_TIMEOUT	8000	/* PHY needs a longer aneg time */
-#define CONFIG_RESET_PHY_R
 
-#define CONFIG_SYS_CONSOLE_INFO_QUIET	/* don't print console @ startup */
 #define CONFIG_SYS_ALT_MEMTEST
 
 /*
@@ -93,28 +74,19 @@
 #define CONFIG_SPL_BSS_START_ADDR	(0x40000000 + (128 << 10))
 #define CONFIG_SPL_BSS_MAX_SIZE		(16 << 10)
 
-#define CONFIG_SYS_SPL_MALLOC_START	(CONFIG_SPL_BSS_START_ADDR + \
-					 CONFIG_SPL_BSS_MAX_SIZE)
-#define CONFIG_SYS_SPL_MALLOC_SIZE	(16 << 10)
+#ifdef CONFIG_SPL_BUILD
+#define CONFIG_SYS_MALLOC_SIMPLE
+#endif
 
 #define CONFIG_SPL_STACK		(0x40000000 + ((192 - 16) << 10))
 #define CONFIG_SPL_BOOTROM_SAVE		(CONFIG_SPL_STACK + 4)
 
-#define CONFIG_SPL_LIBCOMMON_SUPPORT
-#define CONFIG_SPL_LIBGENERIC_SUPPORT
-#define CONFIG_SPL_SERIAL_SUPPORT
-#define CONFIG_SPL_I2C_SUPPORT
-
 /* SPL related SPI defines */
-#define CONFIG_SPL_SPI_SUPPORT
-#define CONFIG_SPL_SPI_FLASH_SUPPORT
 #define CONFIG_SPL_SPI_LOAD
-#define CONFIG_SPL_SPI_BUS		0
-#define CONFIG_SPL_SPI_CS		0
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
 
 /* Enable DDR support in SPL (DDR3 training from Marvell bin_hdr) */
-#define CONFIG_SYS_MVEBU_DDR_AXP
 #define CONFIG_DDR_FIXED_SIZE		(1 << 20)	/* 1GiB */
+#define CONFIG_BOARD_ECC_SUPPORT	/* this board supports ECC */
 
 #endif /* _CONFIG_DB_MV7846MP_GP_H */

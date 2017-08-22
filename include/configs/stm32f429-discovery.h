@@ -1,6 +1,6 @@
 /*
  * (C) Copyright 2015
- * Kamil Lulko, <rev13@wp.pl>
+ * Kamil Lulko, <kamil.lulko@gmail.com>
  *
  * SPDX-License-Identifier:	GPL-2.0+
  */
@@ -8,12 +8,8 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define CONFIG_STM32F4
 #define CONFIG_STM32F4DISCOVERY
 
-#define CONFIG_OF_LIBFDT
-
-#define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_MISC_INIT_R
 
 #define CONFIG_SYS_FLASH_BASE		0x08000000
@@ -44,20 +40,12 @@
 #define CONFIG_ENV_SECT_SIZE		(128 << 10)
 #define CONFIG_ENV_SIZE			(8 << 10)
 
-#define CONFIG_BOARD_SPECIFIC_LED
 #define CONFIG_RED_LED			110
 #define CONFIG_GREEN_LED		109
 
 #define CONFIG_STM32_GPIO
+#define CONFIG_STM32_FLASH
 #define CONFIG_STM32_SERIAL
-/*
- * Configuration of the USART
- * 1:   TX:PA9  RX:PA10
- * 2:   TX:PD5  RX:PD6
- * 3:   TX:PC10 RX:PC11
- * 6:   TX:PG14 RX:PG9
- */
-#define CONFIG_STM32_USART		1
 
 #define CONFIG_STM32_HSE_HZ		8000000
 
@@ -78,9 +66,6 @@
 
 #define CONFIG_SYS_MALLOC_LEN		(2 << 20)
 
-#define CONFIG_STACKSIZE		(64 << 10)
-
-#define CONFIG_BAUDRATE			115200
 #define CONFIG_BOOTARGS							\
 	"console=ttyS0,115200 earlyprintk consoleblank=0 ignore_loglevel"
 #define CONFIG_BOOTCOMMAND						\
@@ -91,18 +76,13 @@
 	"bootcmd_romfs=setenv bootargs ${bootargs} ${bootargs_romfs};" \
 	"bootm 0x08044000 - 0x08042000\0"
 
-#define CONFIG_BOOTDELAY		3
-#define CONFIG_AUTOBOOT
-
 /*
  * Command line configuration.
  */
 #define CONFIG_SYS_LONGHELP
-#define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_AUTO_COMPLETE
 #define CONFIG_CMDLINE_EDITING
 
 #define CONFIG_CMD_MEM
-#define CONFIG_CMD_TIMER
 
 #endif /* __CONFIG_H */

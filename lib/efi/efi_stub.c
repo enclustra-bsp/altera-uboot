@@ -65,6 +65,9 @@ void _debug_uart_init(void)
 
 void putc(const char ch)
 {
+	if (ch == '\n')
+		putc('\r');
+
 	if (use_uart) {
 		NS16550_t com_port = (NS16550_t)0x3f8;
 
@@ -74,8 +77,6 @@ void putc(const char ch)
 	} else {
 		efi_putc(global_priv, ch);
 	}
-	if (ch == '\n')
-		putc('\r');
 }
 
 void puts(const char *str)
@@ -353,9 +354,9 @@ efi_status_t efi_main(efi_handle_t image, struct efi_system_table *sys_table)
 	/* The EFI UART won't work now, switch to a debug one */
 	use_uart = true;
 
-	memcpy((void *)CONFIG_SYS_TEXT_BASE, _binary_u_boot_dtb_bin_start,
-	       (ulong)_binary_u_boot_dtb_bin_end -
-	       (ulong)_binary_u_boot_dtb_bin_start);
+	memcpy((void *)CONFIG_SYS_TEXT_BASE, _binary_u_boot_bin_start,
+	       (ulong)_binary_u_boot_bin_end -
+	       (ulong)_binary_u_boot_bin_start);
 
 #ifdef DEBUG
 	puts("EFI table at ");

@@ -16,6 +16,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+/* control register */
+#define ALTERA_TIMER_CONT	BIT(1)	/* Continuous mode */
+#define ALTERA_TIMER_START	BIT(2)	/* Start timer */
+#define ALTERA_TIMER_STOP	BIT(3)	/* Stop timer */
+
 struct altera_timer_regs {
 	u32	status;		/* Timer status reg */
 	u32	control;	/* Timer control reg */
@@ -27,15 +32,9 @@ struct altera_timer_regs {
 
 struct altera_timer_platdata {
 	struct altera_timer_regs *regs;
-	unsigned long clock_rate;
 };
 
-/* control register */
-#define ALTERA_TIMER_CONT	(1 << 1)	/* Continuous mode */
-#define ALTERA_TIMER_START	(1 << 2)	/* Start timer */
-#define ALTERA_TIMER_STOP	(1 << 3)	/* Stop timer */
-
-static int altera_timer_get_count(struct udevice *dev, unsigned long *count)
+static int altera_timer_get_count(struct udevice *dev, u64 *count)
 {
 	struct altera_timer_platdata *plat = dev->platdata;
 	struct altera_timer_regs *const regs = plat->regs;
@@ -47,18 +46,15 @@ static int altera_timer_get_count(struct udevice *dev, unsigned long *count)
 	/* Read timer value */
 	val = readl(&regs->snapl) & 0xffff;
 	val |= (readl(&regs->snaph) & 0xffff) << 16;
-	*count = ~val;
+	*count = timer_conv_64(~val);
 
 	return 0;
 }
 
 static int altera_timer_probe(struct udevice *dev)
 {
-	struct timer_dev_priv *uc_priv = dev_get_uclass_priv(dev);
 	struct altera_timer_platdata *plat = dev->platdata;
 	struct altera_timer_regs *const regs = plat->regs;
-
-	uc_priv->clock_rate = plat->clock_rate;
 
 	writel(0, &regs->status);
 	writel(0, &regs->control);
@@ -75,10 +71,9 @@ static int altera_timer_ofdata_to_platdata(struct udevice *dev)
 {
 	struct altera_timer_platdata *plat = dev_get_platdata(dev);
 
-	plat->regs = ioremap(dev_get_addr(dev),
-		sizeof(struct altera_timer_regs));
-	plat->clock_rate = fdtdec_get_int(gd->fdt_blob, dev->of_offset,
-		"clock-frequency", 0);
+	plat->regs = map_physmem(devfdt_get_addr(dev),
+				 sizeof(struct altera_timer_regs),
+				 MAP_NOCACHE);
 
 	return 0;
 }
@@ -88,8 +83,8 @@ static const struct timer_ops altera_timer_ops = {
 };
 
 static const struct udevice_id altera_timer_ids[] = {
-	{ .compatible = "altr,timer-1.0", },
-	{ }
+	{ .compatible = "altr,timer-1.0" },
+	{}
 };
 
 U_BOOT_DRIVER(altera_timer) = {

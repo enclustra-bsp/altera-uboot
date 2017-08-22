@@ -26,10 +26,6 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#ifdef CONFIG_36BIT
-#define CONFIG_PHYS_64BIT
-#endif
-
 #ifdef CONFIG_SDCARD
 #define CONFIG_RAMBOOT_SDCARD
 #endif
@@ -39,22 +35,10 @@
 #endif
 
 /* High Level Configuration Options */
-#define CONFIG_BOOKE			/* BOOKE */
-#define CONFIG_E500			/* BOOKE e500 family */
-#define CONFIG_P1022
 #define CONFIG_CONTROLCENTERD
 #define CONFIG_MP			/* support multiple processors */
 
-
-#define CONFIG_SYS_NO_FLASH
 #define CONFIG_ENABLE_36BIT_PHYS
-#define CONFIG_FSL_LAW			/* Use common FSL init code */
-
-#ifdef CONFIG_TRAILBLAZER
-#define CONFIG_IDENT_STRING	" controlcenterd trailblazer 0.01"
-#else
-#define CONFIG_IDENT_STRING	" controlcenterd 0.01"
-#endif
 
 #ifdef CONFIG_PHYS_64BIT
 #define CONFIG_ADDR_MAP
@@ -98,7 +82,6 @@
 #define CONFIG_SYS_MONITOR_BASE		CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
 
-
 /*
  * Memory map
  *
@@ -138,8 +121,6 @@
 #define CONFIG_SYS_SDRAM_SIZE 1024
 #define CONFIG_VERY_BIG_RAM
 
-#define CONFIG_SYS_FSL_DDR3
-#define CONFIG_NUM_DDR_CONTROLLERS	1
 #define CONFIG_DIMM_SLOTS_PER_CTLR	1
 #define CONFIG_CHIP_SELECTS_PER_CTRL	(2 * CONFIG_DIMM_SLOTS_PER_CTLR)
 
@@ -155,7 +136,6 @@
 /*
  * Local Bus Definitions
  */
-#define CONFIG_FSL_ELBC			/* Has Enhanced localbus controller */
 
 #define CONFIG_SYS_ELBC_BASE		0xe0000000
 #ifdef CONFIG_PHYS_64BIT
@@ -178,7 +158,6 @@
  * Serial Port
  */
 #define CONFIG_CONS_INDEX		2
-#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_bus_freq(0)
@@ -202,12 +181,10 @@
 #define CONFIG_SYS_FSL_I2C2_OFFSET	0x3100
 
 #ifndef CONFIG_TRAILBLAZER
-#define CONFIG_CMD_I2C
 #endif
 
 #define CONFIG_PCA9698			/* NXP PCA9698 */
 
-#define CONFIG_CMD_EEPROM
 #define CONFIG_SYS_I2C_EEPROM_ADDR 0x52
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 2
 
@@ -216,27 +193,16 @@
  * eSPI - Enhanced SPI
  */
 #define CONFIG_HARD_SPI
-#define CONFIG_FSL_ESPI
 
-#define CONFIG_SPI_FLASH_STMICRO
-
-#define CONFIG_CMD_SF
 #define CONFIG_SF_DEFAULT_SPEED		10000000
 #define CONFIG_SF_DEFAULT_MODE		0
 #endif
 
-#define CONFIG_SHA1
-
 /*
  * MMC
  */
-#define CONFIG_MMC
-#define CONFIG_GENERIC_MMC
-#define CONFIG_CMD_MMC
-
 #define CONFIG_FSL_ESDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR	CONFIG_SYS_MPC85xx_ESDHC_ADDR
-
 
 #ifndef CONFIG_TRAILBLAZER
 
@@ -245,19 +211,13 @@
  */
 #define CONFIG_FSL_DIU_FB
 #define CONFIG_SYS_DIU_ADDR	(CONFIG_SYS_CCSRBAR + 0x10000)
-#define CONFIG_VIDEO
-#define CONFIG_CFB_CONSOLE
-#define CONFIG_VGA_AS_SINGLE_DEVICE
-#define CONFIG_CMD_BMP
 
 /*
  * General PCI
  * Memory space is mapped 1-1, but I/O space must start from 0.
  */
-#define CONFIG_PCI			/* Enable PCI/PCIE */
-#define CONFIG_PCIE1			/* PCIE controler 1 (slot 1) */
+#define CONFIG_PCIE1			/* PCIE controller 1 (slot 1) */
 #define CONFIG_PCI_INDIRECT_BRIDGE
-#define CONFIG_PCI_PNP			/* do pci plug-and-play */
 #define CONFIG_PCI_SCAN_SHOW		/* show pci devices on startup */
 #define CONFIG_SYS_PCI_64BIT		/* enable 64-bit PCI resources */
 #define CONFIG_CMD_PCI
@@ -328,9 +288,6 @@
 /*
  * USB
  */
-#define CONFIG_USB_EHCI
-#define CONFIG_CMD_USB
-#define CONFIG_USB_STORAGE
 
 #define CONFIG_HAS_FSL_DR_USB
 #define CONFIG_USB_EHCI_FSL
@@ -362,13 +319,10 @@
 
 #define CONFIG_SYS_EXTRA_ENV_RELOC
 
-#define CONFIG_SYS_CONSOLE_IS_IN_ENV
-
 /*
  * Command line configuration.
  */
 #ifndef CONFIG_TRAILBLAZER
-#define CONFIG_SYS_HUSH_PARSER
 #define CONFIG_SYS_LONGHELP
 #define CONFIG_CMDLINE_EDITING			/* Command-line editing */
 #define CONFIG_AUTO_COMPLETE			/* add autocompletion support */
@@ -387,36 +341,17 @@
 
 #ifndef CONFIG_TRAILBLAZER
 
-#define CONFIG_CMD_ERRATA
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_IRQ
-#define CONFIG_CMD_MII
-#define CONFIG_CMD_PING
 #define CONFIG_CMD_REGINFO
 
 /*
  * Board initialisation callbacks
  */
-#define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_EARLY_INIT_R
 #define CONFIG_MISC_INIT_R
 #define CONFIG_LAST_STAGE_INIT
 
-/*
- * Pass open firmware flat tree
- */
-#define CONFIG_OF_LIBFDT
-#define CONFIG_OF_BOARD_SETUP
-#define CONFIG_OF_STDOUT_VIA_ALIAS
-
-/* new uImage format support */
-#define CONFIG_FIT
-#define CONFIG_FIT_VERBOSE
-
 #else /* CONFIG_TRAILBLAZER */
 
-#define CONFIG_BOARD_EARLY_INIT_F
 #define CONFIG_BOARD_EARLY_INIT_R
 #define CONFIG_LAST_STAGE_INIT
 
@@ -428,7 +363,6 @@
 #define CONFIG_HW_WATCHDOG
 #define CONFIG_LOADS_ECHO
 #define CONFIG_SYS_LOADS_BAUD_CHANGE
-#define CONFIG_DOS_PARTITION
 
 /*
  * For booting Linux, the board info and command line data
@@ -443,10 +377,6 @@
  */
 
 #ifdef CONFIG_TRAILBLAZER
-
-#define CONFIG_BOOTDELAY	0	/* -1 disables auto-boot */
-#define CONFIG_BAUDRATE	115200
-
 #define	CONFIG_EXTRA_ENV_SETTINGS				\
 	"mp_holdoff=1\0"
 
@@ -458,10 +388,6 @@
 #define CONFIG_UBOOTPATH	u-boot.bin	/* U-Boot image on TFTP */
 
 #define CONFIG_LOADADDR		1000000
-
-#define CONFIG_BOOTDELAY	10	/* -1 disables auto-boot */
-
-#define CONFIG_BAUDRATE	115200
 
 #define	CONFIG_EXTRA_ENV_SETTINGS				\
 	"netdev=eth0\0"						\
@@ -476,7 +402,7 @@
 	"consoledev=ttyS1\0"					\
 	"ramdiskaddr=2000000\0"					\
 	"ramdiskfile=rootfs.ext2.gz.uboot\0"			\
-	"fdtaddr=c00000\0"					\
+	"fdtaddr=1e00000\0"					\
 	"fdtfile=controlcenterd.dtb\0"				\
 	"bdev=sda3\0"
 

@@ -15,8 +15,6 @@
 #define CONFIG_DBAU1X00		1
 #define CONFIG_SOC_AU1X00	1  /* alchemy series cpu */
 
-#define CONFIG_DISPLAY_BOARDINFO
-
 #ifdef CONFIG_DBAU1000
 /* Also known as Merlot */
 #define CONFIG_SOC_AU1000	1
@@ -36,10 +34,6 @@
 #endif
 #endif
 #endif
-
-#define CONFIG_BOOTDELAY	2	/* autoboot after 2 seconds	*/
-
-#define CONFIG_BAUDRATE		115200
 
 /* valid baudrates */
 
@@ -61,7 +55,6 @@
 #define CONFIG_BOOTCOMMAND	"bootp;bootm"
 #endif /* CONFIG_DBAU1550 */
 
-
 /*
  * BOOTP options
  */
@@ -70,27 +63,14 @@
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_HOSTNAME
 
-
 /*
  * Command line configuration.
  */
-#undef CONFIG_CMD_BEDBUG
-#undef CONFIG_CMD_FAT
-#undef CONFIG_CMD_MII
 
 #ifdef CONFIG_DBAU1550
 
-#undef CONFIG_CMD_I2C
-#undef CONFIG_CMD_IDE
 #undef CONFIG_CMD_PCMCIA
-
-#else
-
-#define CONFIG_CMD_IDE
-#define CONFIG_CMD_DHCP
-
 #endif
-
 
 /*
  * Miscellaneous configurable options
@@ -146,7 +126,6 @@
 #define CONFIG_SYS_FLASH_CFI           1
 #define CONFIG_FLASH_CFI_DRIVER    1
 
-/* The following #defines are needed to get flash environment right */
 #define	CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_TEXT_BASE
 #define	CONFIG_SYS_MONITOR_LEN		(192 << 10)
 
@@ -169,7 +148,6 @@
 
 #define CONFIG_NR_DRAM_BANKS	2
 
-
 #ifdef CONFIG_DBAU1550
 #define MEM_SIZE 192
 #else
@@ -185,7 +163,6 @@
 #define CONFIG_PCMCIA_SLOT_A
 
 #define CONFIG_ATAPI 1
-#define CONFIG_MAC_PARTITION 1
 
 /* We run CF in "true ide" mode or a harddrive via pcmcia */
 #define CONFIG_IDE_PCMCIA 1
@@ -210,12 +187,5 @@
 /* Offset for alternate registers       */
 #define CONFIG_SYS_ATA_ALT_OFFSET      0x0100
 #endif /* CONFIG_DBAU1550 */
-
-/*-----------------------------------------------------------------------
- * Cache Configuration
- */
-#define CONFIG_SYS_DCACHE_SIZE		16384
-#define CONFIG_SYS_ICACHE_SIZE		16384
-#define CONFIG_SYS_CACHELINE_SIZE	32
 
 #endif	/* __CONFIG_H */

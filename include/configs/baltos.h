@@ -19,9 +19,7 @@
 #include <linux/sizes.h>
 #include <configs/ti_am335x_common.h>
 
-#define MACH_TYPE_TIAM335EVM		3589	/* Until the next sync */
-#define CONFIG_MACH_TYPE		MACH_TYPE_TIAM335EVM
-#define CONFIG_BOARD_LATE_INIT
+#define CONFIG_MACH_TYPE		MACH_TYPE_AM335XEVM
 
 /* Clock Defines */
 #define V_OSCK				24000000  /* Clock output from T2 */
@@ -33,15 +31,8 @@
 /* Always 128 KiB env size */
 #define CONFIG_ENV_SIZE			(128 << 10)
 
-/* Enhance our eMMC support / experience. */
-#define CONFIG_CMD_GPT
-#define CONFIG_EFI_PARTITION
-#define CONFIG_PARTITION_UUIDS
-#define CONFIG_CMD_PART
-
 /* FIT support */
 #define CONFIG_SYS_BOOTM_LEN         SZ_64M
-#define CONFIG_OF_BOARD_SETUP
 
 /* UBI Support */
 #define CONFIG_CMD_MTDPARTS
@@ -49,14 +40,12 @@
 #define CONFIG_MTD_DEVICE
 #define CONFIG_RBTREE
 #define CONFIG_LZO
-#define CONFIG_CMD_UBI
 #define CONFIG_CMD_UBIFS
 
 /* I2C configuration */
 #undef CONFIG_SYS_OMAP24_I2C_SPEED
 #define CONFIG_SYS_OMAP24_I2C_SPEED 1000
 
-#undef CONFIG_SPL_OS_BOOT
 #ifdef CONFIG_NAND
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x00080000
 #ifdef CONFIG_SPL_OS_BOOT
@@ -105,7 +94,9 @@
 	"optargs=\0" \
 	"mmcdev=0\0" \
 	"mmcroot=/dev/mmcblk0p2 ro\0" \
+	"usbroot=/dev/sda2 ro\0" \
 	"mmcrootfstype=ext4 rootwait\0" \
+	"usbrootfstype=ext4 rootwait\0" \
 	"rootpath=/export/rootfs\0" \
 	"nfsopts=nolock\0" \
 	"static_ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}:${hostname}" \
@@ -117,6 +108,11 @@
 		"${mtdparts} " \
 		"root=${mmcroot} " \
 		"rootfstype=${mmcrootfstype}\0" \
+	"usbargs=setenv bootargs console=${console} " \
+		"${optargs} " \
+		"${mtdparts} " \
+		"root=${usbroot} " \
+		"rootfstype=${usbrootfstype}\0" \
 	"spiroot=/dev/mtdblock4 rw\0" \
 	"spirootfstype=jffs2\0" \
 	"spisrcaddr=0xe0000\0" \
@@ -133,7 +129,10 @@
 		"ip=dhcp\0" \
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=load mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
+	"usbloadbootenv=load usb 0:1 ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
+		"env import -t $loadaddr $filesize\0" \
+	"usbimportbootenv=echo Importing environment from USB ...; " \
 		"env import -t $loadaddr $filesize\0" \
 	"ramargs=setenv bootargs console=${console} " \
 		"${optargs} " \
@@ -141,7 +140,14 @@
 		"rootfstype=${ramrootfstype}\0" \
 	"loadramdisk=load mmc ${mmcdev} ${rdaddr} ramdisk.gz\0" \
 	"loadimage=load mmc ${bootpart} ${loadaddr} ${bootdir}/${bootfile}\0" \
+	"usbloadimage=load usb 0:1 ${loadaddr} kernel-fit.itb\0" \
 	"loadfdt=load mmc ${bootpart} ${fdtaddr} ${bootdir}/${fdtfile}\0" \
+	"usbloados=run usbargs; " \
+		"bootm ${loadaddr}#conf${board_name}; " \
+		"if test $? -ne 0; then " \
+			"echo Using default FIT configuration; " \
+			"bootm ${loadaddr}; " \
+		"fi;\0" \
 	"mmcloados=run mmcargs; " \
 		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
 			"if run loadfdt; then " \
@@ -155,6 +161,21 @@
 			"fi; " \
 		"else " \
 			"bootz; " \
+		"fi;\0" \
+	"usbboot=usb reset; " \
+		"if usb storage; then " \
+			"echo USB drive found;" \
+			"if run usbloadbootenv; then " \
+				"echo Loaded environment from ${bootenv};" \
+				"run usbimportbootenv;" \
+			"fi;" \
+			"if test -n $uenvcmd; then " \
+				"echo Running uenvcmd ...;" \
+				"run uenvcmd;" \
+			"fi;" \
+			"if run usbloadimage; then " \
+				"run usbloados;" \
+			"fi;" \
 		"fi;\0" \
 	"mmcboot=mmc dev ${mmcdev}; " \
 		"if mmc rescan; then " \
@@ -193,12 +214,12 @@
 
 #define CONFIG_BOOTCOMMAND \
 	"run findfdt; " \
+	"run usbboot;" \
 	"run mmcboot;" \
 	"setenv mmcdev 1; " \
 	"setenv bootpart 1:2; " \
 	"run mmcboot;" \
 	"run nandboot;"
-
 
 /* NS16550 Configuration */
 #define CONFIG_SYS_NS16550_COM1		0x44e09000	/* Base EVM has UART0 */
@@ -207,35 +228,26 @@
 #define CONFIG_SYS_NS16550_COM4		0x481a6000	/* UART3 */
 #define CONFIG_SYS_NS16550_COM5		0x481a8000	/* UART4 */
 #define CONFIG_SYS_NS16550_COM6		0x481aa000	/* UART5 */
-#define CONFIG_BAUDRATE			115200
 
-#define CONFIG_CMD_EEPROM
 #define CONFIG_ENV_EEPROM_IS_ON_I2C
 #define CONFIG_SYS_I2C_EEPROM_ADDR	0x50	/* Main EEPROM */
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN	2
-#define CONFIG_SYS_I2C_MULTI_EEPROMS
 
 /* PMIC support */
 #define CONFIG_POWER_TPS65910
 
 /* SPL */
 #ifndef CONFIG_NOR_BOOT
-#define CONFIG_SPL_POWER_SUPPORT
-#define CONFIG_SPL_YMODEM_SUPPORT
-
 /* Bootcount using the RTC block */
 #define CONFIG_BOOTCOUNT_LIMIT
 #define CONFIG_BOOTCOUNT_AM33XX
 
 /* USB gadget RNDIS */
-/*#define CONFIG_SPL_MUSB_NEW_SUPPORT*/
 
 /* General network SPL, both CPSW and USB gadget RNDIS */
-/*#define CONFIG_SPL_NET_SUPPORT
-#define CONFIG_SPL_ENV_SUPPORT
 #define CONFIG_SPL_NET_VCI_STRING	"AM335x U-Boot SPL"*/
 
-#define CONFIG_SPL_LDSCRIPT		"$(CPUDIR)/am33xx/u-boot-spl.lds"
+#define CONFIG_SPL_LDSCRIPT		"arch/arm/mach-omap2/u-boot-spl.lds"
 
 #ifdef CONFIG_NAND
 #define CONFIG_NAND_OMAP_GPMC
@@ -272,46 +284,25 @@
  * and DFU.
  */
 #define CONFIG_USB_MUSB_DSPS
-#define CONFIG_ARCH_MISC_INIT
-#define CONFIG_USB_MUSB_GADGET
 #define CONFIG_USB_MUSB_PIO_ONLY
 #define CONFIG_USB_MUSB_DISABLE_BULK_COMBINE_SPLIT
-#define CONFIG_USB_GADGET
-#define CONFIG_USBDOWNLOAD_GADGET
-#define CONFIG_USB_GADGET_DUALSPEED
-#define CONFIG_USB_GADGET_VBUS_DRAW	2
-#define CONFIG_USB_MUSB_HOST
 #define CONFIG_AM335X_USB0
 #define CONFIG_AM335X_USB0_MODE	MUSB_HOST
 #define CONFIG_AM335X_USB1
 #define CONFIG_AM335X_USB1_MODE MUSB_OTG
 
-#ifdef CONFIG_USB_MUSB_HOST
-#define CONFIG_CMD_USB
-#define CONFIG_USB_STORAGE
-#endif
-
 #ifdef CONFIG_USB_MUSB_GADGET
 #define CONFIG_USB_ETHER
 #define CONFIG_USB_ETH_RNDIS
 #define CONFIG_USBNET_HOST_ADDR	"de:ad:be:af:00:00"
-
-/* USB TI's IDs */
-#define CONFIG_G_DNL_VENDOR_NUM 0x0403
-#define CONFIG_G_DNL_PRODUCT_NUM 0xBD00
-#define CONFIG_G_DNL_MANUFACTURER "Texas Instruments"
 #endif /* CONFIG_USB_MUSB_GADGET */
 
 #if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_USBETH_SUPPORT)
 /* disable host part of MUSB in SPL */
-#undef CONFIG_USB_MUSB_HOST
 /* disable EFI partitions and partition UUID support */
-#undef CONFIG_PARTITION_UUIDS
-#undef CONFIG_EFI_PARTITION
 /*
  * Disable CPSW SPL support so we fit within the 101KiB limit.
  */
-#undef CONFIG_SPL_ETH_SUPPORT
 #endif
 
 /* Network. */
@@ -320,7 +311,6 @@
 #define CONFIG_PHY_ADDR			0
 #define CONFIG_PHY_SMSC
 #define CONFIG_MII
-#define CONFIG_CMD_MII
 #define CONFIG_PHY_ATHEROS
 
 /* NAND support */

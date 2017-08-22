@@ -13,7 +13,7 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 /* We only support up to 8 */
-#define SANDBOX_NUM_PORTS	2
+#define SANDBOX_NUM_PORTS	4
 
 struct sandbox_hub_platdata {
 	struct usb_dev_platdata plat;
@@ -156,7 +156,7 @@ static int clrset_post_state(struct udevice *hub, int port, int clear, int set)
 			} else if (clear & USB_PORT_STAT_POWER) {
 				debug("%s: %s: power off, removed, ret=%d\n",
 				      __func__, dev->name, ret);
-				ret = device_remove(dev);
+				ret = device_remove(dev, DM_REMOVE_NORMAL);
 				clear |= USB_PORT_STAT_CONNECTION;
 			}
 		}
@@ -277,7 +277,7 @@ static int sandbox_child_post_bind(struct udevice *dev)
 {
 	struct sandbox_hub_platdata *plat = dev_get_parent_platdata(dev);
 
-	plat->port = fdtdec_get_int(gd->fdt_blob, dev->of_offset, "reg", -1);
+	plat->port = dev_read_u32_default(dev, "reg", -1);
 
 	return 0;
 }

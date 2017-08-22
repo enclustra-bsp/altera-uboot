@@ -21,7 +21,6 @@
 
 #define CONFIG_MCFUART
 #define CONFIG_SYS_UART_PORT		(0)
-#define CONFIG_BAUDRATE		115200
 
 #undef	CONFIG_MONITOR_IS_IN_RAM	/* define if monitor is started from a pre-loader */
 
@@ -47,9 +46,6 @@
 /*
  * Command line configuration.
  */
-#define CONFIG_CMD_CACHE
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_MII
 
 #define CONFIG_MCFFEC
 #ifdef CONFIG_MCFFEC
@@ -73,7 +69,6 @@
 #	endif			/* CONFIG_SYS_DISCOVER_PHY */
 #endif
 
-#define CONFIG_BOOTDELAY	5
 #ifdef CONFIG_MCFFEC
 #	define CONFIG_IPADDR	192.162.1.2
 #	define CONFIG_NETMASK	255.255.255.0

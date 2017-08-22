@@ -7,7 +7,7 @@
  */
 
 /* ---
- * Version: U-boot 1.0.0 - initial release for Sentec COBRA5272 board
+ * Version: U-Boot 1.0.0 - initial release for Sentec COBRA5272 board
  * Date: 2004-03-29
  * Author: Florian Schlote
  *
@@ -52,7 +52,6 @@
 
 #define CONFIG_MCFUART
 #define CONFIG_SYS_UART_PORT		(0)
-#define CONFIG_BAUDRATE		19200
 
 /* ---
  * set "#if 0" to "#if 1" if (Hardware)-WATCHDOG should be enabled & change
@@ -116,13 +115,9 @@
 #define CONFIG_BOOTP_GATEWAY
 #define CONFIG_BOOTP_HOSTNAME
 
-
 /*
  * Command line configuration.
  */
-#define CONFIG_CMD_PING
-
-#undef CONFIG_CMD_MII
 
 #ifdef CONFIG_MCFFEC
 #	define CONFIG_MII		1
@@ -152,12 +147,6 @@
  */
 
 /*AUTOBOOT settings - booting images automatically by u-boot after power on*/
-
-#define CONFIG_BOOTDELAY	5		/* used for autoboot, delay in
-seconds u-boot will wait before starting defined (auto-)boot command, setting
-to -1 disables delay, setting to 0 will too prevent access to u-boot command
-interface: u-boot then has to reflashed */
-
 
 /* The following settings will be contained in the environment block ; if you
 want to use a neutral environment all those settings can be manually set in

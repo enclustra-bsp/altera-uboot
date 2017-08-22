@@ -21,6 +21,14 @@ int print_cpuinfo(void)
 }
 #endif /* CONFIG_DISPLAY_CPUINFO */
 
+#ifdef CONFIG_ALTERA_SYSID
+int checkboard(void)
+{
+	display_sysid();
+	return 0;
+}
+#endif
+
 int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	disable_interrupts();
@@ -55,11 +63,9 @@ int arch_cpu_init_dm(void)
 	struct udevice *dev;
 	int ret;
 
-	ret = uclass_first_device(UCLASS_CPU, &dev);
+	ret = uclass_first_device_err(UCLASS_CPU, &dev);
 	if (ret)
 		return ret;
-	if (!dev)
-		return -ENODEV;
 
 	gd->ram_size = CONFIG_SYS_SDRAM_SIZE;
 #ifndef CONFIG_ROM_STUBS
@@ -97,7 +103,7 @@ static int altera_nios2_get_count(struct udevice *dev)
 static int altera_nios2_probe(struct udevice *dev)
 {
 	const void *blob = gd->fdt_blob;
-	int node = dev->of_offset;
+	int node = dev_of_offset(dev);
 
 	gd->cpu_clk = fdtdec_get_int(blob, node,
 		"clock-frequency", 0);
@@ -117,7 +123,9 @@ static int altera_nios2_probe(struct udevice *dev)
 		"altr,has-initda", 0);
 	gd->arch.has_mmu = fdtdec_get_int(blob, node,
 		"altr,has-mmu", 0);
-	gd->arch.io_region_base = gd->arch.has_mmu ? 0xe0000000 : 0x8000000;
+	gd->arch.io_region_base = gd->arch.has_mmu ? 0xe0000000 : 0x80000000;
+	gd->arch.mem_region_base = gd->arch.has_mmu ? 0xc0000000 : 0x00000000;
+	gd->arch.physaddr_mask = gd->arch.has_mmu ? 0x1fffffff : 0x7fffffff;
 
 	return 0;
 }
@@ -142,3 +150,9 @@ U_BOOT_DRIVER(altera_nios2) = {
 	.ops		= &altera_nios2_ops,
 	.flags		= DM_FLAG_PRE_RELOC,
 };
+
+/* This is a dummy function on nios2 */
+int dram_init(void)
+{
+	return 0;
+}
