@@ -7,8 +7,8 @@
 #ifndef __CONFIG_SOCFPGA_CYCLONE5_MARS_MA3_H__
 #define __CONFIG_SOCFPGA_CYCLONE5_MARS_MA3_H__
 
-#include <asm/arch/socfpga_base_addrs.h>
 #include <configs/socfpga_cyclone5_mercury_sa1.h>
+#include <asm/arch/base_addr_ac5.h>
 
 #define CONFIG_PREBOOT
 
