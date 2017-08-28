@@ -8,10 +8,6 @@
 #include <asm/arch/reset_manager.h>
 #include <asm/io.h>
 
-#include <usb.h>
-#include <usb/s3c_udc.h>
-#include <usb_mass_storage.h>
-
 #include <micrel.h>
 #include <netdev.h>
 #include <phy.h>
@@ -235,19 +231,6 @@ void ic_sda_hold_fixup(uint32_t i2c_addr) {
 }
 #endif
 
-void s_init(void) {}
-
-/*
- * Miscellaneous platform dependent initialisations
- */
-int board_init(void)
-{
-	/* Address of boot parameters for ATAG (if ATAG is used) */
-	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
-
-	return 0;
-}
-
 void socfpga_i2c_init_all(void) {
 	#if CONFIG_SYS_I2C_BUS_MAX >= 1
 	i2c_init(0, 0);
@@ -356,22 +339,5 @@ int board_phy_config(struct phy_device *phydev)
 		return phydev->drv->config(phydev);
 
 	return 0;
-}
-#endif
-
-#ifdef CONFIG_USB_GADGET
-struct s3c_plat_otg_data socfpga_otg_data = {
-	.regs_otg	= CONFIG_USB_DWC2_REG_ADDR,
-	.usb_gusbcfg	= 0x1417,
-};
-
-int board_usb_init(int index, enum usb_init_type init)
-{
-	return s3c_udc_probe(&socfpga_otg_data);
-}
-
-int g_dnl_board_usb_cable_connected(void)
-{
-	return 1;
 }
 #endif
