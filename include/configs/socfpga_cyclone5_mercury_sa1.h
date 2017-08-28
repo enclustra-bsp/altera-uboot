@@ -55,7 +55,7 @@
 #define QSPI_ROOTFS_OFFSET		0x01000000  // Storage for Linux Root FS (JFFS)
 #define QSPI_ROOTFS_SIZE		0x03000000  // size 48 MiB
 #define QSPI_RAMDISK_SIZE		0x1000000  // size 16MB MiB
-
+#define CONFIG_SYS_MAX_FLASH_BANKS	1
 /* Extra Environment */
 #define CONFIG_HOSTNAME		socfpga_cyclone5
 #define CONFIG_BOOTCOMMAND 	"run modeboot"
@@ -153,6 +153,11 @@
 
 /* The rest of the configuration is shared */
 #include <configs/socfpga_common.h>
+
+#if defined(CONFIG_SYS_I2C_BUS_MAX)
+#undef CONFIG_SYS_I2C_BUS_MAX
+#endif
+#define ONFIG_SYS_I2C_BUS_MAX 1
 
 /* Configure the system clock */
 #ifdef CONFIG_SYS_TIMER_RATE
