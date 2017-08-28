@@ -7,30 +7,7 @@
 #ifndef __CONFIG_SOCFPGA_CYCLONE5_H__
 #define __CONFIG_SOCFPGA_CYCLONE5_H__
 
-#include <asm/arch/socfpga_base_addrs.h>
-
-/* U-Boot Commands */
-#define CONFIG_SYS_NO_FLASH
-#define CONFIG_DOS_PARTITION
-#define CONFIG_FAT_WRITE
-
-#define CONFIG_CMD_ASKENV
-#define CONFIG_CMD_BOOTZ
-#define CONFIG_CMD_CACHE
-#define CONFIG_CMD_DFU
-#define CONFIG_CMD_DHCP
-#define CONFIG_CMD_EXT4
-#define CONFIG_CMD_EXT4_WRITE
-#define CONFIG_CMD_FAT
-#define CONFIG_CMD_FS_GENERIC
-#define CONFIG_CMD_GREPENV
-#define CONFIG_CMD_MII
-#define CONFIG_CMD_MMC
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_USB
-#define CONFIG_CMD_USB_MASS_STORAGE
-
-#define CONFIG_BOARD_LATE_INIT
+#include <asm/arch/base_addr_ac5.h>
 
 #define ENCLUSTRA_MAC               0xF7B020
 
@@ -41,28 +18,15 @@
 #define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB */
 
 /* Booting Linux */
-#define CONFIG_BOOTDELAY	3
 #define CONFIG_LOADADDR		0x8000
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
 
 /* Ethernet on SoC (EMAC) */
 #if defined(CONFIG_CMD_NET)
-#define CONFIG_EMAC_BASE		SOCFPGA_EMAC1_ADDRESS
 #define CONFIG_PHY_INTERFACE_MODE	PHY_INTERFACE_MODE_RGMII
-
-/* PHY */
 #define CONFIG_PHY_MICREL
 #define CONFIG_PHY_MICREL_KSZ9021
-#define CONFIG_KSZ9021_CLK_SKEW_ENV	"micrel-ksz9021-clk-skew"
-#define CONFIG_KSZ9021_CLK_SKEW_VAL	0xf0f0
-#define CONFIG_KSZ9021_DATA_SKEW_ENV	"micrel-ksz9021-data-skew"
-#define CONFIG_KSZ9021_DATA_SKEW_VAL	0x0
-
 #define CONFIG_PHY_MICREL_KSZ9031
-#define CONFIG_KSZ9031_CLK_SKEW_ENV    "micrel-ksz9031-clk-skew"
-#define CONFIG_KSZ9031_CLK_SKEW_VAL    0x3FF
-#define CONFIG_KSZ9031_DATA_SKEW_ENV   "micrel-ksz9031-data-skew"
-#define CONFIG_KSZ9031_DATA_SKEW_VAL   0x00
 #endif
 
 /* USB */
@@ -183,11 +147,9 @@
 		"fi\0"
 
 #define CONFIG_ENV_IS_IN_SPI_FLASH
-#define CONFIG_SPI_FLASH_BAR
 #define CONFIG_ENV_SIZE			QSPI_ENV_SIZE
 #define CONFIG_ENV_SECT_SIZE		CONFIG_ENV_SIZE
 #define CONFIG_ENV_OFFSET		QSPI_ENV_OFFSET
-#define CONFIG_CMD_ENV
 
 /* The rest of the configuration is shared */
 #include <configs/socfpga_common.h>
