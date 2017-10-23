@@ -37,6 +37,7 @@
 		"else echo \"Switching SD interface to MMC\";" \
 			"run altera_enable_mmc; " \
 		"fi;\0" \
+	"sd_target=emmc\0" \
 	"altera_enable_mmc=gpio set 53; mmc rescan;\0" \
 	"altera_enable_emmc=gpio clear 53; mmc rescan;\0" \
 	"loadaddr=0x200000\0"                       \
