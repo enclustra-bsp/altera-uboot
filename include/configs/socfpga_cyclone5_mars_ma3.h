@@ -31,10 +31,13 @@
 			"then env run importbootenv; " \
 			"fi; " \
 		"fi;\0" \
-	"altera_mux_sd_memory=if test \"${sd_target}\" = emmc; " \
+	"altera_mux_sd_memory=fdt addr ${devicetree_loadaddr}; " \
+		"if test \"${sd_target}\" = emmc; " \
 		"then echo \"Switching SD interface to eMMC\"; " \
+			"fdt set /soc/dwmmc0@ff704000 bus-width <0x00000008>; " \
 			"run altera_enable_emmc; " \
 		"else echo \"Switching SD interface to MMC\";" \
+			"fdt set /soc/dwmmc0@ff704000 bus-width <0x00000004>; " \
 			"run altera_enable_mmc; " \
 		"fi;\0" \
 	"sd_target=emmc\0" \
