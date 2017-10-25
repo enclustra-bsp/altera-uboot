@@ -32,6 +32,7 @@ struct dwmci_socfpga_priv_data {
 	struct dwmci_host	host;
 	unsigned int		drvsel;
 	unsigned int		smplsel;
+	unsigned int		mmc_8bit_cap;
 };
 
 static void socfpga_dwmci_clksel(struct dwmci_host *host)
@@ -98,6 +99,12 @@ static int socfpga_dwmmc_ofdata_to_platdata(struct udevice *dev)
 					"smplsel", 0);
 	host->priv = priv;
 
+	if (fdt_get_property(gd->fdt_blob, dev_of_offset(dev),
+				"mmc_8bit_cap", NULL))
+		priv->mmc_8bit_cap = 1;
+	else
+		priv->mmc_8bit_cap = 0;
+
 	return 0;
 }
 
@@ -109,6 +116,9 @@ static int socfpga_dwmmc_probe(struct udevice *dev)
 	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
 	struct dwmci_socfpga_priv_data *priv = dev_get_priv(dev);
 	struct dwmci_host *host = &priv->host;
+
+	if (priv->mmc_8bit_cap)
+		host->quirks |= DWMCI_QUIRK_MMC_8BIT_CAP;
 
 #ifdef CONFIG_BLK
 	dwmci_setup_cfg(&plat->cfg, host, host->bus_hz, 400000);
