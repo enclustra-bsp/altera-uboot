@@ -68,6 +68,7 @@
 	u-boot,dm-pre-reloc;
 	status = "okay";
 
+	mmc_8bit_cap;
 	cd-gpios = <&portb 18 0>;
 	vmmc-supply = <&regulator_3_3v>;
 	vqmmc-supply = <&regulator_3_3v>;
