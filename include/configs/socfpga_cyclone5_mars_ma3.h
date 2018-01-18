@@ -20,17 +20,37 @@
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #endif
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	"envfile=uEnv.txt\0" \
-	"loadbootenv_addr=0x2000000\0" \
-	"loadbootenv=load mmc 0 ${loadbootenv_addr} ${envfile}\0" \
-	"importbootenv=echo Importing environment from SD ...; " \
-	"env import -t ${loadbootenv_addr} $filesize\0" \
-	"sd_uenvtxt_exists=test -e mmc 0 ${envfile}\0" \
-	"preboot=mmc rescan; if env run sd_uenvtxt_exists; " \
-		"then if env run loadbootenv; "\
-			"then env run importbootenv; " \
-			"fi; " \
-		"fi;\0" \
+	"uenvtxt=uEnv.txt\0"\
+	\
+	"preboot=run ${bootmode}_preboot\0"\
+	"emmc_preboot=run sd_preboot\0"\
+	"qspi_preboot=;\0"\
+	\
+	"emmc_str=eMMC\0"\
+	"sd_str=SD\0"\
+	"qspi_str=QSPI\0"\
+	"usb_str=USB\0"\
+	\
+	"uenvtxt_import="\
+		"echo Importing environment from ${bootmode}_str...;"\
+		"env import -t ${uenvtxt_loadaddr} $filesize\0"\
+	\
+	"sd_preboot="\
+		"mmc rescan;"\
+		"if test -e mmc 0 ${uenvtxt}; then "\
+			"if load mmc 0 ${uenvtxt_loadaddr} ${uenvtxt}; then "\
+				"run uenvtxt_import;"\
+			"fi;"\
+		"fi\0"\
+	\
+	"usb_preboot="\
+		"usb start;"\
+		"if test -e usb 0 ${uenvtxt}; then "\
+			"if load usb 0 ${uenvtxt_loadaddr} ${uenvtxt}; then "\
+				"run uenvtxt_import;"\
+			"fi;"\
+		"fi\0"\
+	\
 	"altera_mux_sd_memory=fdt addr ${devicetree_loadaddr}; " \
 		"if test \"${sd_target}\" = emmc; " \
 		"then echo \"Switching SD interface to eMMC\"; " \
@@ -66,6 +86,7 @@
 	"rootfs_loadaddr=0x4000000\0"               \
 	"ramdisk_loadaddr=0x4000000\0"               \
 	"bootscript_loadaddr=0x1000000\0"           \
+	"uenvtxt_loadaddr=0x2000000\0"\
 	"initrd_high=0x10000000\0" \
 						\
 	"preloader_size="   __stringify(QSPI_PRELOADER_SIZE) "\0"\
