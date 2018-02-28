@@ -32,6 +32,7 @@
 #include <spi.h>
 #include "cadence_qspi.h"
 
+#define CQSPI_TIMEOUT_MS			500
 #define CQSPI_REG_POLL_US			1 /* 1us */
 #define CQSPI_REG_RETRY				10000
 #define CQSPI_POLL_IDLE_RETRY			3
@@ -719,6 +720,35 @@ int cadence_qspi_apb_indirect_write_setup(struct cadence_spi_platdata *plat,
 	return 0;
 }
 
+static void write_unaligned(unsigned int *addr, const u8 *txbuf,
+			    unsigned int bytes)
+{
+	u32 val;
+	while (bytes >= 4) {
+		memcpy(&val, txbuf, 4);
+		writel(val, addr);
+		txbuf += 4;
+		bytes -= 4;
+	}
+	while (bytes > 0) {
+		writeb(*txbuf, addr);
+		txbuf += 1;
+		bytes -= 1;
+	}
+}
+static void write_aligned(unsigned int *addr, const u8 *txbuf,
+			  unsigned int bytes)
+{
+	if (bytes >= 4) {
+		writesl(addr, txbuf, bytes / 4);
+		txbuf += bytes & ~0x3u;
+		bytes -= bytes & ~0x3u;
+	}
+	if (bytes > 0) {
+		writesb(addr, txbuf, bytes);
+	}
+}
+
 int cadence_qspi_apb_indirect_write_execute(struct cadence_spi_platdata *plat,
 	unsigned int n_tx, const u8 *txbuf)
 {
@@ -736,15 +766,16 @@ int cadence_qspi_apb_indirect_write_execute(struct cadence_spi_platdata *plat,
 
 	while (remaining > 0) {
 		write_bytes = remaining > page_size ? page_size : remaining;
-		/* Handle non-4-byte aligned access to avoid data abort. */
-		if (((uintptr_t)txbuf % 4) || (write_bytes % 4))
-			writesb(plat->ahbbase, txbuf, write_bytes);
-		else
-			writesl(plat->ahbbase, txbuf, write_bytes >> 2);
+		if ((uintptr_t)txbuf % 4) {
+			write_unaligned(plat->ahbbase, txbuf, write_bytes);
+		} else {
+			write_aligned(plat->ahbbase, txbuf, write_bytes);
+		}
 
 		ret = wait_for_bit("QSPI", plat->regbase + CQSPI_REG_SDRAMLEVEL,
 				   CQSPI_REG_SDRAMLEVEL_WR_MASK <<
-				   CQSPI_REG_SDRAMLEVEL_WR_LSB, 0, 10, 0);
+				   CQSPI_REG_SDRAMLEVEL_WR_LSB, 0,
+				   CQSPI_TIMEOUT_MS, 0);
 		if (ret) {
 			printf("Indirect write timed out (%i)\n", ret);
 			goto failwr;
@@ -756,7 +787,7 @@ int cadence_qspi_apb_indirect_write_execute(struct cadence_spi_platdata *plat,
 
 	/* Check indirect done status */
 	ret = wait_for_bit("QSPI", plat->regbase + CQSPI_REG_INDIRECTWR,
-			   CQSPI_REG_INDIRECTWR_DONE, 1, 10, 0);
+			   CQSPI_REG_INDIRECTWR_DONE, 1, CQSPI_TIMEOUT_MS, 0);
 	if (ret) {
 		printf("Indirect write completion error (%i)\n", ret);
 		goto failwr;
