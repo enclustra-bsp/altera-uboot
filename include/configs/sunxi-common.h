@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2012-2012 Henrik Nordstrom <henrik@henriknordstrom.net>
  *
@@ -6,8 +7,6 @@
  * Tom Cubie <tangliang@allwinnertech.com>
  *
  * Configuration settings for the Allwinner sunxi series of boards.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _SUNXI_COMMON_CONFIG_H
@@ -34,6 +33,7 @@
 
 #ifdef CONFIG_ARM64
 #define CONFIG_BUILD_TARGET "u-boot.itb"
+#define CONFIG_SYS_BOOTM_LEN		(32 << 20)
 #endif
 
 /* Serial & console */
@@ -63,7 +63,6 @@
 #define SDRAM_OFFSET(x) 0x2##x
 #define CONFIG_SYS_SDRAM_BASE		0x20000000
 #define CONFIG_SYS_LOAD_ADDR		0x22000000 /* default load address */
-#define CONFIG_SYS_TEXT_BASE		0x2a000000
 /* Note SPL_STACK_R_ADDR is set through Kconfig, we include it here 
  * since it needs to fit in with the other values. By also #defining it
  * we get warnings if the Kconfig value mismatches. */
@@ -74,11 +73,6 @@
 #define CONFIG_SYS_SDRAM_BASE		0x40000000
 #define CONFIG_SYS_LOAD_ADDR		0x42000000 /* default load address */
 /* V3s do not have enough memory to place code at 0x4a000000 */
-#ifndef CONFIG_MACH_SUN8I_V3S
-#define CONFIG_SYS_TEXT_BASE		0x4a000000
-#else
-#define CONFIG_SYS_TEXT_BASE		0x42e00000
-#endif
 /* Note SPL_STACK_R_ADDR is set through Kconfig, we include it here 
  * since it needs to fit in with the other values. By also #defining it
  * we get warnings if the Kconfig value mismatches. */
@@ -113,8 +107,6 @@
 #define PHYS_SDRAM_0_SIZE		0x80000000 /* 2 GiB */
 
 #ifdef CONFIG_AHCI
-#define CONFIG_LIBATA
-#define CONFIG_SCSI_AHCI
 #define CONFIG_SCSI_AHCI_PLAT
 #define CONFIG_SUNXI_AHCI
 #define CONFIG_SYS_64BIT_LBA
@@ -122,7 +114,6 @@
 #define CONFIG_SYS_SCSI_MAX_LUN		1
 #define CONFIG_SYS_SCSI_MAX_DEVICE	(CONFIG_SYS_SCSI_MAX_SCSI_ID * \
 					 CONFIG_SYS_SCSI_MAX_LUN)
-#define CONFIG_SCSI
 #endif
 
 #define CONFIG_SETUP_MEMORY_TAGS
@@ -149,7 +140,23 @@
 #endif
 
 #if defined(CONFIG_ENV_IS_IN_MMC)
-#define CONFIG_SYS_MMC_ENV_DEV		0	/* first detected MMC controller */
+
+#ifdef CONFIG_ARM64
+/*
+ * This is actually (CONFIG_ENV_OFFSET -
+ * (CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)), but the value will be used
+ * directly in a makefile, without the preprocessor expansion.
+ */
+#define CONFIG_BOARD_SIZE_LIMIT		0x7e000
+#endif
+
+#if CONFIG_MMC_SUNXI_SLOT_EXTRA != -1
+/* If we have two devices (most likely eMMC + MMC), favour the eMMC */
+#define CONFIG_SYS_MMC_ENV_DEV		1
+#else
+/* Otherwise, use the only device we have */
+#define CONFIG_SYS_MMC_ENV_DEV		0
+#endif
 #define CONFIG_SYS_MMC_MAX_DEVICE	4
 #elif defined(CONFIG_ENV_IS_NOWHERE)
 #define CONFIG_ENV_SIZE			(128 << 10)
@@ -168,10 +175,6 @@
  */
 #define CONFIG_SYS_CBSIZE	1024	/* Console I/O Buffer Size */
 #define CONFIG_SYS_PBSIZE	1024	/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	16	/* max number of command args */
-
-/* Boot Argument Buffer Size */
-#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 
 /* standalone support */
 #define CONFIG_STANDALONE_LOAD_ADDR	CONFIG_SYS_LOAD_ADDR
@@ -179,8 +182,6 @@
 /* FLASH and environment organization */
 
 #define CONFIG_SYS_MONITOR_LEN		(768 << 10)	/* 768 KiB */
-
-#define CONFIG_SPL_FRAMEWORK
 
 #ifndef CONFIG_ARM64		/* AArch64 FEL support is not ready yet */
 #define CONFIG_SPL_BOARD_LOAD_IMAGE
@@ -202,10 +203,6 @@
 #endif
 
 #define CONFIG_SPL_STACK		LOW_LEVEL_SRAM_STACK
-
-#ifndef CONFIG_ARM64
-#define CONFIG_SPL_LDSCRIPT "arch/arm/cpu/armv7/sunxi/u-boot-spl.lds"
-#endif
 
 #define CONFIG_SPL_PAD_TO		32768		/* decimal for 'dd' */
 
@@ -271,17 +268,12 @@ extern int soft_i2c_gpio_scl;
 /* GPIO */
 #define CONFIG_SUNXI_GPIO
 
-#ifdef CONFIG_VIDEO
+#ifdef CONFIG_VIDEO_SUNXI
 /*
  * The amount of RAM to keep free at the top of RAM when relocating u-boot,
  * to use as framebuffer. This must be a multiple of 4096.
  */
 #define CONFIG_SUNXI_MAX_FB_SIZE (16 << 20)
-
-/* Do we want to initialize a simple FB? */
-#define CONFIG_VIDEO_DT_SIMPLEFB
-
-#define CONFIG_VIDEO_SUNXI
 
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_VIDEO_STD_TIMINGS
@@ -291,18 +283,14 @@ extern int soft_i2c_gpio_scl;
 /* allow both serial and cfb console. */
 /* stop x86 thinking in cfbconsole from trying to init a pc keyboard */
 
-#endif /* CONFIG_VIDEO */
+#endif /* CONFIG_VIDEO_SUNXI */
 
 /* Ethernet support */
-#ifdef CONFIG_SUNXI_EMAC
-#define CONFIG_PHY_ADDR		1
+#ifdef CONFIG_SUN4I_EMAC
 #define CONFIG_MII			/* MII PHY management		*/
-#define CONFIG_PHYLIB
 #endif
 
-#ifdef CONFIG_SUNXI_GMAC
-#define CONFIG_PHY_GIGE			/* GMAC can use gigabit PHY	*/
-#define CONFIG_PHY_ADDR		1
+#ifdef CONFIG_SUN7I_GMAC
 #define CONFIG_MII			/* MII PHY management		*/
 #define CONFIG_PHY_REALTEK
 #endif
@@ -311,29 +299,6 @@ extern int soft_i2c_gpio_scl;
 #define CONFIG_USB_OHCI_NEW
 #define CONFIG_USB_OHCI_SUNXI
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS 1
-#define CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS 1
-#endif
-
-#ifdef CONFIG_USB_MUSB_SUNXI
-#define CONFIG_USB_MUSB_PIO_ONLY
-#endif
-
-#ifdef CONFIG_USB_MUSB_GADGET
-#define CONFIG_USB_FUNCTION_FASTBOOT
-#define CONFIG_USB_FUNCTION_MASS_STORAGE
-#endif
-
-#ifdef CONFIG_USB_FUNCTION_FASTBOOT
-#define CONFIG_CMD_FASTBOOT
-#define CONFIG_FASTBOOT_BUF_ADDR	CONFIG_SYS_LOAD_ADDR
-#define CONFIG_FASTBOOT_BUF_SIZE	0x2000000
-#define CONFIG_ANDROID_BOOT_IMAGE
-
-#define CONFIG_FASTBOOT_FLASH
-
-#ifdef CONFIG_MMC
-#define CONFIG_FASTBOOT_FLASH_MMC_DEV	0
-#endif
 #endif
 
 #ifdef CONFIG_USB_FUNCTION_MASS_STORAGE
@@ -341,13 +306,11 @@ extern int soft_i2c_gpio_scl;
 
 #ifdef CONFIG_USB_KEYBOARD
 #define CONFIG_PREBOOT
-#define CONFIG_SYS_USB_EVENT_POLL_VIA_INT_QUEUE
 #endif
 
 #define CONFIG_MISC_INIT_R
 
 #ifndef CONFIG_SPL_BUILD
-#include <config_distro_defaults.h>
 
 #ifdef CONFIG_ARM64
 /*
@@ -409,15 +372,28 @@ extern int soft_i2c_gpio_scl;
 	"ramdisk ram " RAMDISK_ADDR_R " 0x4000000\0"
 
 #ifdef CONFIG_MMC
-#define BOOT_TARGET_DEVICES_MMC(func) func(MMC, mmc, 0)
 #if CONFIG_MMC_SUNXI_SLOT_EXTRA != -1
-#define BOOT_TARGET_DEVICES_MMC_EXTRA(func) func(MMC, mmc, 1)
+#define BOOTENV_DEV_MMC_AUTO(devtypeu, devtypel, instance)		\
+	BOOTENV_DEV_MMC(MMC, mmc, 0)					\
+	BOOTENV_DEV_MMC(MMC, mmc, 1)					\
+	"bootcmd_mmc_auto="						\
+		"if test ${mmc_bootdev} -eq 1; then "			\
+			"run bootcmd_mmc1; "				\
+			"run bootcmd_mmc0; "				\
+		"elif test ${mmc_bootdev} -eq 0; then "			\
+			"run bootcmd_mmc0; "				\
+			"run bootcmd_mmc1; "				\
+		"fi\0"
+
+#define BOOTENV_DEV_NAME_MMC_AUTO(devtypeu, devtypel, instance) \
+	"mmc_auto "
+
+#define BOOT_TARGET_DEVICES_MMC(func) func(MMC_AUTO, mmc_auto, na)
 #else
-#define BOOT_TARGET_DEVICES_MMC_EXTRA(func)
+#define BOOT_TARGET_DEVICES_MMC(func) func(MMC, mmc, 0)
 #endif
 #else
 #define BOOT_TARGET_DEVICES_MMC(func)
-#define BOOT_TARGET_DEVICES_MMC_EXTRA(func)
 #endif
 
 #ifdef CONFIG_AHCI
@@ -445,7 +421,6 @@ extern int soft_i2c_gpio_scl;
 #define BOOT_TARGET_DEVICES(func) \
 	func(FEL, fel, na) \
 	BOOT_TARGET_DEVICES_MMC(func) \
-	BOOT_TARGET_DEVICES_MMC_EXTRA(func) \
 	BOOT_TARGET_DEVICES_SCSI(func) \
 	BOOT_TARGET_DEVICES_USB(func) \
 	func(PXE, pxe, na) \
@@ -507,6 +482,20 @@ extern int soft_i2c_gpio_scl;
 #define SUNXI_MTDPARTS_DEFAULT
 #endif
 
+#define PARTS_DEFAULT \
+	"name=loader1,start=8k,size=32k,uuid=${uuid_gpt_loader1};" \
+	"name=loader2,size=984k,uuid=${uuid_gpt_loader2};" \
+	"name=esp,size=128M,bootable,uuid=${uuid_gpt_esp};" \
+	"name=system,size=-,uuid=${uuid_gpt_system};"
+
+#define UUID_GPT_ESP "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+
+#ifdef CONFIG_ARM64
+#define UUID_GPT_SYSTEM "b921b045-1df0-41c3-af44-4c6f280d3fae"
+#else
+#define UUID_GPT_SYSTEM "69dad710-2ce4-4e3c-b16c-21a1d49abed3"
+#endif
+
 #define CONSOLE_ENV_SETTINGS \
 	CONSOLE_STDIN_SETTINGS \
 	CONSOLE_STDOUT_SETTINGS
@@ -525,6 +514,9 @@ extern int soft_i2c_gpio_scl;
 	"console=ttyS0,115200\0" \
 	SUNXI_MTDIDS_DEFAULT \
 	SUNXI_MTDPARTS_DEFAULT \
+	"uuid_gpt_esp=" UUID_GPT_ESP "\0" \
+	"uuid_gpt_system=" UUID_GPT_SYSTEM "\0" \
+	"partitions=" PARTS_DEFAULT "\0" \
 	BOOTCMD_SUNXI_COMPAT \
 	BOOTENV
 

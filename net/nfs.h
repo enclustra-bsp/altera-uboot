@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Masami Komiya <mkomiya@sonare.it> 2004
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __NFS_H__
@@ -36,16 +35,13 @@
 #define NFSERR_ISDIR    21
 #define NFSERR_INVAL    22
 
-/* Block size used for NFS read accesses.  A RPC reply packet (including  all
+/*
+ * Block size used for NFS read accesses.  A RPC reply packet (including  all
  * headers) must fit within a single Ethernet frame to avoid fragmentation.
- * However, if CONFIG_IP_DEFRAG is set, the config file may want to use a
- * bigger value. In any case, most NFS servers are optimized for a power of 2.
+ * However, if CONFIG_IP_DEFRAG is set, a bigger value could be used.  In any
+ * case, most NFS servers are optimized for a power of 2.
  */
-#ifdef CONFIG_NFS_READ_SIZE
-#define NFS_READ_SIZE CONFIG_NFS_READ_SIZE
-#else
-#define NFS_READ_SIZE 1024 /* biggest power of two that fits Ether frame */
-#endif
+#define NFS_READ_SIZE	1024	/* biggest power of two that fits Ether frame */
 
 /* Values for Accept State flag on RPC answers (See: rfc1831) */
 enum rpc_accept_stat {
@@ -79,7 +75,7 @@ struct rpc_t {
 			uint32_t data[NFS_READ_SIZE];
 		} reply;
 	} u;
-};
+} __attribute__((packed));
 void nfs_start(void);	/* Begin NFS */
 
 

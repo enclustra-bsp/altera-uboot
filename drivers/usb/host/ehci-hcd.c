@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0
 /*-
  * Copyright (c) 2007-2008, Juniper Networks, Inc.
  * Copyright (c) 2008, Excito Elektronik i Skåne AB
  * Copyright (c) 2008, Michael Trimarchi <trimarchimichael@yahoo.it>
  *
  * All rights reserved.
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 #include <common.h>
 #include <dm.h>
@@ -52,8 +51,8 @@ static struct descriptor {
 		0,		/* wHubCharacteristics */
 		10,		/* bPwrOn2PwrGood */
 		0,		/* bHubCntrCurrent */
-		{},		/* Device removable */
-		{}		/* at most 7 ports! XXX */
+		{		/* Device removable */
+		}		/* at most 7 ports! XXX */
 	},
 	{
 		0x12,		/* bLength */
@@ -148,9 +147,12 @@ static void ehci_powerup_fixup(struct ehci_ctrl *ctrl, uint32_t *status_reg,
 
 static uint32_t *ehci_get_portsc_register(struct ehci_ctrl *ctrl, int port)
 {
-	if (port < 0 || port >= CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS) {
+	int max_ports = HCS_N_PORTS(ehci_readl(&ctrl->hccr->cr_hcsparams));
+
+	if (port < 0 || port >= max_ports) {
 		/* Printing the message would cause a scan failure! */
-		debug("The request port(%u) is not configured\n", port);
+		debug("The request port(%u) exceeds maximum port number\n",
+		      port);
 		return NULL;
 	}
 
@@ -205,9 +207,7 @@ static int ehci_shutdown(struct ehci_ctrl *ctrl)
 {
 	int i, ret = 0;
 	uint32_t cmd, reg;
-
-	if (!ctrl || !ctrl->hcor)
-		return -EINVAL;
+	int max_ports = HCS_N_PORTS(ehci_readl(&ctrl->hccr->cr_hcsparams));
 
 	cmd = ehci_readl(&ctrl->hcor->or_usbcmd);
 	/* If not run, directly return */
@@ -219,7 +219,7 @@ static int ehci_shutdown(struct ehci_ctrl *ctrl)
 		100 * 1000);
 
 	if (!ret) {
-		for (i = 0; i < CONFIG_SYS_USB_EHCI_MAX_ROOT_PORTS; i++) {
+		for (i = 0; i < max_ports; i++) {
 			reg = ehci_readl(&ctrl->hcor->or_portsc[i]);
 			reg |= EHCI_PS_SUSP;
 			ehci_writel(&ctrl->hcor->or_portsc[i], reg);
@@ -591,8 +591,9 @@ ehci_submit_async(struct usb_device *dev, unsigned long pipe, void *buffer,
 	 * dangerous operation, it's responsibility of the calling
 	 * code to make sure enough space is reserved.
 	 */
-	invalidate_dcache_range((unsigned long)buffer,
-		ALIGN((unsigned long)buffer + length, ARCH_DMA_MINALIGN));
+	if (buffer != NULL && length > 0)
+		invalidate_dcache_range((unsigned long)buffer,
+			ALIGN((unsigned long)buffer + length, ARCH_DMA_MINALIGN));
 
 	/* Check that the TD processing happened */
 	if (QT_TOKEN_GET_STATUS(token) & QT_TOKEN_STATUS_ACTIVE)
@@ -937,7 +938,7 @@ unknown:
 	return -1;
 }
 
-const struct ehci_ops default_ehci_ops = {
+static const struct ehci_ops default_ehci_ops = {
 	.set_usb_mode		= ehci_set_usbmode,
 	.get_port_speed		= ehci_get_port_speed,
 	.powerup_fixup		= ehci_powerup_fixup,
@@ -1108,6 +1109,8 @@ int usb_lowlevel_init(int index, enum usb_init_type init, void **controller)
 	rc = ehci_hcd_init(index, init, &ctrl->hccr, &ctrl->hcor);
 	if (rc)
 		return rc;
+	if (!ctrl->hccr || !ctrl->hcor)
+		return -1;
 	if (init == USB_INIT_DEVICE)
 		goto done;
 
@@ -1592,16 +1595,30 @@ static int ehci_destroy_int_queue(struct udevice *dev, struct usb_device *udev,
 	return _ehci_destroy_int_queue(udev, queue);
 }
 
+static int ehci_get_max_xfer_size(struct udevice *dev, size_t *size)
+{
+	/*
+	 * EHCD can handle any transfer length as long as there is enough
+	 * free heap space left, hence set the theoretical max number here.
+	 */
+	*size = SIZE_MAX;
+
+	return 0;
+}
+
 int ehci_register(struct udevice *dev, struct ehci_hccr *hccr,
 		  struct ehci_hcor *hcor, const struct ehci_ops *ops,
 		  uint tweaks, enum usb_init_type init)
 {
 	struct usb_bus_priv *priv = dev_get_uclass_priv(dev);
 	struct ehci_ctrl *ctrl = dev_get_priv(dev);
-	int ret;
+	int ret = -1;
 
 	debug("%s: dev='%s', ctrl=%p, hccr=%p, hcor=%p, init=%d\n", __func__,
 	      dev->name, ctrl, hccr, hcor, init);
+
+	if (!ctrl || !hccr || !hcor)
+		goto err;
 
 	priv->desc_before_addr = true;
 
@@ -1654,6 +1671,7 @@ struct dm_usb_ops ehci_usb_ops = {
 	.create_int_queue = ehci_create_int_queue,
 	.poll_int_queue = ehci_poll_int_queue,
 	.destroy_int_queue = ehci_destroy_int_queue,
+	.get_max_xfer_size  = ehci_get_max_xfer_size,
 };
 
 #endif

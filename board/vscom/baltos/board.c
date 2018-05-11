@@ -1,16 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * board.c
  *
  * Board functions for TI AM335X based boards
  *
  * Copyright (C) 2011, Texas Instruments, Incorporated - http://www.ti.com/
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <errno.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <spl.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/hardware.h>
@@ -68,7 +67,7 @@ static int baltos_set_console(void)
 	printf("DIPs: 0x%1x\n", (~dips) & 0xf);
 
 	if ((dips & 0xf) == 0xe)
-		setenv("console", "ttyUSB0,115200n8");
+		env_set("console", "ttyUSB0,115200n8");
 
 	return 0;
 }
@@ -373,7 +372,7 @@ int board_late_init(void)
 		return -ENODEV;
 	}
 
-	setenv("board_name", model);
+	env_set("board_name", model);
 #endif
 
 	return 0;
@@ -423,7 +422,7 @@ static struct cpsw_platform_data cpsw_data = {
 };
 #endif
 
-#if ((defined(CONFIG_SPL_ETH_SUPPORT) || defined(CONFIG_SPL_USBETH_SUPPORT)) \
+#if ((defined(CONFIG_SPL_ETH_SUPPORT) || defined(CONFIG_SPL_USB_ETHER)) \
 		&& defined(CONFIG_SPL_BUILD)) || \
 	((defined(CONFIG_DRIVER_TI_CPSW) || \
 	  defined(CONFIG_USB_ETHER) && defined(CONFIG_USB_MUSB_GADGET)) && \
@@ -453,11 +452,11 @@ int board_eth_init(bd_t *bis)
 
 #if (defined(CONFIG_DRIVER_TI_CPSW) && !defined(CONFIG_SPL_BUILD)) || \
 	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
-	if (!getenv("ethaddr")) {
+	if (!env_get("ethaddr")) {
 		printf("<ethaddr> not set. Validating first E-fuse MAC\n");
 
 		if (is_valid_ethaddr(mac_addr))
-			eth_setenv_enetaddr("ethaddr", mac_addr);
+			eth_env_set_enetaddr("ethaddr", mac_addr);
 	}
 
 #ifdef CONFIG_DRIVER_TI_CPSW

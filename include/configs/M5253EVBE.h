@@ -1,14 +1,11 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2004-2007 Freescale Semiconductor, Inc.
  * Hayden Fraser (Hayden.Fraser@freescale.com)
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _M5253EVBE_H
 #define _M5253EVBE_H
-
-#define CONFIG_M5253EVBE	/* define board type */
 
 #define CONFIG_MCFTMR
 
@@ -24,24 +21,19 @@
 #ifndef CONFIG_MONITOR_IS_IN_RAM
 #define CONFIG_ENV_OFFSET		0x4000
 #define CONFIG_ENV_SECT_SIZE	0x2000
-#define CONFIG_ENV_IS_IN_FLASH	1
 #else
 #define CONFIG_ENV_ADDR		0xffe04000
 #define CONFIG_ENV_SECT_SIZE	0x2000
-#define CONFIG_ENV_IS_IN_FLASH	1
 #endif
 
 #define LDS_BOARD_TEXT \
 	. = DEFINED(env_offset) ? env_offset : .; \
-	common/env_embedded.o      (.text)
+	env/embedded.o(.text)
 
 /*
  * BOOTP options
  */
 #undef CONFIG_BOOTP_BOOTFILESIZE
-#undef CONFIG_BOOTP_BOOTPATH
-#undef CONFIG_BOOTP_GATEWAY
-#undef CONFIG_BOOTP_HOSTNAME
 
 /*
  * Command line configuration.
@@ -63,17 +55,6 @@
 #define CONFIG_SYS_ATA_REG_OFFSET	0xA0	/* Offset for normal register accesses */
 #define CONFIG_SYS_ATA_ALT_OFFSET	0xC0	/* Offset for alternate registers */
 #define CONFIG_SYS_ATA_STRIDE		4	/* Interval between registers */
-
-#define CONFIG_SYS_LONGHELP		/* undef to save memory */
-
-#if defined(CONFIG_CMD_KGDB)
-#define CONFIG_SYS_CBSIZE		1024	/* Console I/O Buffer Size */
-#else
-#define CONFIG_SYS_CBSIZE		256	/* Console I/O Buffer Size */
-#endif
-#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)	/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS		16	/* max number of command args */
-#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE	/* Boot Argument Buffer Size */
 
 #define CONFIG_SYS_LOAD_ADDR		0x00100000
 

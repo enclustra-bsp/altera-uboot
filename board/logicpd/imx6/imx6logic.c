@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2017 Logic PD, Inc.
  *
@@ -5,12 +6,11 @@
  *
  * Based on SabreSD by Fabio Estevam <fabio.estevam@nxp.com>
  * and updates by Jagan Teki <jagan@amarulasolutions.com>
- *
- * SPDX-License-Identifier:    GPL-2.0+
  */
 
 #include <common.h>
 #include <miiphy.h>
+#include <input.h>
 #include <mmc.h>
 #include <fsl_esdhc.h>
 #include <asm/io.h>
@@ -22,8 +22,8 @@
 #include <asm/arch/mxc_hdmi.h>
 #include <asm/arch/mx6-pins.h>
 #include <asm/arch/sys_proto.h>
-#include <asm/imx-common/boot_mode.h>
-#include <asm/imx-common/iomux-v3.h>
+#include <asm/mach-imx/boot_mode.h>
+#include <asm/mach-imx/iomux-v3.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -173,11 +173,11 @@ int board_init(void)
 
 int board_late_init(void)
 {
-	setenv("board_name", "imx6logic");
+	env_set("board_name", "imx6logic");
 
 	if (is_mx6dq()) {
-		setenv("board_rev", "MX6DQ");
-		setenv("fdt_file", "imx6q-logicpd.dtb");
+		env_set("board_rev", "MX6DQ");
+		env_set("fdt_file", "imx6q-logicpd.dtb");
 	}
 
 	return 0;

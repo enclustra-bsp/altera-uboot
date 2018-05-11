@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * brtpp1.h
  *
@@ -5,8 +6,6 @@
  *
  * Copyright (C) 2013 Hannes Schmelzer <oe5hpm@oevsv.at> -
  * Bernecker & Rainer Industrieelektronik GmbH - http://www.br-automation.com
- *
- * SPDX-License-Identifier:        GPL-2.0+
  */
 
 #ifndef __CONFIG_BRPPT1_H__
@@ -19,11 +18,6 @@
 #define CONFIG_LCD_ROTATION
 #define CONFIG_LCD_DT_SIMPLEFB
 #define LCD_BPP				LCD_COLOR32
-
-/* Bootcount using the RTC block */
-#define CONFIG_SYS_BOOTCOUNT_ADDR	0x44E3E000
-#define CONFIG_BOOTCOUNT_LIMIT
-#define CONFIG_BOOTCOUNT_AM33XX
 
 /* memory */
 #define CONFIG_SYS_MALLOC_LEN		(5 * 1024 * 1024)
@@ -54,7 +48,6 @@
  */
 #if defined(CONFIG_SPI_BOOT) || defined(CONFIG_NAND)
 #define CONFIG_MTD_DEVICE		/* Required for mtdparts */
-#define CONFIG_CMD_MTDPARTS
 #endif /* CONFIG_SPI_BOOT, ... */
 
 #ifdef CONFIG_SPL_OS_BOOT
@@ -67,14 +60,11 @@
 
 /* NAND */
 #ifdef CONFIG_NAND
-#define CONFIG_CMD_SPL_NAND_OFS			0x080000 /* end of u-boot */
 #define CONFIG_SYS_NAND_SPL_KERNEL_OFFS		0x140000
-#define CONFIG_CMD_SPL_WRITE_SIZE		0x2000
 #endif /* CONFIG_NAND */
 #endif /* CONFIG_SPL_OS_BOOT */
 
 #ifdef CONFIG_NAND
-#define CONFIG_SPL_NAND_AM33XX_BCH	/* OMAP4 and later ELM support */
 #define CONFIG_SPL_NAND_BASE
 #define CONFIG_SPL_NAND_DRIVERS
 #define CONFIG_SPL_NAND_ECC
@@ -87,8 +77,8 @@
 
 #ifdef CONFIG_NAND
 #define NANDARGS \
-	"mtdids=" MTDIDS_DEFAULT "\0" \
-	"mtdparts=" MTDPARTS_DEFAULT "\0" \
+	"mtdids=" CONFIG_MTDIDS_DEFAULT "\0" \
+	"mtdparts=" CONFIG_MTDPARTS_DEFAULT "\0" \
 	"nandargs=setenv bootargs console=${console} " \
 		"${optargs} " \
 		"${optargs_rot} " \
@@ -187,9 +177,7 @@ MMCARGS
  */
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		0x8000000
-#define CONFIG_NAND_OMAP_GPMC
 /* don't change OMAP_ELM, ECCSCHEME. ROM code only supports this */
-#define CONFIG_NAND_OMAP_ELM
 #define CONFIG_NAND_OMAP_ECCSCHEME	OMAP_ECC_BCH8_CODE_HW
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
 #define CONFIG_SYS_NAND_BLOCK_SIZE	(128*1024)
@@ -212,22 +200,10 @@ MMCARGS
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x80000
 
-#define MTDIDS_DEFAULT			"nand0=omap2-nand.0"
-#define MTDPARTS_DEFAULT		"mtdparts=omap2-nand.0:" \
-					"128k(MLO)," \
-					"128k(MLO.backup)," \
-					"128k(dtb)," \
-					"128k(u-boot-env)," \
-					"512k(u-boot)," \
-					"4m(kernel),"\
-					"128m(rootfs),"\
-					"-(user)"
 #define CONFIG_NAND_OMAP_GPMC_WSCFG	1
 #endif /* CONFIG_NAND */
 
 /* USB configuration */
-#define CONFIG_USB_MUSB_DSPS
-#define CONFIG_USB_MUSB_PIO_ONLY
 #define CONFIG_USB_MUSB_DISABLE_BULK_COMBINE_SPLIT
 #define CONFIG_AM335X_USB0
 #define CONFIG_AM335X_USB0_MODE	MUSB_HOST
@@ -236,14 +212,9 @@ MMCARGS
 
 #if defined(CONFIG_SPI_BOOT)
 /* McSPI IP block */
-#define CONFIG_SPI
-#define CONFIG_OMAP3_SPI
 #define CONFIG_SF_DEFAULT_SPEED		24000000
 
-#define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
-#undef CONFIG_ENV_IS_NOWHERE
-#define CONFIG_ENV_IS_IN_SPI_FLASH
 #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
 #define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
 #define CONFIG_ENV_SECT_SIZE		(4 << 10) /* 4 KB sectors */
@@ -251,8 +222,6 @@ MMCARGS
 #define CONFIG_ENV_OFFSET_REDUND	(896 << 10) /* 896 KiB in */
 
 #elif defined(CONFIG_EMMC_BOOT)
-#undef CONFIG_ENV_IS_NOWHERE
-#define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		1
 #define CONFIG_SYS_MMC_ENV_PART		2
 #define CONFIG_ENV_OFFSET		0x40000	/* TODO: Adresse definieren */
@@ -261,23 +230,10 @@ MMCARGS
 
 #elif defined(CONFIG_NAND)
 /* No NAND env support in SPL */
-#ifdef CONFIG_SPL_BUILD
-#define CONFIG_ENV_IS_NOWHERE
-#else
-#define CONFIG_ENV_IS_IN_NAND
-#endif
 #define CONFIG_ENV_OFFSET		0x60000
 #define CONFIG_SYS_ENV_SECT_SIZE	CONFIG_ENV_SIZE
 #else
 #error "no storage for Environment defined!"
 #endif
-/*
- * Common filesystems support.  When we have removable storage we
- * enabled a number of useful commands and support.
- */
-#if defined(CONFIG_MMC) || defined(CONFIG_USB_STORAGE)
-#define CONFIG_FS_EXT4
-#define CONFIG_EXT4_WRITE
-#endif /* CONFIG_MMC, ... */
 
 #endif	/* ! __CONFIG_BRPPT1_H__ */

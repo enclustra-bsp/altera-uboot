@@ -1,12 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2010
  * Texas Instruments, <www.ti.com>
  *
  * Aneesh V <aneesh@ti.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
+
 #include <common.h>
+#include <binman_sym.h>
 #include <dm.h>
 #include <spl.h>
 #include <asm/u-boot.h>
@@ -30,6 +31,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #endif
 
 u32 *boot_params_ptr = NULL;
+
+/* See spl.h for information about this */
+binman_sym_declare(ulong, u_boot_any, pos);
 
 /* Define board data structure */
 static bd_t bdata __attribute__ ((section(".data")));
@@ -119,9 +123,23 @@ __weak void spl_board_prepare_for_boot(void)
 
 void spl_set_header_raw_uboot(struct spl_image_info *spl_image)
 {
+	ulong u_boot_pos = binman_sym(ulong, u_boot_any, pos);
+
 	spl_image->size = CONFIG_SYS_MONITOR_LEN;
-	spl_image->entry_point = CONFIG_SYS_UBOOT_START;
-	spl_image->load_addr = CONFIG_SYS_TEXT_BASE;
+
+	/*
+	 * Binman error cases: address of the end of the previous region or the
+	 * start of the image's entry area (usually 0) if there is no previous
+	 * region.
+	 */
+	if (u_boot_pos && u_boot_pos != BINMAN_SYM_MISSING) {
+		/* Binman does not support separated entry addresses */
+		spl_image->entry_point = u_boot_pos;
+		spl_image->load_addr = u_boot_pos;
+	} else {
+		spl_image->entry_point = CONFIG_SYS_UBOOT_START;
+		spl_image->load_addr = CONFIG_SYS_TEXT_BASE;
+	}
 	spl_image->os = IH_OS_U_BOOT;
 	spl_image->name = "U-Boot";
 }
@@ -153,11 +171,11 @@ int spl_parse_image_header(struct spl_image_info *spl_image,
 		spl_image->os = image_get_os(header);
 		spl_image->name = image_get_name(header);
 		debug("spl: payload image: %.*s load addr: 0x%lx size: %d\n",
-			(int)sizeof(spl_image->name), spl_image->name,
+			IH_NMLEN, spl_image->name,
 			spl_image->load_addr, spl_image->size);
 #else
 		/* LEGACY image not supported */
-		debug("Legacy boot image support not enabled, proceeding to other boot methods");
+		debug("Legacy boot image support not enabled, proceeding to other boot methods\n");
 		return -EINVAL;
 #endif
 	} else {
@@ -195,7 +213,7 @@ int spl_parse_image_header(struct spl_image_info *spl_image,
 		spl_set_header_raw_uboot(spl_image);
 #else
 		/* RAW image not supported, proceed to other boot methods. */
-		debug("Raw boot image support not enabled, proceeding to other boot methods");
+		debug("Raw boot image support not enabled, proceeding to other boot methods\n");
 		return -EINVAL;
 #endif
 	}
@@ -220,12 +238,12 @@ static int spl_common_init(bool setup_malloc)
 
 	debug("spl_early_init()\n");
 
-#if defined(CONFIG_SYS_MALLOC_F_LEN)
+#if CONFIG_VAL(SYS_MALLOC_F_LEN)
 	if (setup_malloc) {
 #ifdef CONFIG_MALLOC_F_ADDR
 		gd->malloc_base = CONFIG_MALLOC_F_ADDR;
 #endif
-		gd->malloc_limit = CONFIG_SYS_MALLOC_F_LEN;
+		gd->malloc_limit = CONFIG_VAL(SYS_MALLOC_F_LEN);
 		gd->malloc_ptr = 0;
 	}
 #endif
@@ -243,7 +261,7 @@ static int spl_common_init(bool setup_malloc)
 			return ret;
 		}
 	}
-	if (IS_ENABLED(CONFIG_SPL_DM)) {
+	if (CONFIG_IS_ENABLED(DM)) {
 		bootstage_start(BOOTSTATE_ID_ACCUM_DM_SPL, "dm_spl");
 		/* With CONFIG_SPL_OF_PLATDATA, bring in all devices */
 		ret = dm_init_and_scan(!CONFIG_IS_ENABLED(OF_PLATDATA));
@@ -255,6 +273,12 @@ static int spl_common_init(bool setup_malloc)
 	}
 
 	return 0;
+}
+
+void spl_set_bd(void)
+{
+	if (!gd->bd)
+		gd->bd = &bdata;
 }
 
 int spl_early_init(void)
@@ -364,7 +388,9 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	struct spl_image_info spl_image;
 
 	debug(">>spl:board_init_r()\n");
-	gd->bd = &bdata;
+
+	spl_set_bd();
+
 #ifdef CONFIG_SPL_OS_BOOT
 	dram_init_banksize();
 #endif
@@ -378,7 +404,7 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 		if (spl_init())
 			hang();
 	}
-#ifndef CONFIG_PPC
+#if !defined(CONFIG_PPC) && !defined(CONFIG_ARCH_MX6)
 	/*
 	 * timer_init() does not exist on PPC systems. The timer is initialized
 	 * and enabled (decrementer) in interrupt_init() here.
@@ -386,7 +412,7 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	timer_init();
 #endif
 
-#ifdef CONFIG_SPL_BOARD_INIT
+#if CONFIG_IS_ENABLED(BOARD_INIT)
 	spl_board_init();
 #endif
 
@@ -409,6 +435,12 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	case IH_OS_U_BOOT:
 		debug("Jumping to U-Boot\n");
 		break;
+#if CONFIG_IS_ENABLED(ATF)
+	case IH_OS_ARM_TRUSTED_FIRMWARE:
+		debug("Jumping to U-Boot via ARM Trusted Firmware\n");
+		spl_invoke_atf(&spl_image);
+		break;
+#endif
 #ifdef CONFIG_SPL_OS_BOOT
 	case IH_OS_LINUX:
 		debug("Jumping to Linux\n");
@@ -419,17 +451,10 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	default:
 		debug("Unsupported OS image.. Jumping nevertheless..\n");
 	}
-#if defined(CONFIG_SYS_MALLOC_F_LEN) && !defined(CONFIG_SYS_SPL_MALLOC_SIZE)
+#if CONFIG_VAL(SYS_MALLOC_F_LEN) && !defined(CONFIG_SYS_SPL_MALLOC_SIZE)
 	debug("SPL malloc() used %#lx bytes (%ld KB)\n", gd->malloc_ptr,
 	      gd->malloc_ptr / 1024);
 #endif
-
-	if (IS_ENABLED(CONFIG_SPL_ATF_SUPPORT)) {
-		debug("loaded - jumping to U-Boot via ATF BL31.\n");
-		bl31_entry();
-	}
-
-	debug("loaded - jumping to U-Boot...\n");
 #ifdef CONFIG_BOOTSTAGE_STASH
 	int ret;
 
@@ -439,10 +464,13 @@ void board_init_r(gd_t *dummy1, ulong dummy2)
 	if (ret)
 		debug("Failed to stash bootstage: err=%d\n", ret);
 #endif
+
+	debug("loaded - jumping to U-Boot...\n");
 	spl_board_prepare_for_boot();
 	jump_to_image_no_args(&spl_image);
 }
 
+#ifdef CONFIG_SPL_SERIAL_SUPPORT
 /*
  * This requires UART clocks to be enabled.  In order for this to work the
  * caller must ensure that the gd pointer is valid.
@@ -455,12 +483,15 @@ void preloader_console_init(void)
 
 	gd->have_console = 1;
 
+#ifndef CONFIG_SPL_DISABLE_BANNER_PRINT
 	puts("\nU-Boot SPL " PLAIN_VERSION " (" U_BOOT_DATE " - " \
-			U_BOOT_TIME ")\n");
+			U_BOOT_TIME " " U_BOOT_TZ ")\n");
+#endif
 #ifdef CONFIG_SPL_DISPLAY_PRINT
 	spl_display_print();
 #endif
 }
+#endif
 
 /**
  * spl_relocate_stack_gd() - Relocate stack ready for board_init_r() execution
@@ -486,7 +517,7 @@ ulong spl_relocate_stack_gd(void)
 	gd_t *new_gd;
 	ulong ptr = CONFIG_SPL_STACK_R_ADDR;
 
-#ifdef CONFIG_SPL_SYS_MALLOC_SIMPLE
+#if defined(CONFIG_SPL_SYS_MALLOC_SIMPLE) && CONFIG_VAL(SYS_MALLOC_F_LEN)
 	if (CONFIG_SPL_STACK_R_MALLOC_SIMPLE_LEN) {
 		ptr -= CONFIG_SPL_STACK_R_MALLOC_SIMPLE_LEN;
 		gd->malloc_base = ptr;

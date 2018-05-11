@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2014 Soeren Moch <smoch@web.de>
  *
  * Configuration settings for the TBS2910 MatrixARM board.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __TBS2910_CONFIG_H
@@ -42,8 +41,6 @@
 #define CONFIG_MXC_UART
 #define CONFIG_MXC_UART_BASE		UART1_BASE /* select UART1/UART2 */
 
-#define CONFIG_CONS_INDEX		1
-
 /* Filesystems / image support */
 
 /* MMC */
@@ -59,20 +56,17 @@
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #define CONFIG_ETHPRIME			"FEC"
 #define CONFIG_FEC_MXC_PHYADDR		4
-#define CONFIG_PHYLIB
 #define CONFIG_PHY_ATHEROS
 
 /* Framebuffer */
 #ifdef CONFIG_VIDEO
 #define CONFIG_VIDEO_IPUV3
-#define CONFIG_IPUV3_CLK		260000000
 #define CONFIG_VIDEO_BMP_RLE8
 #define CONFIG_IMX_HDMI
 #define CONFIG_IMX_VIDEO_SKIP
 #endif
 
 /* PCI */
-#define CONFIG_CMD_PCI
 #ifdef CONFIG_CMD_PCI
 #define CONFIG_PCI_SCAN_SHOW
 #define CONFIG_PCIE_IMX
@@ -80,14 +74,11 @@
 #endif
 
 /* SATA */
-#define CONFIG_CMD_SATA
 #ifdef CONFIG_CMD_SATA
-#define CONFIG_DWC_AHSATA
 #define CONFIG_SYS_SATA_MAX_DEVICE	1
 #define CONFIG_DWC_AHSATA_PORT_ID	0
 #define CONFIG_DWC_AHSATA_BASE_ADDR	SATA_ARB_BASE_ADDR
 #define CONFIG_LBA48
-#define CONFIG_LIBATA
 #endif
 
 /* USB */
@@ -97,10 +88,8 @@
 #define CONFIG_MXC_USB_PORTSC		(PORT_PTS_UTMI | PORT_PTS_PTW)
 #ifdef CONFIG_CMD_USB_MASS_STORAGE
 #define CONFIG_USBD_HS
-#define CONFIG_USB_FUNCTION_MASS_STORAGE
 #endif /* CONFIG_CMD_USB_MASS_STORAGE */
 #ifdef CONFIG_USB_KEYBOARD
-#define CONFIG_SYS_USB_EVENT_POLL_VIA_INT_QUEUE
 #define CONFIG_PREBOOT \
 	"usb start; " \
 	"if hdmidet; then " \
@@ -129,7 +118,6 @@
 #endif
 
 /* Environment organization */
-#define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		2 /* overwritten on SD boot */
 #define CONFIG_SYS_MMC_ENV_PART		1 /* overwritten on SD boot */
 #define CONFIG_ENV_SIZE			(8 * 1024)

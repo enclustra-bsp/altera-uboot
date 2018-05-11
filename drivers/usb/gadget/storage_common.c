@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * storage_common.c -- Common definitions for mass storage functionality
  *
@@ -10,8 +11,6 @@
  *
  * Code refactoring & cleanup:
  * Łukasz Majewski <l.majewski@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 
@@ -309,7 +308,7 @@ static struct fsg_lun *fsg_lun_from_dev(struct device *dev)
 #define FSG_NUM_BUFFERS	2
 
 /* Default size of buffer length. */
-#define FSG_BUFLEN	((u32)16384)
+#define FSG_BUFLEN	((u32)131072)
 
 /* Maximal number of LUNs supported in mass storage function */
 #define FSG_MAX_LUNS	8

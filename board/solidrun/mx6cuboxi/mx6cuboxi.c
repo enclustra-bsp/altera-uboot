@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2015 Freescale Semiconductor, Inc.
  *
@@ -10,8 +11,6 @@
  *
  * Derived from EDM_CF_IMX6 code by TechNexion,Inc
  * Ported to SolidRun microSOM by Rabeeh Khoury <rabeeh@solid-run.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <asm/arch/clock.h>
@@ -21,8 +20,9 @@
 #include <asm/arch/mxc_hdmi.h>
 #include <linux/errno.h>
 #include <asm/gpio.h>
-#include <asm/imx-common/iomux-v3.h>
-#include <asm/imx-common/video.h>
+#include <asm/mach-imx/iomux-v3.h>
+#include <asm/mach-imx/sata.h>
+#include <asm/mach-imx/video.h>
 #include <mmc.h>
 #include <fsl_esdhc.h>
 #include <malloc.h>
@@ -307,25 +307,30 @@ int board_ehci_hcd_init(int port)
 
 int board_early_init_f(void)
 {
-	int ret = 0;
 	setup_iomux_uart();
 
-#ifdef CONFIG_VIDEO_IPUV3
-	ret = setup_display();
+#ifdef CONFIG_CMD_SATA
+	setup_sata();
 #endif
 
 #ifdef CONFIG_USB_EHCI_MX6
 	setup_usb();
 #endif
-	return ret;
+	return 0;
 }
 
 int board_init(void)
 {
+	int ret = 0;
+
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
 
-	return 0;
+#ifdef CONFIG_VIDEO_IPUV3
+	ret = setup_display();
+#endif
+
+	return ret;
 }
 
 static bool is_hummingboard(void)
@@ -344,6 +349,7 @@ static bool is_hummingboard(void)
 	 * Machine selection -
 	 * Machine        val1, val2
 	 * -------------------------
+	 * HB2            x     x
 	 * HB rev 3.x     x     0
 	 * CBi            0     1
 	 * HB             1     1
@@ -357,9 +363,37 @@ static bool is_hummingboard(void)
 		return true;
 }
 
+static bool is_hummingboard2(void)
+{
+	int val1;
+
+	SETUP_IOMUX_PADS(hb_cbi_sense);
+
+	gpio_direction_input(IMX_GPIO_NR(2, 8));
+
+        val1 = gpio_get_value(IMX_GPIO_NR(2, 8));
+
+	/*
+	 * Machine selection -
+	 * Machine        val1
+	 * -------------------
+	 * HB2            0
+	 * HB rev 3.x     x
+	 * CBi            x
+	 * HB             x
+	 */
+
+	if (val1 == 0)
+		return true;
+	else
+		return false;
+}
+
 int checkboard(void)
 {
-	if (is_hummingboard())
+	if (is_hummingboard2())
+		puts("Board: MX6 Hummingboard2\n");
+	else if (is_hummingboard())
 		puts("Board: MX6 Hummingboard\n");
 	else
 		puts("Board: MX6 Cubox-i\n");
@@ -370,15 +404,17 @@ int checkboard(void)
 int board_late_init(void)
 {
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
-	if (is_hummingboard())
-		setenv("board_name", "HUMMINGBOARD");
+	if (is_hummingboard2())
+		env_set("board_name", "HUMMINGBOARD2");
+	else if (is_hummingboard())
+		env_set("board_name", "HUMMINGBOARD");
 	else
-		setenv("board_name", "CUBOXI");
+		env_set("board_name", "CUBOXI");
 
 	if (is_mx6dq())
-		setenv("board_rev", "MX6Q");
+		env_set("board_rev", "MX6Q");
 	else
-		setenv("board_rev", "MX6DL");
+		env_set("board_rev", "MX6DL");
 #endif
 
 	return 0;
@@ -391,7 +427,7 @@ static const struct mx6dq_iomux_ddr_regs mx6q_ddr_ioregs = {
 	.dram_sdclk_1 =  0x00020030,
 	.dram_cas =  0x00020030,
 	.dram_ras =  0x00020030,
-	.dram_reset =  0x00020030,
+	.dram_reset =  0x000c0030,
 	.dram_sdcke0 =  0x00003000,
 	.dram_sdcke1 =  0x00003000,
 	.dram_sdba2 =  0x00000000,
@@ -547,7 +583,6 @@ static struct mx6_ddr3_cfg mem_ddr_2g = {
 	.trcd      = 1375,
 	.trcmin    = 4875,
 	.trasmin   = 3500,
-	.SRT       = 1,
 };
 
 static struct mx6_ddr3_cfg mem_ddr_4g = {
@@ -574,17 +609,6 @@ static void ccgr_init(void)
 	writel(0x00FFF300, &ccm->CCGR4);
 	writel(0x0F0000C3, &ccm->CCGR5);
 	writel(0x000003FF, &ccm->CCGR6);
-}
-
-static void gpr_init(void)
-{
-	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
-
-	/* enable AXI cache for VDOA/VPU/IPU */
-	writel(0xF00000CF, &iomux->gpr[4]);
-	/* set IPU AXI-id0 Qos=0xf(bypass) AXI-id1 Qos=0x7 */
-	writel(0x007F007F, &iomux->gpr[6]);
-	writel(0x007F007F, &iomux->gpr[7]);
 }
 
 static void spl_dram_init(int width)

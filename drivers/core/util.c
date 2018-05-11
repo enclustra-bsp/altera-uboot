@@ -1,13 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2013 Google, Inc
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
-#include <libfdt.h>
+#include <dm/util.h>
+#include <linux/libfdt.h>
 #include <vsprintf.h>
 
+#ifdef CONFIG_DM_WARN
 void dm_warn(const char *fmt, ...)
 {
 	va_list args;
@@ -16,15 +17,7 @@ void dm_warn(const char *fmt, ...)
 	vprintf(fmt, args);
 	va_end(args);
 }
-
-void dm_dbg(const char *fmt, ...)
-{
-	va_list args;
-
-	va_start(args, fmt);
-	vprintf(fmt, args);
-	va_end(args);
-}
+#endif
 
 int list_count_items(struct list_head *head)
 {

@@ -24,16 +24,12 @@
 /* Ethernet on SoC (EMAC) */
 #if defined(CONFIG_CMD_NET)
 #define CONFIG_PHY_INTERFACE_MODE	PHY_INTERFACE_MODE_RGMII
-#define CONFIG_PHY_MICREL
-#define CONFIG_PHY_MICREL_KSZ9021
-#define CONFIG_PHY_MICREL_KSZ9031
 #endif
 
 /* USB */
 #ifdef CONFIG_CMD_USB
 #define CONFIG_USB_DWC2_REG_ADDR	SOCFPGA_USB1_ADDRESS
 #endif
-#define CONFIG_G_DNL_MANUFACTURER      "Altera"
 
 /* QSPI Flash Memory Map */
 #define QSPI_PRELOADER_OFFSET		0x00000000  // Storage for Preloader
@@ -57,7 +53,7 @@
 #define QSPI_RAMDISK_SIZE		0x1000000  // size 16MB MiB
 #define CONFIG_SYS_MAX_FLASH_BANKS	1
 /* Extra Environment */
-#define CONFIG_HOSTNAME		socfpga_cyclone5
+#define CONFIG_HOSTNAME		"socfpga_cyclone5"
 #define CONFIG_BOOTCOMMAND 	"run modeboot"
 
 #define CONFIG_EXTRA_ENV_SETTINGS \

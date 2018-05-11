@@ -1,10 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Configuation settings for the Freescale MCF5475 board.
  *
  * Copyright (C) 2004-2008 Freescale Semiconductor, Inc.
  * TsiChung Liew (Tsi-Chung.Liew@freescale.com)
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -24,10 +23,6 @@
 
 #undef CONFIG_HW_WATCHDOG
 #define CONFIG_WATCHDOG_TIMEOUT	5000	/* timeout in milliseconds, max timeout is 6.71sec */
-
-/* Command line configuration */
-#define CONFIG_CMD_PCI
-#define CONFIG_CMD_REGINFO
 
 #define CONFIG_SLTTMR
 
@@ -69,9 +64,6 @@
 #ifdef CONFIG_CMD_USB
 #	define CONFIG_USB_OHCI_NEW
 
-#	ifndef CONFIG_CMD_PCI
-#		define CONFIG_CMD_PCI
-#	endif
 #	define CONFIG_PCI_OHCI
 
 #	undef CONFIG_SYS_USB_OHCI_BOARD_INIT
@@ -117,7 +109,7 @@
 #	define CONFIG_GATEWAYIP	192.162.1.1
 #endif				/* FEC_ENET */
 
-#define CONFIG_HOSTNAME		M547xEVB
+#define CONFIG_HOSTNAME		"M547xEVB"
 #define CONFIG_EXTRA_ENV_SETTINGS		\
 	"netdev=eth0\0"				\
 	"loadaddr=10000\0"			\
@@ -131,17 +123,7 @@
 	""
 
 #define CONFIG_PRAM		512	/* 512 KB */
-#define CONFIG_SYS_LONGHELP		/* undef to save memory */
 
-#ifdef CONFIG_CMD_KGDB
-#	define CONFIG_SYS_CBSIZE	1024	/* Console I/O Buffer Size */
-#else
-#	define CONFIG_SYS_CBSIZE	256	/* Console I/O Buffer Size */
-#endif
-
-#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)	/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS		16	/* max number of command args */
-#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE	/* Boot Argument Buffer Size    */
 #define CONFIG_SYS_LOAD_ADDR		0x00010000
 
 #define CONFIG_SYS_CLK			CONFIG_SYS_BUSCLK
@@ -233,7 +215,6 @@
  */
 #define CONFIG_ENV_OFFSET		0x40000
 #define CONFIG_ENV_SECT_SIZE	0x10000
-#define CONFIG_ENV_IS_IN_FLASH	1
 
 /*-----------------------------------------------------------------------
  * Cache Configuration

@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Rockchip Electronics Co., Ltd
  *
  * Based on kernel drivers/regulator/pwm-regulator.c
  * Copyright (C) 2014 - STMicroelectronics Inc.
  * Author: Lee Jones <lee.jones@linaro.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -13,7 +12,7 @@
 #include <errno.h>
 #include <pwm.h>
 #include <power/regulator.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <fdt_support.h>
 #include <fdtdec.h>
 
@@ -80,18 +79,14 @@ static int pwm_regulator_set_voltage(struct udevice *dev, int uvolt)
 	}
 
 	ret = pwm_set_config(priv->pwm, priv->pwm_id,
-			(priv->period_ns / 100) * duty_cycle, priv->period_ns);
+			priv->period_ns, (priv->period_ns / 100) * duty_cycle);
 	if (ret) {
 		dev_err(dev, "Failed to configure PWM\n");
 		return ret;
 	}
 
-	ret = pwm_set_enable(priv->pwm, priv->pwm_id, true);
-	if (ret) {
-		dev_err(dev, "Failed to enable PWM\n");
-		return ret;
-	}
 	priv->volt_uV = uvolt;
+
 	return ret;
 }
 
@@ -143,8 +138,6 @@ static int pwm_regulator_probe(struct udevice *dev)
 
 	if (priv->init_voltage)
 		pwm_regulator_set_voltage(dev, priv->init_voltage);
-
-	pwm_regulator_enable(dev, 1);
 
 	return 0;
 }

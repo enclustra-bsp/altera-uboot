@@ -1,6 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2016 Google, Inc
-#
-# SPDX-License-Identifier:      GPL-2.0+
 #
 # Base class for all entries
 #
@@ -197,4 +196,12 @@ class Entry(object):
         self.size = size
 
     def ProcessContents(self):
+        pass
+
+    def WriteSymbols(self, image):
+        """Write symbol values into binary files for access at run time
+
+        Args:
+          image: Image containing the entry
+        """
         pass

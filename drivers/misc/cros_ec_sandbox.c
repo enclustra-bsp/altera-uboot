@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Chromium OS cros_ec driver - sandbox emulation
  *
  * Copyright (c) 2013 The Chromium OS Authors.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -50,8 +49,6 @@
  * Other features can be added, although a better path is probably to link
  * the EC image in with U-Boot (Vic has demonstrated a prototype for this).
  */
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define KEYBOARD_ROWS	8
 #define KEYBOARD_COLS	13
@@ -197,7 +194,7 @@ static int keyscan_read_fdt_matrix(struct ec_state *ec, ofnode node)
 	int upto;
 	int len;
 
-	cell = ofnode_read_prop(node, "linux,keymap", &len);
+	cell = ofnode_get_property(node, "linux,keymap", &len);
 	ec->matrix_count = len / 4;
 	ec->matrix = calloc(ec->matrix_count, sizeof(*ec->matrix));
 	if (!ec->matrix) {

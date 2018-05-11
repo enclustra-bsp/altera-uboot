@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2008-2011
  * Graeme Russ, <graeme.russ@gmail.com>
@@ -15,8 +16,6 @@
  *
  * Part of this file is adapted from coreboot
  * src/arch/x86/lib/cpu.c
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -143,8 +142,8 @@ const char *cpu_vendor_name(int vendor)
 {
 	const char *name;
 	name = "<invalid cpu vendor>";
-	if ((vendor < (ARRAY_SIZE(x86_vendor_name))) &&
-	    (x86_vendor_name[vendor] != 0))
+	if (vendor < ARRAY_SIZE(x86_vendor_name) &&
+	    x86_vendor_name[vendor])
 		name = x86_vendor_name[vendor];
 
 	return name;

@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2016 Freescale Semiconductor
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __LS1046A_COMMON_H
@@ -35,8 +34,6 @@
 /* Link Definitions */
 #define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_FSL_OCRAM_BASE + 0xfff0)
 
-#define CONFIG_SUPPORT_RAW_INITRD
-
 #define CONFIG_SKIP_LOWLEVEL_INIT
 
 #define CONFIG_VERY_BIG_RAM
@@ -54,7 +51,6 @@
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 1024 * 1024)
 
 /* Serial Port */
-#define CONFIG_CONS_INDEX		1
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK          (get_serial_clock())
@@ -63,8 +59,6 @@
 
 /* SD boot SPL */
 #ifdef CONFIG_SD_BOOT
-#define CONFIG_SPL_FRAMEWORK
-#define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/armv8/u-boot-spl.lds"
 #define CONFIG_SPL_TARGET		"u-boot-with-spl.bin"
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
 #define CONFIG_SPL_LIBGENERIC_SUPPORT
@@ -72,7 +66,6 @@
 #define CONFIG_SPL_MPC8XXX_INIT_DDR_SUPPORT
 #define CONFIG_SPL_WATCHDOG_SUPPORT
 #define CONFIG_SPL_I2C_SUPPORT
-#define CONFIG_SPL_SERIAL_SUPPORT
 #define CONFIG_SPL_DRIVERS_MISC_SUPPORT
 
 #define CONFIG_SPL_MMC_SUPPORT
@@ -103,15 +96,12 @@
 /* NAND SPL */
 #ifdef CONFIG_NAND_BOOT
 #define CONFIG_SPL_PBL_PAD
-#define CONFIG_SPL_FRAMEWORK
-#define CONFIG_SPL_LDSCRIPT		"arch/arm/cpu/armv8/u-boot-spl.lds"
 #define CONFIG_SPL_TARGET		"u-boot-with-spl.bin"
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
 #define CONFIG_SPL_LIBGENERIC_SUPPORT
 #define CONFIG_SPL_ENV_SUPPORT
 #define CONFIG_SPL_WATCHDOG_SUPPORT
 #define CONFIG_SPL_I2C_SUPPORT
-#define CONFIG_SPL_SERIAL_SUPPORT
 #define CONFIG_SPL_MPC8XXX_INIT_DDR_SUPPORT
 
 #define CONFIG_SPL_NAND_SUPPORT
@@ -132,11 +122,6 @@
 
 /* I2C */
 #define CONFIG_SYS_I2C
-#define CONFIG_SYS_I2C_MXC
-#define CONFIG_SYS_I2C_MXC_I2C1
-#define CONFIG_SYS_I2C_MXC_I2C2
-#define CONFIG_SYS_I2C_MXC_I2C3
-#define CONFIG_SYS_I2C_MXC_I2C4
 
 /* PCIe */
 #define CONFIG_PCIE1		/* PCIE controller 1 */
@@ -145,7 +130,18 @@
 
 #ifdef CONFIG_PCI
 #define CONFIG_PCI_SCAN_SHOW
-#define CONFIG_CMD_PCI
+#endif
+
+/* SATA */
+#ifndef SPL_NO_SATA
+#define CONFIG_SCSI_AHCI_PLAT
+
+#define CONFIG_SYS_SATA				AHCI_BASE_ADDR
+
+#define CONFIG_SYS_SCSI_MAX_SCSI_ID		1
+#define CONFIG_SYS_SCSI_MAX_LUN			1
+#define CONFIG_SYS_SCSI_MAX_DEVICE		(CONFIG_SYS_SCSI_MAX_SCSI_ID * \
+						CONFIG_SYS_SCSI_MAX_LUN)
 #endif
 
 /* Command line configuration */
@@ -153,13 +149,8 @@
 /* MMC */
 #ifndef SPL_NO_MMC
 #ifdef CONFIG_MMC
-#define CONFIG_FSL_ESDHC
 #define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
 #endif
-#endif
-
-#ifndef SPL_NO_QBMAN
-#define CONFIG_SYS_DPAA_QBMAN		/* Support Q/Bman */
 #endif
 
 /* FMan ucode */
@@ -186,7 +177,7 @@
 #define CONFIG_ENV_SPI_MODE		0x03
 #elif defined(CONFIG_NAND_BOOT)
 #define CONFIG_SYS_QE_FMAN_FW_IN_NAND
-#define CONFIG_SYS_FMAN_FW_ADDR		(72 * CONFIG_SYS_NAND_BLOCK_SIZE)
+#define CONFIG_SYS_FMAN_FW_ADDR		(36 * CONFIG_SYS_NAND_BLOCK_SIZE)
 #else
 #define CONFIG_SYS_QE_FMAN_FW_IN_NOR
 #define CONFIG_SYS_FMAN_FW_ADDR		0x60900000
@@ -201,38 +192,90 @@
 #define CONFIG_HWCONFIG
 #define HWCONFIG_BUFFER_SIZE		128
 
+#ifndef CONFIG_SPL_BUILD
+#define BOOT_TARGET_DEVICES(func) \
+	func(SCSI, scsi, 0) \
+	func(MMC, mmc, 0) \
+	func(USB, usb, 0)
+#include <config_distro_bootcmd.h>
+#endif
+
 #ifndef SPL_NO_MISC
 /* Initial environment variables */
 #define CONFIG_EXTRA_ENV_SETTINGS		\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
-	"loadaddr=0x80100000\0"			\
 	"ramdisk_addr=0x800000\0"		\
 	"ramdisk_size=0x2000000\0"		\
 	"fdt_high=0xffffffffffffffff\0"		\
 	"initrd_high=0xffffffffffffffff\0"	\
+	"fdt_addr=0x64f00000\0"                 \
+	"kernel_addr=0x65000000\0"              \
+	"scriptaddr=0x80000000\0"               \
+	"scripthdraddr=0x80080000\0"		\
+	"fdtheader_addr_r=0x80100000\0"         \
+	"kernelheader_addr_r=0x80200000\0"      \
+	"load_addr=0xa0000000\0"            \
+	"kernel_addr_r=0x81000000\0"            \
+	"fdt_addr_r=0x90000000\0"               \
+	"ramdisk_addr_r=0xa0000000\0"           \
 	"kernel_start=0x1000000\0"		\
+	"kernelheader_start=0x800000\0"		\
 	"kernel_load=0xa0000000\0"		\
 	"kernel_size=0x2800000\0"		\
+	"kernelheader_size=0x40000\0"		\
+	"kernel_addr_sd=0x8000\0"		\
+	"kernel_size_sd=0x14000\0"		\
+	"kernelhdr_addr_sd=0x4000\0"		\
+	"kernelhdr_size_sd=0x10\0"		\
 	"console=ttyS0,115200\0"                \
-		MTDPARTS_DEFAULT "\0"
+	 CONFIG_MTDPARTS_DEFAULT "\0"		\
+	BOOTENV					\
+	"boot_scripts=ls1046ardb_boot.scr\0"    \
+	"boot_script_hdr=hdr_ls1046ardb_bs.out\0"	\
+	"scan_dev_for_boot_part="               \
+		"part list ${devtype} ${devnum} devplist; "   \
+		"env exists devplist || setenv devplist 1; "  \
+		"for distro_bootpart in ${devplist}; do "     \
+		  "if fstype ${devtype} "                  \
+			"${devnum}:${distro_bootpart} "      \
+			"bootfstype; then "                  \
+			"run scan_dev_for_boot; "            \
+		  "fi; "                                   \
+		"done\0"                                   \
+	"scan_dev_for_boot="				  \
+		"echo Scanning ${devtype} "		  \
+				"${devnum}:${distro_bootpart}...; "  \
+		"for prefix in ${boot_prefixes}; do "	  \
+			"run scan_dev_for_scripts; "	  \
+		"done;"					  \
+		"\0"					  \
+	"boot_a_script="				  \
+		"load ${devtype} ${devnum}:${distro_bootpart} "  \
+			"${scriptaddr} ${prefix}${script}; "    \
+		"env exists secureboot && load ${devtype} "     \
+			"${devnum}:${distro_bootpart} "		\
+			"${scripthdraddr} ${prefix}${boot_script_hdr} " \
+			"&& esbc_validate ${scripthdraddr};"    \
+		"source ${scriptaddr}\0"	  \
+	"qspi_bootcmd=echo Trying load from qspi..;"      \
+		"sf probe && sf read $load_addr "         \
+		"$kernel_start $kernel_size; env exists secureboot "	\
+		"&& sf read $kernelheader_addr_r $kernelheader_start "	\
+		"$kernelheader_size && esbc_validate ${kernelheader_addr_r}; " \
+		"bootm $load_addr#$board\0"		\
+	"sd_bootcmd=echo Trying load from SD ..;"	\
+		"mmcinfo; mmc read $load_addr "		\
+		"$kernel_addr_sd $kernel_size_sd && "	\
+		"env exists secureboot && mmc read $kernelheader_addr_r "		\
+		"$kernelhdr_addr_sd $kernelhdr_size_sd "		\
+		" && esbc_validate ${kernelheader_addr_r};"	\
+		"bootm $load_addr#$board\0"
 
-#define CONFIG_BOOTARGS			"console=ttyS0,115200 root=/dev/ram0 " \
-					"earlycon=uart8250,mmio,0x21c0500 " \
-					MTDPARTS_DEFAULT
 #endif
 
 /* Monitor Command Prompt */
 #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */
-#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE + \
-					sizeof(CONFIG_SYS_PROMPT) + 16)
-#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE /* Boot args buffer */
-#define CONFIG_SYS_LONGHELP
 
-#ifndef SPL_NO_MISC
-#define CONFIG_CMDLINE_EDITING		1
-#endif
-
-#define CONFIG_AUTO_COMPLETE
 #define CONFIG_SYS_MAXARGS		64	/* max command args */
 
 #define CONFIG_SYS_BOOTM_LEN   (64 << 20)      /* Increase max gunzip size */

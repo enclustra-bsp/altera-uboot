@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2008 Semihalf
  *
@@ -10,8 +11,6 @@
  *		some functions added to address abstraction
  *
  * All rights reserved.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include "imagetool.h"
@@ -185,7 +184,7 @@ static void get_basename(char *str, int size, const char *fname)
  * fit_write_images() - Write out a list of images to the FIT
  *
  * We always include the main image (params->datafile). If there are device
- * tree files, we include an fdt@ node for each of those too.
+ * tree files, we include an fdt- node for each of those too.
  */
 static int fit_write_images(struct image_tool_params *params, char *fdt)
 {
@@ -199,7 +198,7 @@ static int fit_write_images(struct image_tool_params *params, char *fdt)
 
 	/* First the main image */
 	typename = genimg_get_type_short_name(params->fit_image_type);
-	snprintf(str, sizeof(str), "%s@1", typename);
+	snprintf(str, sizeof(str), "%s-1", typename);
 	fdt_begin_node(fdt, str);
 	fdt_property_string(fdt, "description", params->imagename);
 	fdt_property_string(fdt, "type", typename);
@@ -225,7 +224,7 @@ static int fit_write_images(struct image_tool_params *params, char *fdt)
 	for (cont = params->content_head; cont; cont = cont->next) {
 		if (cont->type != IH_TYPE_FLATDT)
 			continue;
-		snprintf(str, sizeof(str), "%s@%d", FIT_FDT_PROP, ++upto);
+		snprintf(str, sizeof(str), "%s-%d", FIT_FDT_PROP, ++upto);
 		fdt_begin_node(fdt, str);
 
 		get_basename(str, sizeof(str), cont->fname);
@@ -243,7 +242,7 @@ static int fit_write_images(struct image_tool_params *params, char *fdt)
 
 	/* And a ramdisk file if available */
 	if (params->fit_ramdisk) {
-		fdt_begin_node(fdt, FIT_RAMDISK_PROP "@1");
+		fdt_begin_node(fdt, FIT_RAMDISK_PROP "-1");
 
 		fdt_property_string(fdt, "type", FIT_RAMDISK_PROP);
 		fdt_property_string(fdt, "os", genimg_get_os_short_name(params->os));
@@ -277,41 +276,41 @@ static void fit_write_configs(struct image_tool_params *params, char *fdt)
 	int upto;
 
 	fdt_begin_node(fdt, "configurations");
-	fdt_property_string(fdt, "default", "conf@1");
+	fdt_property_string(fdt, "default", "conf-1");
 
 	upto = 0;
 	for (cont = params->content_head; cont; cont = cont->next) {
 		if (cont->type != IH_TYPE_FLATDT)
 			continue;
 		typename = genimg_get_type_short_name(cont->type);
-		snprintf(str, sizeof(str), "conf@%d", ++upto);
+		snprintf(str, sizeof(str), "conf-%d", ++upto);
 		fdt_begin_node(fdt, str);
 
 		get_basename(str, sizeof(str), cont->fname);
 		fdt_property_string(fdt, "description", str);
 
 		typename = genimg_get_type_short_name(params->fit_image_type);
-		snprintf(str, sizeof(str), "%s@1", typename);
+		snprintf(str, sizeof(str), "%s-1", typename);
 		fdt_property_string(fdt, typename, str);
 
 		if (params->fit_ramdisk)
 			fdt_property_string(fdt, FIT_RAMDISK_PROP,
-					    FIT_RAMDISK_PROP "@1");
+					    FIT_RAMDISK_PROP "-1");
 
-		snprintf(str, sizeof(str), FIT_FDT_PROP "@%d", upto);
+		snprintf(str, sizeof(str), FIT_FDT_PROP "-%d", upto);
 		fdt_property_string(fdt, FIT_FDT_PROP, str);
 		fdt_end_node(fdt);
 	}
 
 	if (!upto) {
-		fdt_begin_node(fdt, "conf@1");
+		fdt_begin_node(fdt, "conf-1");
 		typename = genimg_get_type_short_name(params->fit_image_type);
-		snprintf(str, sizeof(str), "%s@1", typename);
+		snprintf(str, sizeof(str), "%s-1", typename);
 		fdt_property_string(fdt, typename, str);
 
 		if (params->fit_ramdisk)
 			fdt_property_string(fdt, FIT_RAMDISK_PROP,
-					    FIT_RAMDISK_PROP "@1");
+					    FIT_RAMDISK_PROP "-1");
 
 		fdt_end_node(fdt);
 	}
@@ -372,7 +371,7 @@ static int fit_build(struct image_tool_params *params, const char *fname)
 	if (fd < 0) {
 		fprintf(stderr, "%s: Can't open %s: %s\n",
 			params->cmdname, fname, strerror(errno));
-		goto err;
+		goto err_buf;
 	}
 	ret = write(fd, buf, size);
 	if (ret != size) {
@@ -501,6 +500,7 @@ static int fit_extract_data(struct image_tool_params *params, const char *fname)
 		ret = -EIO;
 		goto err;
 	}
+	free(buf);
 	close(fd);
 	return 0;
 
@@ -536,21 +536,21 @@ static int fit_import_data(struct image_tool_params *params, const char *fname)
 		fprintf(stderr, "%s: Failed to allocate memory (%d bytes)\n",
 			__func__, size);
 		ret = -ENOMEM;
-		goto err;
+		goto err_has_fd;
 	}
 	ret = fdt_open_into(old_fdt, fdt, size);
 	if (ret) {
 		debug("%s: Failed to expand FIT: %s\n", __func__,
 		      fdt_strerror(errno));
 		ret = -EINVAL;
-		goto err;
+		goto err_has_fd;
 	}
 
 	images = fdt_path_offset(fdt, FIT_IMAGES_PATH);
 	if (images < 0) {
 		debug("%s: Cannot find /images node: %d\n", __func__, images);
 		ret = -EINVAL;
-		goto err;
+		goto err_has_fd;
 	}
 
 	for (node = fdt_first_subnode(fdt, images);
@@ -571,11 +571,11 @@ static int fit_import_data(struct image_tool_params *params, const char *fname)
 			debug("%s: Failed to write property: %s\n", __func__,
 			      fdt_strerror(ret));
 			ret = -EINVAL;
-			goto err;
+			goto err_has_fd;
 		}
 	}
 
-	munmap(old_fdt, sbuf.st_size);
+	/* Close the old fd so we can re-use it. */
 	close(fd);
 
 	/* Pack the FDT and place the data after it */
@@ -588,21 +588,23 @@ static int fit_import_data(struct image_tool_params *params, const char *fname)
 	if (fd < 0) {
 		fprintf(stderr, "%s: Can't open %s: %s\n",
 			params->cmdname, fname, strerror(errno));
-		free(fdt);
-		return -EIO;
+		ret = -EIO;
+		goto err_no_fd;
 	}
 	if (write(fd, fdt, new_size) != new_size) {
 		debug("%s: Failed to write external data to file %s\n",
 		      __func__, strerror(errno));
 		ret = -EIO;
-		goto err;
+		goto err_has_fd;
 	}
 
 	ret = 0;
 
-err:
-	free(fdt);
+err_has_fd:
 	close(fd);
+err_no_fd:
+	munmap(old_fdt, sbuf.st_size);
+	free(fdt);
 	return ret;
 }
 
@@ -647,12 +649,12 @@ static int fit_handle_file(struct image_tool_params *params)
 		}
 		*cmd = '\0';
 	} else if (params->datafile) {
-		/* dtc -I dts -O dtb -p 500 datafile > tmpfile */
-		snprintf(cmd, sizeof(cmd), "%s %s %s > %s",
-			 MKIMAGE_DTC, params->dtc, params->datafile, tmpfile);
+		/* dtc -I dts -O dtb -p 500 -o tmpfile datafile */
+		snprintf(cmd, sizeof(cmd), "%s %s -o \"%s\" \"%s\"",
+			 MKIMAGE_DTC, params->dtc, tmpfile, params->datafile);
 		debug("Trying to execute \"%s\"\n", cmd);
 	} else {
-		snprintf(cmd, sizeof(cmd), "cp %s %s",
+		snprintf(cmd, sizeof(cmd), "cp \"%s\" \"%s\"",
 			 params->imagefile, tmpfile);
 	}
 	if (*cmd && system(cmd) == -1) {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * This file is part of UBIFS.
  *
@@ -8,8 +9,6 @@
  *
  * Authors: Artem Bityutskiy (Битюцкий Артём)
  *          Adrian Hunter
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -462,14 +461,10 @@ out:
 		dbg_gen("cannot find next direntry, error %d", err);
 
 out_free:
-	if (file->private_data)
-		kfree(file->private_data);
-	if (file)
-		free(file);
-	if (dentry)
-		free(dentry);
-	if (dir)
-		free(dir);
+	kfree(file->private_data);
+	free(file);
+	free(dentry);
+	free(dir);
 
 	return ret;
 }
@@ -941,7 +936,7 @@ int ubifs_load(char *filename, u32 addr, u32 size)
 
 	err = ubifs_read(filename, (void *)(uintptr_t)addr, 0, size, &actread);
 	if (err == 0) {
-		setenv_hex("filesize", actread);
+		env_set_hex("filesize", actread);
 		printf("Done\n");
 	}
 

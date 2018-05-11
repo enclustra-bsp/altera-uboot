@@ -1,19 +1,12 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2015 Freescale Semiconductor
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __LS1043ARDB_H__
 #define __LS1043ARDB_H__
 
 #include "ls1043a_common.h"
-
-#if defined(CONFIG_NAND_BOOT) || defined(CONFIG_SD_BOOT)
-#define CONFIG_SYS_TEXT_BASE		0x82000000
-#else
-#define CONFIG_SYS_TEXT_BASE		0x60100000
-#endif
 
 #define CONFIG_SYS_CLK_FREQ		100000000
 #define CONFIG_DDR_CLK_FREQ		100000000
@@ -28,13 +21,13 @@
 
 #define CONFIG_SYS_SPD_BUS_NUM		0
 
-#define CONFIG_FSL_DDR_BIST
 #ifndef CONFIG_SPL
-#define CONFIG_FSL_DDR_INTERACTIVE	/* Interactive debugging */
-#endif
 #define CONFIG_SYS_DDR_RAW_TIMING
+#define CONFIG_FSL_DDR_INTERACTIVE	/* Interactive debugging */
+#define CONFIG_FSL_DDR_BIST
 #define CONFIG_ECC_INIT_VIA_DDRCONTROLLER
 #define CONFIG_MEM_INIT_VALUE           0xdeadbeef
+#endif
 
 #ifdef CONFIG_RAMBOOT_PBL
 #define CONFIG_SYS_FSL_PBL_PBI board/freescale/ls1043ardb/ls1043ardb_pbi.cfg
@@ -46,6 +39,11 @@
 
 #ifdef CONFIG_SD_BOOT
 #define CONFIG_SYS_FSL_PBL_RCW board/freescale/ls1043ardb/ls1043ardb_rcw_sd.cfg
+#define CONFIG_CMD_SPL
+#define CONFIG_SYS_SPL_ARGS_ADDR	0x90000000
+#define CONFIG_SYS_MMCSD_RAW_MODE_KERNEL_SECTOR	0x10000
+#define CONFIG_SYS_MMCSD_RAW_MODE_ARGS_SECTOR	0x500
+#define CONFIG_SYS_MMCSD_RAW_MODE_ARGS_SECTORS	30
 #endif
 
 /*
@@ -129,7 +127,6 @@
 #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_MTD_NAND_VERIFY_WRITE
-#define CONFIG_CMD_NAND
 
 #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
 
@@ -233,16 +230,13 @@
 #endif
 
 #if defined(CONFIG_NAND_BOOT)
-#define CONFIG_ENV_IS_IN_NAND
 #define CONFIG_ENV_SIZE			0x2000
 #define CONFIG_ENV_OFFSET		(24 * CONFIG_SYS_NAND_BLOCK_SIZE)
 #elif defined(CONFIG_SD_BOOT)
 #define CONFIG_ENV_OFFSET		(3 * 1024 * 1024)
-#define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		0
 #define CONFIG_ENV_SIZE			0x2000
 #else
-#define CONFIG_ENV_IS_IN_FLASH
 #define CONFIG_ENV_ADDR			(CONFIG_SYS_FLASH_BASE + 0x300000)
 #define CONFIG_ENV_SECT_SIZE		0x20000
 #define CONFIG_ENV_SIZE			0x20000
@@ -253,8 +247,6 @@
 #define AQR105_IRQ_MASK			0x40000000
 
 #ifdef CONFIG_NET
-#define CONFIG_PHYLIB
-#define CONFIG_PHY_GIGE		/* Include GbE speed/duplex detection */
 #define CONFIG_PHY_VITESSE
 #define CONFIG_PHY_REALTEK
 #endif
@@ -285,21 +277,8 @@
 #endif
 #endif
 
-/* USB */
-#ifndef SPL_NO_USB
-#define CONFIG_HAS_FSL_XHCI_USB
-#ifdef CONFIG_HAS_FSL_XHCI_USB
-#define CONFIG_USB_XHCI_FSL
-#define CONFIG_USB_MAX_CONTROLLER_COUNT		3
-#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS	2
-#endif
-#endif
-
 /* SATA */
 #ifndef SPL_NO_SATA
-#define CONFIG_LIBATA
-#define CONFIG_SCSI_AHCI
-#define CONFIG_CMD_SCSI
 #ifndef CONFIG_CMD_EXT2
 #define CONFIG_CMD_EXT2
 #endif

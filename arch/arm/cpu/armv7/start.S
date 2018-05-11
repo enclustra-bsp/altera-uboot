@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * armboot - Startup Code for OMAP3530/ARM Cortex CPU-core
  *
@@ -9,8 +10,6 @@
  * Copyright (c) 2003	Richard Woodruff <r-woodruff2@ti.com>
  * Copyright (c) 2003	Kshitij <kshitij@ti.com>
  * Copyright (c) 2006-2008 Syed Mohammed Khasim <x0khasim@ti.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <asm-offsets.h>
@@ -31,6 +30,7 @@
 
 	.globl	reset
 	.globl	save_boot_params_ret
+	.type   save_boot_params_ret,%function
 #ifdef CONFIG_ARMV7_LPAE
 	.global	switch_to_hypervisor_ret
 #endif
@@ -187,6 +187,12 @@ ENTRY(cpu_init_cp15)
 	mcr	p15, 0, r0, c15, c0, 1	@ write diagnostic register
 #endif
 
+#ifdef CONFIG_ARM_ERRATA_845369
+	mrc     p15, 0, r0, c15, c0, 1	@ read diagnostic register
+	orr     r0, r0, #1 << 22	@ set bit #22
+	mcr     p15, 0, r0, c15, c0, 1	@ write diagnostic register
+#endif
+
 	mov	r5, lr			@ Store my Caller
 	mrc	p15, 0, r1, c0, c0, 0	@ r1 has Read Main ID Register (MIDR)
 	mov	r3, r1, lsr #20		@ get variant field
@@ -232,55 +238,47 @@ skip_errata_801819:
 #endif
 
 #ifdef CONFIG_ARM_ERRATA_454179
-	cmp	r2, #0x21		@ Only on < r2p1
-	bge	skip_errata_454179
-
 	mrc	p15, 0, r0, c1, c0, 1	@ Read ACR
-	orr	r0, r0, #(0x3 << 6)	@ Set DBSM(BIT7) and IBE(BIT6) bits
+
+	cmp	r2, #0x21		@ Only on < r2p1
+	orrlt	r0, r0, #(0x3 << 6)	@ Set DBSM(BIT7) and IBE(BIT6) bits
+
 	push	{r1-r5}			@ Save the cpu info registers
 	bl	v7_arch_cp15_set_acr
 	pop	{r1-r5}			@ Restore the cpu info - fall through
-
-skip_errata_454179:
 #endif
 
 #ifdef CONFIG_ARM_ERRATA_430973
-	cmp	r2, #0x21		@ Only on < r2p1
-	bge	skip_errata_430973
-
 	mrc	p15, 0, r0, c1, c0, 1	@ Read ACR
-	orr	r0, r0, #(0x1 << 6)	@ Set IBE bit
+
+	cmp	r2, #0x21		@ Only on < r2p1
+	orrlt	r0, r0, #(0x1 << 6)	@ Set IBE bit
+
 	push	{r1-r5}			@ Save the cpu info registers
 	bl	v7_arch_cp15_set_acr
 	pop	{r1-r5}			@ Restore the cpu info - fall through
-
-skip_errata_430973:
 #endif
 
 #ifdef CONFIG_ARM_ERRATA_621766
-	cmp	r2, #0x21		@ Only on < r2p1
-	bge	skip_errata_621766
-
 	mrc	p15, 0, r0, c1, c0, 1	@ Read ACR
-	orr	r0, r0, #(0x1 << 5)	@ Set L1NEON bit
+
+	cmp	r2, #0x21		@ Only on < r2p1
+	orrlt	r0, r0, #(0x1 << 5)	@ Set L1NEON bit
+
 	push	{r1-r5}			@ Save the cpu info registers
 	bl	v7_arch_cp15_set_acr
 	pop	{r1-r5}			@ Restore the cpu info - fall through
-
-skip_errata_621766:
 #endif
 
 #ifdef CONFIG_ARM_ERRATA_725233
-	cmp	r2, #0x21		@ Only on < r2p1 (Cortex A8)
-	bge	skip_errata_725233
-
 	mrc	p15, 1, r0, c9, c0, 2	@ Read L2ACR
-	orr	r0, r0, #(0x1 << 27)	@ L2 PLD data forwarding disable
+
+	cmp	r2, #0x21		@ Only on < r2p1 (Cortex A8)
+	orrlt	r0, r0, #(0x1 << 27)	@ L2 PLD data forwarding disable
+
 	push	{r1-r5}			@ Save the cpu info registers
 	bl	v7_arch_cp15_set_l2aux_ctrl
 	pop	{r1-r5}			@ Restore the cpu info - fall through
-
-skip_errata_725233:
 #endif
 
 #ifdef CONFIG_ARM_ERRATA_852421

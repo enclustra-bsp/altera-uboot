@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2011
  * Marvell Semiconductor <www.marvell.com>
  * Written-by: Lei Wen <leiwen@marvell.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -61,7 +60,6 @@
  */
 #ifdef CONFIG_CMD_SF
 #define CONFIG_HARD_SPI			1
-#define CONFIG_KIRKWOOD_SPI		1
 #ifndef CONFIG_ENV_SPI_BUS
 # define CONFIG_ENV_SPI_BUS		0
 #endif
@@ -97,7 +95,6 @@
  */
 #ifdef CONFIG_IDE
 #define __io
-#define CONFIG_MVSATA_IDE
 #define CONFIG_IDE_PREINIT
 #define CONFIG_MVSATA_IDE_USE_PORT1
 /* Needs byte-swapping for ATA data register */

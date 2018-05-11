@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * (C) Copyright 2005
  * 2N Telekomunikace, a.s. <www.2n.cz>
  * Ladislav Michl <michl@2n.cz>
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -15,12 +14,9 @@
 #define CONFIG_SYS_NAND_BASE_LIST { CONFIG_SYS_NAND_BASE }
 #endif
 
-DECLARE_GLOBAL_DATA_PTR;
-
 int nand_curr_device = -1;
 
-
-struct mtd_info *nand_info[CONFIG_SYS_MAX_NAND_DEVICE];
+static struct mtd_info *nand_info[CONFIG_SYS_MAX_NAND_DEVICE];
 
 #ifndef CONFIG_SYS_NAND_SELF_INIT
 static struct nand_chip nand_chip[CONFIG_SYS_MAX_NAND_DEVICE];
@@ -31,12 +27,21 @@ static char dev_name[CONFIG_SYS_MAX_NAND_DEVICE][8];
 
 static unsigned long total_nand_size; /* in kiB */
 
+struct mtd_info *get_nand_dev_by_index(int dev)
+{
+	if (dev < 0 || dev >= CONFIG_SYS_MAX_NAND_DEVICE || !nand_info[dev] ||
+	    !nand_info[dev]->name)
+		return NULL;
+
+	return nand_info[dev];
+}
+
 int nand_mtd_to_devnum(struct mtd_info *mtd)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(nand_info); i++) {
-		if (mtd && nand_info[i] == mtd)
+	for (i = 0; i < CONFIG_SYS_MAX_NAND_DEVICE; i++) {
+		if (mtd && get_nand_dev_by_index(i) == mtd)
 			return i;
 	}
 
@@ -101,8 +106,9 @@ static void create_mtd_concat(void)
 	int i;
 
 	for (i = 0; i < CONFIG_SYS_MAX_NAND_DEVICE; i++) {
-		if (nand_info[i] != NULL) {
-			nand_info_list[nand_devices_found] = nand_info[i];
+		struct mtd_info *mtd = get_nand_dev_by_index(i);
+		if (mtd != NULL) {
+			nand_info_list[nand_devices_found] = mtd;
 			nand_devices_found++;
 		}
 	}
@@ -161,7 +167,7 @@ void nand_init(void)
 	/*
 	 * Select the chip in the board/cpu specific driver
 	 */
-	board_nand_select_device(mtd_to_nand(nand_info[nand_curr_device]),
+	board_nand_select_device(mtd_to_nand(get_nand_dev_by_index(nand_curr_device)),
 				 nand_curr_device);
 #endif
 

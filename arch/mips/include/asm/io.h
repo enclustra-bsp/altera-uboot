@@ -1,11 +1,10 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (C) 1994, 1995 Waldorf GmbH
  * Copyright (C) 1994 - 2000, 06 Ralf Baechle
  * Copyright (C) 1999, 2000 Silicon Graphics, Inc.
  * Copyright (C) 2004, 2005  MIPS Technologies, Inc.  All rights reserved.
  *	Author: Maciej W. Rozycki <macro@mips.com>
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 #ifndef _ASM_IO_H
 #define _ASM_IO_H
@@ -95,6 +94,7 @@ static inline unsigned long virt_to_phys(volatile const void *address)
 #endif
 	return CPHYSADDR(addr);
 }
+#define virt_to_phys virt_to_phys
 
 /*
  *     phys_to_virt    -       map physical address to virtual
@@ -112,6 +112,7 @@ static inline void *phys_to_virt(unsigned long address)
 {
 	return (void *)(address + PAGE_OFFSET - PHYS_OFFSET);
 }
+#define phys_to_virt phys_to_virt
 
 /*
  * ISA I/O bus memory addresses are 1:1 with the physical address.
@@ -490,10 +491,7 @@ static inline void memcpy_toio(volatile void __iomem *dst, const void *src, int 
  */
 #define sync()		mmiowb()
 
-#define MAP_NOCACHE	(1)
-#define MAP_WRCOMBINE	(0)
-#define MAP_WRBACK	(0)
-#define MAP_WRTHROUGH	(0)
+#define MAP_NOCACHE	1
 
 static inline void *
 map_physmem(phys_addr_t paddr, unsigned long len, unsigned long flags)
@@ -503,13 +501,7 @@ map_physmem(phys_addr_t paddr, unsigned long len, unsigned long flags)
 
 	return (void *)CKSEG0ADDR(paddr);
 }
-
-/*
- * Take down a mapping set up by map_physmem().
- */
-static inline void unmap_physmem(void *vaddr, unsigned long flags)
-{
-}
+#define map_physmem map_physmem
 
 #define __BUILD_CLRBITS(bwlq, sfx, end, type)				\
 									\
@@ -565,5 +557,7 @@ BUILD_CLRSETBITS(l, 32, _, u32)
 BUILD_CLRSETBITS(q, le64, le64, u64)
 BUILD_CLRSETBITS(q, be64, be64, u64)
 BUILD_CLRSETBITS(q, 64, _, u64)
+
+#include <asm-generic/io.h>
 
 #endif /* _ASM_IO_H */

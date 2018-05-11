@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2017 Logic PD, Inc.
  *
  * Configuration settings for the LogicPD i.MX6 SOM.
- *
- * SPDX-License-Identifier:    GPL-2.0+
  */
 
 #ifndef __IMX6LOGIC_CONFIG_H
@@ -12,13 +11,10 @@
 #define CONFIG_MXC_UART_BASE   UART1_BASE
 #define CONSOLE_DEV            "ttymxc0"
 
-#include <config_distro_defaults.h>
 #include "mx6_common.h"
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN          (10 * SZ_1M)
-
-#define CONFIG_MXC_UART
 
 /* MMC Configs */
 #define CONFIG_SYS_FSL_ESDHC_ADDR      0
@@ -30,10 +26,6 @@
 #define CONFIG_FEC_XCV_TYPE            RMII
 #define CONFIG_ETHPRIME                "FEC"
 #define CONFIG_FEC_MXC_PHYADDR         0
-#define CONFIG_PHYLIB
-#define CONFIG_PHY_SMSC
-
-#define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"script=boot.scr\0" \
@@ -141,12 +133,10 @@
 
 /* Environment organization */
 #define CONFIG_ENV_SIZE                        (8 * 1024)
-#define CONFIG_ENV_IS_IN_NAND
 #define CONFIG_ENV_OFFSET             0x400000
 #define CONFIG_ENV_SECT_SIZE          CONFIG_ENV_SIZE
 
 /* NAND stuff */
-#define CONFIG_CMD_NAND_TRIMFFS
 #define CONFIG_SYS_MAX_NAND_DEVICE     1
 #define CONFIG_SYS_NAND_BASE           0x40000000
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
@@ -156,16 +146,9 @@
 
 /* MTD device */
 # define CONFIG_MTD_DEVICE
-# define CONFIG_CMD_MTDPARTS
 # define CONFIG_MTD_PARTITIONS
-# define MTDIDS_DEFAULT		"nand0=gpmi-nand"
-# define MTDPARTS_DEFAULT	"mtdparts=gpmi-nand:4m(uboot)," \
-					"1m(env),16m(kernel),1m(dtb),-(fs)"
 
 /* DMA stuff, needed for GPMI/MXS NAND support */
-#define CONFIG_APBH_DMA
-#define CONFIG_APBH_DMA_BURST
-#define CONFIG_APBH_DMA_BURST8
 
 /* EEPROM  contains serial no, MAC addr and other Logic PD info */
 #define CONFIG_I2C_EEPROM

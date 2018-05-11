@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Common LCD routines
  *
  * (C) Copyright 2001-2002
  * Wolfgang Denk, DENX Software Engineering -- wd@denx.de
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* #define DEBUG */
@@ -223,7 +222,7 @@ void lcd_clear(void)
 	/* Paint the logo and retrieve LCD base address */
 	debug("[LCD] Drawing the logo...\n");
 	if (do_splash) {
-		s = getenv("splashimage");
+		s = env_get("splashimage");
 		if (s) {
 			do_splash = 0;
 			addr = simple_strtoul(s, NULL, 16);
@@ -578,7 +577,7 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 	unsigned long pwidth = panel_info.vl_col;
 	unsigned colors, bpix, bmp_bpix;
 	int hdr_size;
-	struct bmp_color_table_entry *palette = bmp->color_table;
+	struct bmp_color_table_entry *palette;
 
 	if (!bmp || !(bmp->header.signature[0] == 'B' &&
 		bmp->header.signature[1] == 'M')) {
@@ -587,6 +586,7 @@ int lcd_display_bitmap(ulong bmp_image, int x, int y)
 		return 1;
 	}
 
+	palette = bmp->color_table;
 	width = get_unaligned_le32(&bmp->header.width);
 	height = get_unaligned_le32(&bmp->header.height);
 	bmp_bpix = get_unaligned_le16(&bmp->header.bit_count);

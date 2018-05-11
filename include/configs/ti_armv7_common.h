@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * ti_armv7_common.h
  *
  * Copyright (C) 2013 Texas Instruments Incorporated - http://www.ti.com/
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * The various ARMv7 SoCs from TI all share a number of IP blocks when
  * implementing a given feature.  Rather than define these in every
@@ -53,7 +52,7 @@
 
 #define DEFAULT_FIT_TI_ARGS \
 	"boot_fit=0\0" \
-	"fit_loadaddr=0x88000000\0" \
+	"fit_loadaddr=0x87000000\0" \
 	"fit_bootfile=fitImage\0" \
 	"update_to_fit=setenv loadaddr ${fit_loadaddr}; setenv bootfile ${fit_bootfile}\0" \
 	"loadfit=run args_mmc; bootm ${loadaddr}#${fdtfile};\0" \
@@ -98,11 +97,6 @@
 #define CONFIG_DM_I2C_COMPAT
 #endif
 
-/* McSPI IP block */
-#define CONFIG_SPI
-
-/* GPIO block */
-
 /*
  * The following are general good-enough settings for U-Boot.  We set a
  * large malloc pool as we generally have a lot of DDR, and we opt for
@@ -113,22 +107,15 @@
  * console baudrate of 115200 and use the default baud rate table.
  */
 #define CONFIG_SYS_MALLOC_LEN		SZ_32M
-#define CONFIG_ENV_VARS_UBOOT_CONFIG	/* Strongly encouraged */
 #define CONFIG_ENV_OVERWRITE		/* Overwrite ethaddr / serial# */
 
 /* As stated above, the following choices are optional. */
-#define CONFIG_SYS_LONGHELP
-#define CONFIG_AUTO_COMPLETE
-#define CONFIG_CMDLINE_EDITING
 
 /* We set the max number of command args high to avoid HUSH bugs. */
 #define CONFIG_SYS_MAXARGS		64
 
 /* Console I/O Buffer Size */
 #define CONFIG_SYS_CBSIZE		1024
-/* Print Buffer Size */
-#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE \
-					+ sizeof(CONFIG_SYS_PROMPT) + 16)
 /* Boot Argument Buffer Size */
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 
@@ -139,10 +126,7 @@
  */
 #if defined(CONFIG_SPI_BOOT) || defined(CONFIG_NOR) || defined(CONFIG_NAND) || defined(CONFIG_NAND_DAVINCI)
 #define CONFIG_MTD_DEVICE		/* Required for mtdparts */
-#define CONFIG_CMD_MTDPARTS
 #endif
-
-#define CONFIG_SUPPORT_RAW_INITRD
 
 /*
  * Our platforms make use of SPL to initalize the hardware (primarily
@@ -152,7 +136,6 @@
  */
 #if !defined(CONFIG_NOR_BOOT) && \
 	!(defined(CONFIG_QSPI_BOOT) && defined(CONFIG_AM43XX))
-#define CONFIG_SPL_FRAMEWORK
 
 /*
  * We also support Falcon Mode so that the Linux kernel can be booted
@@ -171,9 +154,6 @@
  * of the BSS area.  We suggest that the stack be placed at 32MiB after the
  * start of DRAM to allow room for all of the above (handled in Kconfig).
  */
-#ifndef CONFIG_SYS_TEXT_BASE
-#define CONFIG_SYS_TEXT_BASE		0x80800000
-#endif
 #ifndef CONFIG_SPL_BSS_START_ADDR
 #define CONFIG_SPL_BSS_START_ADDR	0x80a00000
 #define CONFIG_SPL_BSS_MAX_SIZE		0x80000		/* 512 KB */
@@ -202,10 +182,6 @@
 #define CONFIG_SYS_MMCSD_RAW_MODE_KERNEL_SECTOR	0x1700  /* address 0x2E0000 */
 #define CONFIG_SYS_MMCSD_RAW_MODE_ARGS_SECTOR	0x1500  /* address 0x2A0000 */
 #define CONFIG_SYS_MMCSD_RAW_MODE_ARGS_SECTORS	0x200   /* 256KiB */
-
-
-/* spl export command */
-#define CONFIG_CMD_SPL
 #endif
 
 /* General parts of the framework, required. */
@@ -243,7 +219,5 @@
 #else
 #define NETARGS ""
 #endif
-
-#include <config_distro_defaults.h>
 
 #endif	/* __CONFIG_TI_ARMV7_COMMON_H__ */

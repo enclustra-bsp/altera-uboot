@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2016
  *
  * Michael Kurz, <michi.kurz@gmail.com>
  *
  * STM32 QSPI driver
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -16,7 +15,6 @@
 #include <dm.h>
 #include <errno.h>
 #include <asm/arch/stm32.h>
-#include <asm/arch/stm32_defs.h>
 #include <clk.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -165,6 +163,7 @@ struct stm32_qspi_platdata {
 
 struct stm32_qspi_priv {
 	struct stm32_qspi_regs *regs;
+	ulong clock_rate;
 	u32 max_hz;
 	u32 mode;
 
@@ -471,6 +470,13 @@ static int stm32_qspi_probe(struct udevice *bus)
 		dev_err(bus, "failed to enable clock\n");
 		return ret;
 	}
+
+	priv->clock_rate = clk_get_rate(&clk);
+	if (priv->clock_rate < 0) {
+		clk_disable(&clk);
+		return priv->clock_rate;
+	}
+
 #endif
 
 	setbits_le32(&priv->regs->cr, STM32_QSPI_CR_SSHIFT);
@@ -536,7 +542,7 @@ static int stm32_qspi_set_speed(struct udevice *bus, uint speed)
 	if (speed > plat->max_hz)
 		speed = plat->max_hz;
 
-	u32 qspi_clk = clock_get(CLOCK_AHB);
+	u32 qspi_clk = priv->clock_rate;
 	u32 prescaler = 255;
 	if (speed > 0) {
 		prescaler = DIV_ROUND_UP(qspi_clk, speed) - 1;

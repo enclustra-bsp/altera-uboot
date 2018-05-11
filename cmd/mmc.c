@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2003
  * Kyle Harris, kharris@nexus-tech.net
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -23,7 +22,12 @@ static void print_mmcinfo(struct mmc *mmc)
 			(mmc->cid[1] >> 24), (mmc->cid[1] >> 16) & 0xff,
 			(mmc->cid[1] >> 8) & 0xff, mmc->cid[1] & 0xff);
 
-	printf("Tran Speed: %d\n", mmc->tran_speed);
+	printf("Bus Speed: %d\n", mmc->clock);
+#if CONFIG_IS_ENABLED(MMC_VERBOSE)
+	printf("Mode : %s\n", mmc_mode_name(mmc->selected_mode));
+	mmc_dump_capabilities("card capabilities", mmc->card_caps);
+	mmc_dump_capabilities("host capabilities", mmc->host_caps);
+#endif
 	printf("Rd Block Len: %d\n", mmc->read_bl_len);
 
 	printf("%s version %d.%d", IS_SD(mmc) ? "SD" : "MMC",
@@ -40,15 +44,19 @@ static void print_mmcinfo(struct mmc *mmc)
 	printf("Bus Width: %d-bit%s\n", mmc->bus_width,
 			mmc->ddr_mode ? " DDR" : "");
 
+#if CONFIG_IS_ENABLED(MMC_WRITE)
 	puts("Erase Group Size: ");
 	print_size(((u64)mmc->erase_grp_size) << 9, "\n");
+#endif
 
 	if (!IS_SD(mmc) && mmc->version >= MMC_VERSION_4_41) {
 		bool has_enh = (mmc->part_support & ENHNCD_SUPPORT) != 0;
 		bool usr_enh = has_enh && (mmc->part_attr & EXT_CSD_ENH_USR);
 
+#if CONFIG_IS_ENABLED(MMC_HW_PARTITIONING)
 		puts("HC WP Group Size: ");
 		print_size(((u64)mmc->hc_wp_grp_size) << 9, "\n");
+#endif
 
 		puts("User Capacity: ");
 		print_size(mmc->capacity_user, usr_enh ? " ENH" : "");
@@ -253,7 +261,11 @@ static int do_mmcrpmb(cmd_tbl_t *cmdtp, int flag,
 		return CMD_RET_FAILURE;
 	}
 	/* Switch to the RPMB partition */
+#ifndef CONFIG_BLK
 	original_part = mmc->block_dev.hwpart;
+#else
+	original_part = mmc_get_blk_desc(mmc)->hwpart;
+#endif
 	if (blk_select_hwpart_devnum(IF_TYPE_MMC, curr_device, MMC_PART_RPMB) !=
 	    0)
 		return CMD_RET_FAILURE;
@@ -289,12 +301,12 @@ static int do_mmc_read(cmd_tbl_t *cmdtp, int flag,
 	       curr_device, blk, cnt);
 
 	n = blk_dread(mmc_get_blk_desc(mmc), blk, cnt, addr);
-	/* flush cache after read */
-	flush_cache((ulong)addr, cnt * 512); /* FIXME */
 	printf("%d blocks read: %s\n", n, (n == cnt) ? "OK" : "ERROR");
 
 	return (n == cnt) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 }
+
+#if CONFIG_IS_ENABLED(MMC_WRITE)
 static int do_mmc_write(cmd_tbl_t *cmdtp, int flag,
 			int argc, char * const argv[])
 {
@@ -353,6 +365,8 @@ static int do_mmc_erase(cmd_tbl_t *cmdtp, int flag,
 
 	return (n == cnt) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 }
+#endif
+
 static int do_mmc_rescan(cmd_tbl_t *cmdtp, int flag,
 			 int argc, char * const argv[])
 {
@@ -431,6 +445,7 @@ static int do_mmc_list(cmd_tbl_t *cmdtp, int flag,
 	return CMD_RET_SUCCESS;
 }
 
+#if CONFIG_IS_ENABLED(MMC_HW_PARTITIONING)
 static int parse_hwpart_user(struct mmc_hwpart_conf *pconf,
 			     int argc, char * const argv[])
 {
@@ -580,6 +595,7 @@ static int do_mmc_hwpartition(cmd_tbl_t *cmdtp, int flag,
 		return CMD_RET_FAILURE;
 	}
 }
+#endif
 
 #ifdef CONFIG_SUPPORT_EMMC_BOOT
 static int do_mmc_bootbus(cmd_tbl_t *cmdtp, int flag,
@@ -639,6 +655,28 @@ static int do_mmc_boot_resize(cmd_tbl_t *cmdtp, int flag,
 	printf("EMMC RPMB partition Size %d MB\n", rpmbsize);
 	return CMD_RET_SUCCESS;
 }
+
+static int mmc_partconf_print(struct mmc *mmc)
+{
+	u8 ack, access, part;
+
+	if (mmc->part_config == MMCPART_NOAVAILABLE) {
+		printf("No part_config info for ver. 0x%x\n", mmc->version);
+		return CMD_RET_FAILURE;
+	}
+
+	access = EXT_CSD_EXTRACT_PARTITION_ACCESS(mmc->part_config);
+	ack = EXT_CSD_EXTRACT_BOOT_ACK(mmc->part_config);
+	part = EXT_CSD_EXTRACT_BOOT_PART(mmc->part_config);
+
+	printf("EXT_CSD[179], PARTITION_CONFIG:\n"
+		"BOOT_ACK: 0x%x\n"
+		"BOOT_PARTITION_ENABLE: 0x%x\n"
+		"PARTITION_ACCESS: 0x%x\n", ack, part, access);
+
+	return CMD_RET_SUCCESS;
+}
+
 static int do_mmc_partconf(cmd_tbl_t *cmdtp, int flag,
 			   int argc, char * const argv[])
 {
@@ -646,13 +684,10 @@ static int do_mmc_partconf(cmd_tbl_t *cmdtp, int flag,
 	struct mmc *mmc;
 	u8 ack, part_num, access;
 
-	if (argc != 5)
+	if (argc != 2 && argc != 5)
 		return CMD_RET_USAGE;
 
 	dev = simple_strtoul(argv[1], NULL, 10);
-	ack = simple_strtoul(argv[2], NULL, 10);
-	part_num = simple_strtoul(argv[3], NULL, 10);
-	access = simple_strtoul(argv[4], NULL, 10);
 
 	mmc = init_mmc_device(dev, false);
 	if (!mmc)
@@ -662,6 +697,13 @@ static int do_mmc_partconf(cmd_tbl_t *cmdtp, int flag,
 		puts("PARTITION_CONFIG only exists on eMMC\n");
 		return CMD_RET_FAILURE;
 	}
+
+	if (argc == 2)
+		return mmc_partconf_print(mmc);
+
+	ack = simple_strtoul(argv[2], NULL, 10);
+	part_num = simple_strtoul(argv[3], NULL, 10);
+	access = simple_strtoul(argv[4], NULL, 10);
 
 	/* acknowledge to be sent during boot operation */
 	return mmc_set_part_conf(mmc, ack, part_num, access);
@@ -757,13 +799,17 @@ static int do_mmc_bkops_enable(cmd_tbl_t *cmdtp, int flag,
 static cmd_tbl_t cmd_mmc[] = {
 	U_BOOT_CMD_MKENT(info, 1, 0, do_mmcinfo, "", ""),
 	U_BOOT_CMD_MKENT(read, 4, 1, do_mmc_read, "", ""),
+#if CONFIG_IS_ENABLED(MMC_WRITE)
 	U_BOOT_CMD_MKENT(write, 4, 0, do_mmc_write, "", ""),
 	U_BOOT_CMD_MKENT(erase, 3, 0, do_mmc_erase, "", ""),
+#endif
 	U_BOOT_CMD_MKENT(rescan, 1, 1, do_mmc_rescan, "", ""),
 	U_BOOT_CMD_MKENT(part, 1, 1, do_mmc_part, "", ""),
 	U_BOOT_CMD_MKENT(dev, 3, 0, do_mmc_dev, "", ""),
 	U_BOOT_CMD_MKENT(list, 1, 1, do_mmc_list, "", ""),
+#if CONFIG_IS_ENABLED(MMC_HW_PARTITIONING)
 	U_BOOT_CMD_MKENT(hwpartition, 28, 0, do_mmc_hwpartition, "", ""),
+#endif
 #ifdef CONFIG_SUPPORT_EMMC_BOOT
 	U_BOOT_CMD_MKENT(bootbus, 5, 0, do_mmc_bootbus, "", ""),
 	U_BOOT_CMD_MKENT(bootpart-resize, 4, 0, do_mmc_boot_resize, "", ""),
@@ -828,8 +874,8 @@ U_BOOT_CMD(
 	" - Set the BOOT_BUS_WIDTH field of the specified device\n"
 	"mmc bootpart-resize <dev> <boot part size MB> <RPMB part size MB>\n"
 	" - Change sizes of boot and RPMB partitions of specified device\n"
-	"mmc partconf dev boot_ack boot_partition partition_access\n"
-	" - Change the bits of the PARTITION_CONFIG field of the specified device\n"
+	"mmc partconf dev [boot_ack boot_partition partition_access]\n"
+	" - Show or change the bits of the PARTITION_CONFIG field of the specified device\n"
 	"mmc rst-function dev value\n"
 	" - Change the RST_n_FUNCTION field of the specified device\n"
 	"   WARNING: This is a write-once field and 0 / 1 / 2 are the only valid values.\n"

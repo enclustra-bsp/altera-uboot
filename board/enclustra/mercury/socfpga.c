@@ -264,7 +264,7 @@ int board_late_init(void) {
 	/* Initialize all i2c adapters */
 	socfpga_i2c_init_all();
 
-	if (getenv("ethaddr") == NULL) {
+	if (env_get("ethaddr") == NULL) {
 		/* Choose correct i2c device */
 		i2c_set_bus_num(0);
 		for (i = 0; i < ARRAY_SIZE(eeproms); i++) {
@@ -296,12 +296,12 @@ int board_late_init(void) {
 				continue;
 
 			/* Set the actual env variable */
-			setenv("ethaddr", hwaddr_str);
+			env_set("ethaddr", hwaddr_str);
 			hwaddr_set = true;
 			break;
 		}
 		if (!hwaddr_set)
-			setenv("ethaddr", ENCLUSTRA_ETHADDR_DEFAULT);
+			env_set("ethaddr", ENCLUSTRA_ETHADDR_DEFAULT);
 	}
 	return 0;
 }

@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2007-2012 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -390,7 +389,7 @@ void fsl_pci_init(struct pci_controller *hose, struct fsl_pci_info *pci_info)
 
 #ifdef CONFIG_SRIO_PCIE_BOOT_MASTER
 	/* boot from PCIE --master */
-	char *s = getenv("bootmaster");
+	char *s = env_get("bootmaster");
 	char pcie[6];
 	sprintf(pcie, "PCIE%d", pci_info->pci_num);
 
@@ -673,7 +672,7 @@ int fsl_pci_init_port(struct fsl_pci_info *pci_info,
 #ifdef CONFIG_SRIO_PCIE_BOOT_MASTER
 	} else {
 		/* boot from PCIE --master releases slave's core 0 */
-		char *s = getenv("bootmaster");
+		char *s = env_get("bootmaster");
 		char pcie[6];
 		sprintf(pcie, "PCIE%d", pci_info->pci_num);
 
@@ -886,7 +885,7 @@ int fsl_pcie_init_board(int busno)
 #endif
 
 #ifdef CONFIG_OF_BOARD_SETUP
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <fdt_support.h>
 
 void ft_fsl_pci_setup(void *blob, const char *pci_compat,

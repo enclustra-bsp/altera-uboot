@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2014-2015 Samsung Electronics
  * Przemyslaw Marczak <p.marczak@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <errno.h>
@@ -201,7 +200,7 @@ static int do_pmic(cmd_tbl_t *cmdtp, int flag, int argc,
 }
 
 U_BOOT_CMD(pmic, CONFIG_SYS_MAXARGS, 1, do_pmic,
-	" operations",
+	"PMIC sub-system",
 	"list          - list pmic devices\n"
 	"pmic dev [name]    - show or [set] operating PMIC device\n"
 	"pmic dump          - dump registers\n"

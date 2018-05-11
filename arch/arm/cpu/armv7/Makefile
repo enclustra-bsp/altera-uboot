@@ -1,9 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0+
 #
 # (C) Copyright 2000-2003
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
-#
-# SPDX-License-Identifier:	GPL-2.0+
-#
 
 extra-y	:= start.o
 
@@ -33,10 +31,6 @@ obj-$(if $(filter bcm281xx,$(SOC)),y) += bcm281xx/
 obj-$(if $(filter bcmcygnus,$(SOC)),y) += bcmcygnus/
 obj-$(if $(filter bcmnsp,$(SOC)),y) += bcmnsp/
 obj-$(if $(filter ls102xa,$(SOC)),y) += ls102xa/
-obj-$(if $(filter mx5,$(SOC)),y) += mx5/
-obj-$(CONFIG_MX6) += mx6/
-obj-$(CONFIG_MX7) += mx7/
-obj-$(CONFIG_ARCH_MX7ULP) += mx7ulp/
 obj-$(CONFIG_RMOBILE) += rmobile/
 obj-$(if $(filter stv0991,$(SOC)),y) += stv0991/
 obj-$(CONFIG_ARCH_SUNXI) += sunxi/

@@ -1,9 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0+
 #
 # (C) Copyright 2006
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
-#
-# SPDX-License-Identifier:	GPL-2.0+
-#
 
 ifdef CONFIG_SPL_BUILD
 
@@ -44,6 +42,7 @@ obj-$(CONFIG_NAND_ATMEL) += atmel_nand.o
 obj-$(CONFIG_NAND_ARASAN) += arasan_nfc.o
 obj-$(CONFIG_NAND_DAVINCI) += davinci_nand.o
 obj-$(CONFIG_NAND_DENALI) += denali.o
+obj-$(CONFIG_NAND_DENALI_DT) += denali_dt.o
 obj-$(CONFIG_NAND_FSL_ELBC) += fsl_elbc_nand.o
 obj-$(CONFIG_NAND_FSL_IFC) += fsl_ifc_nand.o
 obj-$(CONFIG_NAND_FSL_UPM) += fsl_upm.o
@@ -56,7 +55,6 @@ obj-$(CONFIG_NAND_LPC32XX_SLC) += lpc32xx_nand_slc.o
 obj-$(CONFIG_NAND_VF610_NFC) += vf610_nfc.o
 obj-$(CONFIG_NAND_MXC) += mxc_nand.o
 obj-$(CONFIG_NAND_MXS) += mxs_nand.o
-obj-$(CONFIG_NAND_NDFC) += ndfc.o
 obj-$(CONFIG_NAND_PXA3XX) += pxa3xx_nand.o
 obj-$(CONFIG_NAND_SPEAR) += spr_nand.o
 obj-$(CONFIG_TEGRA_NAND) += tegra_nand.o

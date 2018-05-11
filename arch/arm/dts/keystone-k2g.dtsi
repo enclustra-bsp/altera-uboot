@@ -9,13 +9,14 @@
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
-#include "skeleton.dtsi"
 
 / {
 	model = "Texas Instruments K2G SoC";
 	#address-cells = <1>;
 	#size-cells = <1>;
 	interrupt-parent = <&gic>;
+
+	chosen { };
 
 	aliases {
 		serial0	= &uart0;
@@ -27,11 +28,6 @@
 		i2c0 = &i2c0;
 		i2c1 = &i2c1;
 		i2c2 = &i2c2;
-	};
-
-	memory {
-		device_type = "memory";
-		reg = <0x80000000 0x80000000>;
 	};
 
 	cpus {
@@ -96,8 +92,9 @@
 			      <0x24000000 0x4000000>;
 			interrupts = <GIC_SPI 198 IRQ_TYPE_EDGE_RISING>;
 			num-cs = <4>;
-			fifo-depth = <256>;
-			sram-size = <256>;
+			cdns,fifo-depth = <256>;
+			cdns,fifo-width = <4>;
+			cdns,trigger-address = <0x24000000>;
 			status = "disabled";
 		};
 

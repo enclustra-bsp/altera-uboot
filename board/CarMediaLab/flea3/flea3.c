@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2007, Guennadi Liakhovetski <lg@denx.de>
  *
  * (C) Copyright 2008-2010 Freescale Semiconductor, Inc.
  *
  * Copyright (C) 2011, Stefano Babic <sbabic@denx.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -211,7 +210,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 		{ "mxc_nand", MTD_DEV_TYPE_NAND, }, /* NAND flash */
 	};
 
-	if (getenv("fdt_noauto")) {
+	if (env_get("fdt_noauto")) {
 		puts("   Skiping ft_board_setup (fdt_noauto defined)\n");
 		return 0;
 	}

@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2014 Freescale Semiconductor
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <malloc.h>
@@ -11,7 +10,7 @@
 #include <fsl_ddr.h>
 #include <asm/io.h>
 #include <fdt_support.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <fsl-mc/fsl_mc.h>
 #include <environment.h>
 #include <asm/arch/soc.h>
@@ -90,7 +89,7 @@ void fdt_fixup_board_enet(void *fdt)
 		return;
 	}
 
-	if (get_mc_boot_status() == 0)
+	if ((get_mc_boot_status() == 0) && (get_dpl_apply_status() == 0))
 		fdt_status_okay(fdt, offset);
 	else
 		fdt_status_fail(fdt, offset);

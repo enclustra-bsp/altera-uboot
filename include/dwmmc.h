@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2012 SAMSUNG Electronics
  * Jaehoon Chung <jh80.chung@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __DWMMC_HW_H
@@ -292,7 +291,7 @@ int dwmci_bind(struct udevice *dev, struct mmc *mmc, struct mmc_config *cfg);
 int add_dwmci(struct dwmci_host *host, u32 max_clk, u32 min_clk);
 #endif /* !CONFIG_BLK */
 
-#ifdef CONFIG_DM_MMC_OPS
+#ifdef CONFIG_DM_MMC
 /* Export the operations to drivers */
 int dwmci_probe(struct udevice *dev);
 extern const struct dm_mmc_ops dm_dwmci_ops;

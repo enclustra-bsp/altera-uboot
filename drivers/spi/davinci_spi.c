@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2009 Texas Instruments Incorporated - http://www.ti.com/
  *
@@ -5,8 +6,6 @@
  * by Atmel Corporation
  *
  * Copyright (C) 2007 Atmel Corporation
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -563,6 +562,7 @@ static const struct dm_spi_ops davinci_spi_ops = {
 static const struct udevice_id davinci_spi_ids[] = {
 	{ .compatible = "ti,keystone-spi" },
 	{ .compatible = "ti,dm6441-spi" },
+	{ .compatible = "ti,da830-spi" },
 	{ }
 };
 

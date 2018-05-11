@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2011, Texas Instruments, Incorporated - http://www.ti.com/
  * Copyright (C) 2017, Grinn - http://grinn-global.com/
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -126,11 +125,11 @@ int board_late_init(void)
 	mac_addr[4] = mac_lo & 0xFF;
 	mac_addr[5] = (mac_lo & 0xFF00) >> 8;
 
-	if (!getenv("ethaddr")) {
+	if (!env_get("ethaddr")) {
 		printf("<ethaddr> not set. Validating first E-fuse MAC\n");
 
 		if (is_valid_ethaddr(mac_addr))
-			eth_setenv_enetaddr("ethaddr", mac_addr);
+			eth_env_set_enetaddr("ethaddr", mac_addr);
 	}
 
 	mac_lo = readl(&cdev->macid1l);
@@ -142,9 +141,9 @@ int board_late_init(void)
 	mac_addr[4] = mac_lo & 0xFF;
 	mac_addr[5] = (mac_lo & 0xFF00) >> 8;
 
-	if (!getenv("eth1addr")) {
+	if (!env_get("eth1addr")) {
 		if (is_valid_ethaddr(mac_addr))
-			eth_setenv_enetaddr("eth1addr", mac_addr);
+			eth_env_set_enetaddr("eth1addr", mac_addr);
 	}
 #endif
 

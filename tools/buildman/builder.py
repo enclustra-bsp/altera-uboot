@@ -1,8 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2013 The Chromium OS Authors.
 #
 # Bloat-o-meter code used here Copyright 2004 Matt Mackall <mpm@selenic.com>
-#
-# SPDX-License-Identifier:	GPL-2.0+
 #
 
 import collections
@@ -212,7 +211,8 @@ class Builder:
                  gnu_make='make', checkout=True, show_unknown=True, step=1,
                  no_subdirs=False, full_path=False, verbose_build=False,
                  incremental=False, per_board_out_dir=False,
-                 config_only=False, squash_config_y=False):
+                 config_only=False, squash_config_y=False,
+                 warnings_as_errors=False):
         """Create a new Builder object
 
         Args:
@@ -237,6 +237,7 @@ class Builder:
                 board rather than a thread-specific directory
             config_only: Only configure each build, don't build it
             squash_config_y: Convert CONFIG options with the value 'y' to '1'
+            warnings_as_errors: Treat all compiler warnings as errors
         """
         self.toolchains = toolchains
         self.base_dir = base_dir
@@ -270,6 +271,7 @@ class Builder:
         if not self.squash_config_y:
             self.config_filenames += EXTRA_CONFIG_FILENAMES
 
+        self.warnings_as_errors = warnings_as_errors
         self.col = terminal.Color()
 
         self._re_function = re.compile('(.*): In function.*')

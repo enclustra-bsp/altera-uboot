@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2013
  * Reinhard Pfau, Guntermann & Drunck GmbH, reinhard.pfau@gdsys.cc
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* TODO: some more #ifdef's to avoid unneeded code for stage 1 / stage 2 */
@@ -217,7 +216,7 @@ static u8 *get_2nd_stage_bl_location(ulong target_addr)
 {
 	ulong addr;
 #ifdef CCDM_SECOND_STAGE
-	addr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
+	addr = env_get_ulong("loadaddr", 16, CONFIG_LOADADDR);
 #else
 	addr = target_addr;
 #endif
@@ -235,7 +234,7 @@ static u8 *get_image_location(void)
 {
 	ulong addr;
 	/* TODO use other area? */
-	addr = getenv_ulong("loadaddr", 16, CONFIG_LOADADDR);
+	addr = env_get_ulong("loadaddr", 16, CONFIG_LOADADDR);
 	return (u8 *)(addr);
 }
 #endif
@@ -1043,13 +1042,13 @@ static int second_stage_init(void)
 		goto failure;
 
 	/* run "prepboot" from env to get "mmcdev" set */
-	cptr = getenv("prepboot");
+	cptr = env_get("prepboot");
 	if (cptr && !run_command(cptr, 0))
-		mmcdev = getenv("mmcdev");
+		mmcdev = env_get("mmcdev");
 	if (!mmcdev)
 		goto failure;
 
-	cptr = getenv("ramdiskimage");
+	cptr = env_get("ramdiskimage");
 	if (cptr)
 		image_path = cptr;
 

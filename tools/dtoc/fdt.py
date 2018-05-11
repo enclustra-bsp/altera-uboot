@@ -1,9 +1,8 @@
 #!/usr/bin/python
+# SPDX-License-Identifier: GPL-2.0+
 #
 # Copyright (C) 2016 Google, Inc
 # Written by Simon Glass <sjg@chromium.org>
-#
-# SPDX-License-Identifier:      GPL-2.0+
 #
 
 import struct
@@ -21,7 +20,7 @@ import libfdt
 # so it is fairly efficient.
 
 # A list of types we support
-(TYPE_BYTE, TYPE_INT, TYPE_STRING, TYPE_BOOL) = range(4)
+(TYPE_BYTE, TYPE_INT, TYPE_STRING, TYPE_BOOL, TYPE_INT64) = range(5)
 
 def CheckErr(errnum, msg):
     if errnum:
@@ -174,8 +173,9 @@ class Node:
         props: A dict of properties for this node, each a Prop object.
             Keyed by property name
     """
-    def __init__(self, fdt, offset, name, path):
+    def __init__(self, fdt, parent, offset, name, path):
         self._fdt = fdt
+        self.parent = parent
         self._offset = offset
         self.name = name
         self.path = path
@@ -211,13 +211,17 @@ class Node:
         searching into subnodes so that the entire tree is built.
         """
         self.props = self._fdt.GetProps(self)
+        phandle = self.props.get('phandle')
+        if phandle:
+            val = fdt_util.fdt32_to_cpu(phandle.value)
+            self._fdt.phandle_to_node[val] = self
 
         offset = libfdt.fdt_first_subnode(self._fdt.GetFdt(), self.Offset())
         while offset >= 0:
             sep = '' if self.path[-1] == '/' else '/'
             name = self._fdt._fdt_obj.get_name(offset)
             path = self.path + sep + name
-            node = Node(self._fdt, offset, name, path)
+            node = Node(self._fdt, self, offset, name, path)
             self.subnodes.append(node)
 
             node.Scan()
@@ -262,6 +266,7 @@ class Fdt:
     def __init__(self, fname):
         self._fname = fname
         self._cached_offsets = False
+        self.phandle_to_node = {}
         if self._fname:
             self._fname = fdt_util.EnsureCompiled(self._fname)
 
@@ -279,7 +284,7 @@ class Fdt:
 
         TODO(sjg@chromium.org): Implement the 'root' parameter
         """
-        self._root = self.Node(self, 0, '/', '/')
+        self._root = self.Node(self, None, 0, '/', '/')
         self._root.Scan()
 
     def GetRoot(self):
@@ -386,7 +391,7 @@ class Fdt:
         return libfdt.fdt_off_dt_struct(self._fdt) + offset
 
     @classmethod
-    def Node(self, fdt, offset, name, path):
+    def Node(self, fdt, parent, offset, name, path):
         """Create a new node
 
         This is used by Fdt.Scan() to create a new node using the correct
@@ -394,11 +399,12 @@ class Fdt:
 
         Args:
             fdt: Fdt object
+            parent: Parent node, or None if this is the root node
             offset: Offset of node
             name: Node name
             path: Full path to node
         """
-        node = Node(fdt, offset, name, path)
+        node = Node(fdt, parent, offset, name, path)
         return node
 
 def FdtScan(fname):

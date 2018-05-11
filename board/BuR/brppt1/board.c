@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * board.c
  *
@@ -5,8 +6,6 @@
  *
  * Copyright (C) 2013 Hannes Schmelzer <oe5hpm@oevsv.at>
  * Bernecker & Rainer Industrieelektronik GmbH - http://www.br-automation.com
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  */
 
@@ -120,9 +119,6 @@ void am33xx_spl_board_init(void)
 	};
 	do_enable_clocks(clk_domains, clk_modules_tsspecific, 1);
 
-	/* setup LCD-Pixel Clock */
-	writel(0x2, &cmdpll->clklcdcpixelclk);	/* clock comes from perPLL M2 */
-
 	/* setup I2C */
 	enable_i2c_pin_mux();
 	i2c_set_bus_num(0);
@@ -167,7 +163,7 @@ int board_late_init(void)
 		lcd_position_cursor(1, 8);
 		lcd_puts(
 		"switching to network-console ...       ");
-		setenv("bootcmd", "run netconsole");
+		env_set("bootcmd", "run netconsole");
 	}
 	return 0;
 }

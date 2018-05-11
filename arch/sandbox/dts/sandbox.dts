@@ -5,6 +5,7 @@
 / {
 	#address-cells = <1>;
 	#size-cells = <1>;
+	model = "sandbox";
 
 	aliases {
 		eth5 = "/eth@90000000";
@@ -69,7 +70,7 @@
 		compatible = "sandbox,gpio";
 		#gpio-cells = <1>;
 		gpio-bank-name = "a";
-		num-gpios = <20>;
+		sandbox,gpio-count = <20>;
 	};
 
 	gpio_b: gpios@1 {
@@ -77,7 +78,7 @@
 		compatible = "sandbox,gpio";
 		#gpio-cells = <2>;
 		gpio-bank-name = "b";
-		num-gpios = <10>;
+		sandbox,gpio-count = <10>;
 	};
 
 	hexagon {

@@ -1,21 +1,17 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2015 Marek Vasut <marex@denx.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #ifndef __CONFIG_ARIES_MCVEVK_H__
 #define __CONFIG_ARIES_MCVEVK_H__
 
 #include <asm/arch/base_addr_ac5.h>
 
-#define CONFIG_HW_WATCHDOG
-
 /* Memory configurations */
 #define PHYS_SDRAM_1_SIZE		0x40000000	/* 1GiB on MCV */
 
 /* Booting Linux */
 #define CONFIG_BOOTFILE		"fitImage"
-#define CONFIG_BOOTARGS		"console=ttyS0," __stringify(CONFIG_BAUDRATE)
 #define CONFIG_PREBOOT		"run try_bootscript"
 #define CONFIG_BOOTCOMMAND	"run mmc_mmc"
 #define CONFIG_LOADADDR		0x01000000
@@ -23,7 +19,6 @@
 
 /* Environment is in MMC */
 #define CONFIG_ENV_OVERWRITE
-#define CONFIG_ENV_IS_IN_MMC
 
 /* Extra Environment */
 #define CONFIG_EXTRA_ENV_SETTINGS					\

@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) International Business Machines Corp., 2006
  * Copyright (c) Nokia Corporation, 2007
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * Author: Artem Bityutskiy (Битюцкий Артём),
  *         Frank Haverkamp
@@ -1060,15 +1059,7 @@ int ubi_attach_mtd_dev(struct mtd_info *mtd, int ubi_num,
 #ifndef __UBOOT__
 	wake_up_process(ubi->bgt_thread);
 #else
-	/*
-	 * U-Boot special: We have no bgt_thread in U-Boot!
-	 * So just call do_work() here directly.
-	 */
-	err = do_work(ubi);
-	if (err) {
-		ubi_err(ubi, "%s: work failed with error code %d",
-			ubi->bgt_name, err);
-	}
+	ubi_do_worker(ubi);
 #endif
 
 	spin_unlock(&ubi->wl_lock);

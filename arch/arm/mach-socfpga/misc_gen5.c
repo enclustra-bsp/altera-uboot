@@ -1,14 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  *  Copyright (C) 2012-2017 Altera Corporation <www.altera.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <asm/io.h>
 #include <errno.h>
 #include <fdtdec.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <altera.h>
 #include <miiphy.h>
 #include <netdev.h>
@@ -31,14 +30,10 @@ static struct pl310_regs *const pl310 =
 	(struct pl310_regs *)CONFIG_SYS_PL310_BASE;
 static struct socfpga_system_manager *sysmgr_regs =
 	(struct socfpga_system_manager *)SOCFPGA_SYSMGR_ADDRESS;
-static struct socfpga_reset_manager *reset_manager_base =
-	(struct socfpga_reset_manager *)SOCFPGA_RSTMGR_ADDRESS;
 static struct nic301_registers *nic301_regs =
 	(struct nic301_registers *)SOCFPGA_L3REGS_ADDRESS;
 static struct scu_registers *scu_regs =
 	(struct scu_registers *)SOCFPGA_MPUSCU_ADDRESS;
-static struct socfpga_sdr_ctrl *sdr_ctrl =
-	(struct socfpga_sdr_ctrl *)SDR_CTRLGRP_ADDRESS;
 
 /*
  * DesignWare Ethernet initialization
@@ -145,7 +140,7 @@ static const struct {
 	const u16	pn;
 	const char	*name;
 	const char	*var;
-} const socfpga_fpga_model[] = {
+} socfpga_fpga_model[] = {
 	/* Cyclone V E */
 	{ 0x2b15, "Cyclone V, E/A2", "cv_e_a2" },
 	{ 0x2b05, "Cyclone V, E/A4", "cv_e_a4" },
@@ -232,9 +227,9 @@ int arch_misc_init(void)
 			}
 	}
 #endif
-	setenv("bootmode", bsel_str[bsel].mode);
+	env_set("bootmode", bsel_str[bsel].mode);
 	if (fpga_id >= 0)
-		setenv("fpgatype", socfpga_fpga_model[fpga_id].var);
+		env_set("fpgatype", socfpga_fpga_model[fpga_id].var);
 	return socfpga_eth_reset();
 }
 #endif
@@ -305,6 +300,12 @@ int arch_early_init_r(void)
 	return 0;
 }
 
+#ifndef CONFIG_SPL_BUILD
+static struct socfpga_reset_manager *reset_manager_base =
+	(struct socfpga_reset_manager *)SOCFPGA_RSTMGR_ADDRESS;
+static struct socfpga_sdr_ctrl *sdr_ctrl =
+	(struct socfpga_sdr_ctrl *)SDR_CTRLGRP_ADDRESS;
+
 static void socfpga_sdram_apply_static_cfg(void)
 {
 	const u32 applymask = 0x8;
@@ -334,7 +335,7 @@ static void socfpga_sdram_apply_static_cfg(void)
 	: : "r"(val), "r"(&sdr_ctrl->static_cfg) : "memory", "cc");
 }
 
-int do_bridge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_bridge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	if (argc != 2)
 		return CMD_RET_USAGE;
@@ -370,3 +371,4 @@ U_BOOT_CMD(
 	"bridge disable - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
 	""
 );
+#endif

@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2015 Google, Inc
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -303,12 +302,12 @@ static int test_readonly(void)
 	index_0 += 1;
 	if (tpm_nv_write_value(INDEX0, (uint8_t *)&index_0, sizeof(index_0) !=
 		TPM_SUCCESS)) {
-		error("\tcould not write index 0\n");
+		pr_err("\tcould not write index 0\n");
 	}
 	tpm_nv_write_value_lock(INDEX0);
 	if (tpm_nv_write_value(INDEX0, (uint8_t *)&index_0, sizeof(index_0)) ==
 			TPM_SUCCESS)
-		error("\tindex 0 is not locked\n");
+		pr_err("\tindex 0 is not locked\n");
 
 	printf("\tdone\n");
 	return 0;
@@ -471,7 +470,7 @@ static int test_write_limit(void)
 		case TPM_MAXNVWRITES:
 			assert(i >= TPM_MAX_NV_WRITES_NOOWNER);
 		default:
-			error("\tunexpected error code %d (0x%x)\n",
+			pr_err("\tunexpected error code %d (0x%x)\n",
 			      result, result);
 		}
 	}

@@ -1,19 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2015 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <dm.h>
 #include <errno.h>
-#include <fdtdec.h>
-#include <libfdt.h>
 #include <power/rk8xx_pmic.h>
 #include <power/pmic.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static const struct pmic_child_info pmic_children_info[] = {
 	{ .prefix = "DCDC_REG", .driver = "rk8xx_buck"},

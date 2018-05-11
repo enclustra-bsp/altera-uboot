@@ -1,9 +1,7 @@
+# SPDX-License-Identifier: GPL-2.0+
 #
 # (C) Copyright 2004-2006
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
-#
-# SPDX-License-Identifier:	GPL-2.0+
-#
 
 ifndef CONFIG_SPL_BUILD
 # core command
@@ -15,10 +13,12 @@ obj-y += version.o
 # command
 obj-$(CONFIG_CMD_AES) += aes.o
 obj-$(CONFIG_CMD_ARMFLASH) += armflash.o
+obj-y += blk_common.o
 obj-$(CONFIG_SOURCE) += source.o
 obj-$(CONFIG_CMD_SOURCE) += source.o
 obj-$(CONFIG_CMD_BDI) += bdinfo.o
 obj-$(CONFIG_CMD_BEDBUG) += bedbug.o
+obj-$(CONFIG_CMD_BINOP) += binop.o
 obj-$(CONFIG_CMD_BLOCK_CACHE) += blkcache.o
 obj-$(CONFIG_CMD_BMP) += bmp.o
 obj-$(CONFIG_CMD_BOOTEFI) += bootefi.o
@@ -26,6 +26,7 @@ obj-$(CONFIG_CMD_BOOTMENU) += bootmenu.o
 obj-$(CONFIG_CMD_BOOTSTAGE) += bootstage.o
 obj-$(CONFIG_CMD_BOOTZ) += bootz.o
 obj-$(CONFIG_CMD_BOOTI) += booti.o
+obj-$(CONFIG_CMD_BTRFS) += btrfs.o
 obj-$(CONFIG_CMD_CACHE) += cache.o
 obj-$(CONFIG_CMD_CBFS) += cbfs.o
 obj-$(CONFIG_CMD_CLK) += clk.o
@@ -53,9 +54,7 @@ obj-$(CONFIG_CMD_FDC) += fdc.o
 obj-$(CONFIG_CMD_FDT) += fdt.o
 obj-$(CONFIG_CMD_FITUPD) += fitupd.o
 obj-$(CONFIG_CMD_FLASH) += flash.o
-ifdef CONFIG_FPGA
 obj-$(CONFIG_CMD_FPGA) += fpga.o
-endif
 obj-$(CONFIG_CMD_FPGAD) += fpgad.o
 obj-$(CONFIG_CMD_FS_GENERIC) += fs.o
 obj-$(CONFIG_CMD_FUSE) += fuse.o
@@ -74,7 +73,7 @@ obj-$(CONFIG_LED_STATUS_CMD) += legacy_led.o
 obj-$(CONFIG_CMD_LED) += led.o
 obj-$(CONFIG_CMD_LICENSE) += license.o
 obj-y += load.o
-obj-$(CONFIG_LOGBUFFER) += log.o
+obj-$(CONFIG_CMD_LOG) += log.o
 obj-$(CONFIG_ID_EEPROM) += mac.o
 obj-$(CONFIG_CMD_MD5SUM) += md5sum.o
 obj-$(CONFIG_CMD_MEMORY) += mem.o
@@ -97,17 +96,18 @@ ifdef CONFIG_PCI
 obj-$(CONFIG_CMD_PCI) += pci.o
 endif
 obj-y += pcmcia.o
-obj-$(CONFIG_CMD_PORTIO) += portio.o
 obj-$(CONFIG_CMD_PXE) += pxe.o
 obj-$(CONFIG_CMD_QFW) += qfw.o
 obj-$(CONFIG_CMD_READ) += read.o
 obj-$(CONFIG_CMD_REGINFO) += reginfo.o
 obj-$(CONFIG_CMD_REISER) += reiser.o
 obj-$(CONFIG_CMD_REMOTEPROC) += remoteproc.o
+obj-$(CONFIG_CMD_ROCKUSB) += rockusb.o
 obj-$(CONFIG_SANDBOX) += host.o
 obj-$(CONFIG_CMD_SATA) += sata.o
+obj-$(CONFIG_CMD_NVME) += nvme.o
 obj-$(CONFIG_CMD_SF) += sf.o
-obj-$(CONFIG_SCSI) += scsi.o disk.o
+obj-$(CONFIG_CMD_SCSI) += scsi.o disk.o
 obj-$(CONFIG_CMD_SHA1SUM) += sha1sum.o
 obj-$(CONFIG_CMD_SETEXPR) += setexpr.o
 obj-$(CONFIG_CMD_SPI) += spi.o
@@ -131,9 +131,10 @@ obj-$(CONFIG_CMD_FASTBOOT) += fastboot.o
 obj-$(CONFIG_CMD_FS_UUID) += fs_uuid.o
 
 obj-$(CONFIG_CMD_USB_MASS_STORAGE) += usb_mass_storage.o
+obj-$(CONFIG_CMD_USB_SDP) += usb_gadget_sdp.o
 obj-$(CONFIG_CMD_THOR_DOWNLOAD) += thordown.o
 obj-$(CONFIG_CMD_XIMG) += ximg.o
-obj-$(CONFIG_YAFFS2) += yaffs2.o
+obj-$(CONFIG_CMD_YAFFS2) += yaffs2.o
 obj-$(CONFIG_CMD_SPL) += spl.o
 obj-$(CONFIG_CMD_ZIP) += zip.o
 obj-$(CONFIG_CMD_ZFS) += zfs.o
@@ -147,12 +148,15 @@ obj-$(CONFIG_CMD_PMIC) += pmic.o
 obj-$(CONFIG_CMD_REGULATOR) += regulator.o
 
 obj-$(CONFIG_CMD_BLOB) += blob.o
+
+obj-$(CONFIG_X86) += x86/
 endif # !CONFIG_SPL_BUILD
 
 # core command
 obj-y += nvedit.o
 
 obj-$(CONFIG_ARCH_MVEBU) += mvebu/
+obj-$(CONFIG_TI_COMMON_CMD_OPTIONS) += ti/
 
 filechk_data_gz = (echo "static const char data_gz[] ="; cat $< | scripts/bin2c; echo ";")
 

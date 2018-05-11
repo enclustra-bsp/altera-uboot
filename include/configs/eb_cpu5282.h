@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Configuation settings for the BuS EB+CPU5283 boards (aka EB+MCF-EV123)
  *
  * (C) Copyright 2005-2009 BuS Elektronik GmbH & Co.KG <esw@bus-elektonik.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _CONFIG_EB_CPU5282_H_
@@ -43,28 +42,19 @@
 
 #define CONFIG_ENV_ADDR		0xFF040000
 #define CONFIG_ENV_SECT_SIZE	0x00020000
-#define CONFIG_ENV_IS_IN_FLASH	1
 
 /*
  * BOOTP options
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
-#define CONFIG_BOOTP_BOOTPATH
-#define CONFIG_BOOTP_GATEWAY
-#define CONFIG_BOOTP_HOSTNAME
 
 /*
  * Command line configuration.
  */
-#define CONFIG_CMDLINE_EDITING
 
 #define CONFIG_MCFTMR
 
-#define	CONFIG_SYS_LONGHELP	1
-
 #define	CONFIG_SYS_CBSIZE	1024	/* Console I/O Buffer Size	*/
-#define	CONFIG_SYS_PBSIZE 	(CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)
-#define	CONFIG_SYS_MAXARGS	16	/* max number of command args	*/
 #define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE
 
 #define CONFIG_SYS_LOAD_ADDR		0x20000

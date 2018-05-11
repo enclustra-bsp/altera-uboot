@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2015 Samsung Electronics
  * Przemyslaw Marczak <p.marczak@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -13,8 +12,6 @@
 #include <dm/uclass-internal.h>
 #include <adc.h>
 #include <power/regulator.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 #define ADC_UCLASS_PLATDATA_SIZE	sizeof(struct adc_uclass_platdata)
 #define CHECK_NUMBER			true
@@ -64,7 +61,7 @@ static int adc_supply_enable(struct udevice *dev)
 	}
 
 	if (ret)
-		error("%s: can't enable %s-supply!", dev->name, supply_type);
+		pr_err("%s: can't enable %s-supply!", dev->name, supply_type);
 
 	return ret;
 }
@@ -389,12 +386,12 @@ static int adc_pre_probe(struct udevice *dev)
 	/* Set ADC VDD platdata: polarity, uV, regulator (phandle). */
 	ret = adc_vdd_platdata_set(dev);
 	if (ret)
-		error("%s: Can't update Vdd. Error: %d", dev->name, ret);
+		pr_err("%s: Can't update Vdd. Error: %d", dev->name, ret);
 
 	/* Set ADC VSS platdata: polarity, uV, regulator (phandle). */
 	ret = adc_vss_platdata_set(dev);
 	if (ret)
-		error("%s: Can't update Vss. Error: %d", dev->name, ret);
+		pr_err("%s: Can't update Vss. Error: %d", dev->name, ret);
 
 	return 0;
 }

@@ -1,6 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2011-2012 The Chromium OS Authors.
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
 
 	memset(&data, '\0', sizeof(data));
 	gd = &data;
-#ifdef CONFIG_SYS_MALLOC_F_LEN
+#if CONFIG_VAL(SYS_MALLOC_F_LEN)
 	gd->malloc_base = CONFIG_MALLOC_F_ADDR;
 #endif
 	setup_ram_buf(state);

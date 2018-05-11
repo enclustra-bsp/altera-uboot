@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2000-2002
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
  *
  * (C) Copyright 2003
  * Gleb Natapov <gnatapov@mrv.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -28,24 +27,7 @@ void __board_show_activity (ulong dummy)
 #define CONFIG_SYS_WATCHDOG_FREQ (CONFIG_SYS_HZ / 2)
 #endif
 
-extern int interrupt_init_cpu (unsigned *);
-extern void timer_interrupt_cpu (struct pt_regs *);
-
 static unsigned decrementer_count; /* count value for 1e6/HZ microseconds */
-
-static __inline__ unsigned long get_msr (void)
-{
-	unsigned long msr;
-
-	asm volatile ("mfmsr %0":"=r" (msr):);
-
-	return msr;
-}
-
-static __inline__ void set_msr (unsigned long msr)
-{
-	asm volatile ("mtmsr %0"::"r" (msr));
-}
 
 static __inline__ unsigned long get_dec (void)
 {
@@ -80,13 +62,8 @@ int disable_interrupts (void)
 
 int interrupt_init (void)
 {
-	int ret;
-
 	/* call cpu specific function from $(CPU)/interrupts.c */
-	ret = interrupt_init_cpu (&decrementer_count);
-
-	if (ret)
-		return ret;
+	interrupt_init_cpu (&decrementer_count);
 
 	set_dec (decrementer_count);
 

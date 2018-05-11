@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2006-2009 Freescale Semiconductor, Inc.
  *
  * Dave Liu <daveliu@freescale.com>
  * based on source code of Shlomi Gridish
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -221,12 +220,10 @@ void u_qe_init(void)
 		mmc_init(mmc);
 		(void)mmc->block_dev.block_read(&mmc->block_dev, blk, cnt,
 						addr);
-		/* flush cache after read */
-		flush_cache((ulong)addr, cnt * 512);
 	}
 #endif
-	u_qe_upload_firmware(addr);
-	out_be32(&qe_immr->iram.iready, QE_IRAM_READY);
+	if (!u_qe_upload_firmware(addr))
+		out_be32(&qe_immr->iram.iready, QE_IRAM_READY);
 #ifdef CONFIG_SYS_QE_FMAN_FW_IN_MMC
 	free(addr);
 #endif

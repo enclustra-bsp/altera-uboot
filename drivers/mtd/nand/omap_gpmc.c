@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2004-2008 Texas Instruments, <www.ti.com>
  * Rohit Choraria <rohitkc@ti.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -894,17 +893,14 @@ static int omap_select_ecc_scheme(struct nand_chip *nand,
 int __maybe_unused omap_nand_switch_ecc(uint32_t hardware, uint32_t eccstrength)
 {
 	struct nand_chip *nand;
-	struct mtd_info *mtd;
+	struct mtd_info *mtd = get_nand_dev_by_index(nand_curr_device);
 	int err = 0;
 
-	if (nand_curr_device < 0 ||
-	    nand_curr_device >= CONFIG_SYS_MAX_NAND_DEVICE ||
-	    !nand_info[nand_curr_device]) {
+	if (!mtd) {
 		printf("nand: error: no NAND devices found\n");
 		return -ENODEV;
 	}
 
-	mtd = nand_info[nand_curr_device];
 	nand = mtd_to_nand(mtd);
 	nand->options |= NAND_OWN_BUFFERS;
 	nand->options &= ~NAND_SUBPAGE_READ;

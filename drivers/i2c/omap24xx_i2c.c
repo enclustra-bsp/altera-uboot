@@ -47,8 +47,6 @@
 
 #include "omap24xx_i2c.h"
 
-DECLARE_GLOBAL_DATA_PTR;
-
 #define I2C_TIMEOUT	1000
 
 /* Absolutely safe for status update at 100 kHz I2C: */
@@ -706,15 +704,15 @@ static struct i2c *omap24_get_base(struct i2c_adapter *adap)
 	case 1:
 		return (struct i2c *)I2C_BASE2;
 		break;
-#if (I2C_BUS_MAX > 2)
+#if (CONFIG_SYS_I2C_BUS_MAX > 2)
 	case 2:
 		return (struct i2c *)I2C_BASE3;
 		break;
-#if (I2C_BUS_MAX > 3)
+#if (CONFIG_SYS_I2C_BUS_MAX > 3)
 	case 3:
 		return (struct i2c *)I2C_BASE4;
 		break;
-#if (I2C_BUS_MAX > 4)
+#if (CONFIG_SYS_I2C_BUS_MAX > 4)
 	case 4:
 		return (struct i2c *)I2C_BASE5;
 		break;
@@ -755,7 +753,7 @@ static uint omap24_i2c_setspeed(struct i2c_adapter *adap, uint speed)
 
 	ret = __omap24_i2c_setspeed(i2c_base, speed, &adap->waitdelay);
 	if (ret) {
-		error("%s: set i2c speed failed\n", __func__);
+		pr_err("%s: set i2c speed failed\n", __func__);
 		return ret;
 	}
 
@@ -795,7 +793,7 @@ U_BOOT_I2C_ADAP_COMPLETE(omap24_1, omap24_i2c_init, omap24_i2c_probe,
 			 CONFIG_SYS_OMAP24_I2C_SPEED1,
 			 CONFIG_SYS_OMAP24_I2C_SLAVE1,
 			 1)
-#if (I2C_BUS_MAX > 2)
+#if (CONFIG_SYS_I2C_BUS_MAX > 2)
 #if !defined(CONFIG_SYS_OMAP24_I2C_SPEED2)
 #define CONFIG_SYS_OMAP24_I2C_SPEED2 CONFIG_SYS_OMAP24_I2C_SPEED
 #endif
@@ -808,7 +806,7 @@ U_BOOT_I2C_ADAP_COMPLETE(omap24_2, omap24_i2c_init, omap24_i2c_probe,
 			 CONFIG_SYS_OMAP24_I2C_SPEED2,
 			 CONFIG_SYS_OMAP24_I2C_SLAVE2,
 			 2)
-#if (I2C_BUS_MAX > 3)
+#if (CONFIG_SYS_I2C_BUS_MAX > 3)
 #if !defined(CONFIG_SYS_OMAP24_I2C_SPEED3)
 #define CONFIG_SYS_OMAP24_I2C_SPEED3 CONFIG_SYS_OMAP24_I2C_SPEED
 #endif
@@ -821,7 +819,7 @@ U_BOOT_I2C_ADAP_COMPLETE(omap24_3, omap24_i2c_init, omap24_i2c_probe,
 			 CONFIG_SYS_OMAP24_I2C_SPEED3,
 			 CONFIG_SYS_OMAP24_I2C_SLAVE3,
 			 3)
-#if (I2C_BUS_MAX > 4)
+#if (CONFIG_SYS_I2C_BUS_MAX > 4)
 #if !defined(CONFIG_SYS_OMAP24_I2C_SPEED4)
 #define CONFIG_SYS_OMAP24_I2C_SPEED4 CONFIG_SYS_OMAP24_I2C_SPEED
 #endif

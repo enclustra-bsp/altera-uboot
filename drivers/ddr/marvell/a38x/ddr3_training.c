@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) Marvell International Ltd. and its affiliates
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -21,6 +20,8 @@
 
 #define GET_CS_FROM_MASK(mask)	(cs_mask2_num[mask])
 #define CS_CBE_VALUE(cs_num)	(cs_cbe_reg[cs_num])
+
+#define TIMES_9_TREFI_CYCLES	0x8
 
 u32 window_mem_addr = 0;
 u32 phy_reg0_val = 0;
@@ -308,12 +309,14 @@ int hws_ddr3_tip_init_controller(u32 dev_num, struct init_cntr_param *init_cntr_
 	enum hws_speed_bin speed_bin_index = SPEED_BIN_DDR_2133N;
 	enum hws_mem_size memory_size = MEM_2G;
 	enum hws_ddr_freq freq = init_freq;
+	enum hws_timing timing;
 	u32 cs_mask = 0;
 	u32 cl_value = 0, cwl_val = 0;
 	u32 refresh_interval_cnt = 0, bus_cnt = 0, adll_tap = 0;
 	enum hws_access_type access_type = ACCESS_TYPE_UNICAST;
 	u32 data_read[MAX_INTERFACE_NUM];
 	struct hws_topology_map *tm = ddr3_get_topology_map();
+	u32 odt_config = g_odt_config_2cs;
 
 	DEBUG_TRAINING_IP(DEBUG_LEVEL_TRACE,
 			  ("Init_controller, do_mrs_phy=%d, is_ctrl64_bit=%d\n",
@@ -506,7 +509,9 @@ int hws_ddr3_tip_init_controller(u32 dev_num, struct init_cntr_param *init_cntr_
 				DEBUG_TRAINING_IP(DEBUG_LEVEL_TRACE,
 						  ("cl_value 0x%x cwl_val 0x%x\n",
 						   cl_value, cwl_val));
-
+				t_wr = TIME_2_CLOCK_CYCLES(speed_bin_table(speed_bin_index,
+									   SPEED_BIN_TWR),
+							   t_ckclk);
 				data_value =
 					((cl_mask_table[cl_value] & 0x1) << 2) |
 					((cl_mask_table[cl_value] & 0xe) << 3);
@@ -516,8 +521,9 @@ int hws_ddr3_tip_init_controller(u32 dev_num, struct init_cntr_param *init_cntr_
 					      (0x7 << 4) | (1 << 2)));
 				CHECK_STATUS(ddr3_tip_if_write
 					     (dev_num, access_type, if_id,
-					      MR0_REG, twr_mask_table[t_wr + 1],
-					      0xe00));
+					      MR0_REG, twr_mask_table[t_wr + 1] << 9,
+					      (0x7 << 9)));
+
 
 				/*
 				 * MR1: Set RTT and DIC Design GL values
@@ -569,12 +575,17 @@ int hws_ddr3_tip_init_controller(u32 dev_num, struct init_cntr_param *init_cntr_
 				      DUNIT_CONTROL_HIGH_REG,
 				      (init_cntr_prm->msys_init << 7), (1 << 7)));
 
+			/* calculate number of CS (per interface) */
+			CHECK_STATUS(calc_cs_num
+				     (dev_num, if_id, &cs_num));
+			timing = tm->interface_params[if_id].timing;
+
 			if (mode2_t != 0xff) {
 				t2t = mode2_t;
+			} else if (timing != HWS_TIM_DEFAULT) {
+				/* Board topology map is forcing timing */
+				t2t = (timing == HWS_TIM_2T) ? 1 : 0;
 			} else {
-				/* calculate number of CS (per interface) */
-				CHECK_STATUS(calc_cs_num
-					     (dev_num, if_id, &cs_num));
 				t2t = (cs_num == 1) ? 0 : 1;
 			}
 
@@ -583,16 +594,15 @@ int hws_ddr3_tip_init_controller(u32 dev_num, struct init_cntr_param *init_cntr_
 				      DDR_CONTROL_LOW_REG, t2t << 3,
 				      0x3 << 3));
 			/* move the block to ddr3_tip_set_timing - start */
-			t_pd = GET_MAX_VALUE(t_ckclk * 3,
-					     speed_bin_table(speed_bin_index,
-							     SPEED_BIN_TPD));
-			t_pd = TIME_2_CLOCK_CYCLES(t_pd, t_ckclk);
-			txpdll = GET_MAX_VALUE(t_ckclk * 10, 24);
+			t_pd = TIMES_9_TREFI_CYCLES;
+			txpdll = GET_MAX_VALUE(t_ckclk * 10,
+					       speed_bin_table(speed_bin_index,
+							       SPEED_BIN_TXPDLL));
 			txpdll = CEIL_DIVIDE((txpdll - 1), t_ckclk);
 			CHECK_STATUS(ddr3_tip_if_write
 				     (dev_num, access_type, if_id,
-				      DDR_TIMING_REG, txpdll << 4,
-				      0x1f << 4));
+				      DDR_TIMING_REG, txpdll << 4 | t_pd,
+				      0x1f << 4 | 0xf));
 			CHECK_STATUS(ddr3_tip_if_write
 				     (dev_num, access_type, if_id,
 				      DDR_TIMING_REG, 0x28 << 9, 0x3f << 9));
@@ -617,9 +627,11 @@ int hws_ddr3_tip_init_controller(u32 dev_num, struct init_cntr_param *init_cntr_
 				      (1 << 11)));
 
 			/* Set Active control for ODT write transactions */
+			if (cs_num == 1)
+				odt_config = g_odt_config_1cs;
 			CHECK_STATUS(ddr3_tip_if_write
 				     (dev_num, ACCESS_TYPE_MULTICAST,
-				      PARAM_NOT_CARE, 0x1494, g_odt_config,
+				      PARAM_NOT_CARE, 0x1494, odt_config,
 				      MASK_ALL_BITS));
 		}
 	} else {
@@ -1218,6 +1230,7 @@ int ddr3_tip_freq_set(u32 dev_num, enum hws_access_type access_type,
 	u32 cl_value = 0, cwl_value = 0, mem_mask = 0, val = 0,
 		bus_cnt = 0, t_hclk = 0, t_wr = 0,
 		refresh_interval_cnt = 0, cnt_id;
+	u32 t_ckclk;
 	u32 t_refi = 0, end_if, start_if;
 	u32 bus_index = 0;
 	int is_dll_off = 0;
@@ -1366,7 +1379,7 @@ int ddr3_tip_freq_set(u32 dev_num, enum hws_access_type access_type,
 
 		/* adjust t_refi to new frequency */
 		t_refi = (tm->interface_params[if_id].interface_temp ==
-			  HWS_TEMP_HIGH) ? TREFI_LOW : TREFI_HIGH;
+			  HWS_TEMP_HIGH) ? TREFI_HIGH : TREFI_LOW;
 		t_refi *= 1000;	/*psec */
 
 		/* HCLK in[ps] */
@@ -1384,8 +1397,12 @@ int ddr3_tip_freq_set(u32 dev_num, enum hws_access_type access_type,
 		CHECK_STATUS(ddr3_tip_if_write
 			     (dev_num, access_type, if_id, DFS_REG,
 			      (cwl_mask_table[cwl_value] << 12), 0x7000));
-		t_wr = speed_bin_table(speed_bin_index, SPEED_BIN_TWR);
-		t_wr = (t_wr / 1000);
+
+		t_ckclk = MEGA / freq_val[frequency];
+		t_wr = TIME_2_CLOCK_CYCLES(speed_bin_table(speed_bin_index,
+							   SPEED_BIN_TWR),
+					   t_ckclk);
+
 		CHECK_STATUS(ddr3_tip_if_write
 			     (dev_num, access_type, if_id, DFS_REG,
 			      (twr_mask_table[t_wr + 1] << 16), 0x70000));
@@ -1533,7 +1550,7 @@ int ddr3_tip_freq_set(u32 dev_num, enum hws_access_type access_type,
 		CHECK_STATUS(ddr3_tip_if_write(dev_num, access_type,
 					       if_id, ODT_TIMING_LOW,
 					       val, 0xffff0));
-		val = 0x71 | ((cwl_value - 1) << 8) | ((cwl_value + 5) << 12);
+		val = 0x91 | ((cwl_value - 1) << 8) | ((cwl_value + 5) << 12);
 		CHECK_STATUS(ddr3_tip_if_write(dev_num, access_type,
 					       if_id, ODT_TIMING_HI_REG,
 					       val, 0xffff));
@@ -1585,7 +1602,7 @@ static int ddr3_tip_write_odt(u32 dev_num, enum hws_access_type access_type,
 
 	CHECK_STATUS(ddr3_tip_if_write(dev_num, access_type, if_id,
 				       ODT_TIMING_LOW, val, 0xffff0));
-	val = 0x71 | ((cwl_value - 1) << 8) | ((cwl_value + 5) << 12);
+	val = 0x91 | ((cwl_value - 1) << 8) | ((cwl_value + 5) << 12);
 	CHECK_STATUS(ddr3_tip_if_write(dev_num, access_type, if_id,
 				       ODT_TIMING_HI_REG, val, 0xffff));
 	if (odt_additional == 1) {

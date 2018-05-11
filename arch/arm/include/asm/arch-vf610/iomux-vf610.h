@@ -1,13 +1,12 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2013-2014 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __IOMUX_VF610_H__
 #define __IOMUX_VF610_H__
 
-#include <asm/imx-common/iomux-v3.h>
+#include <asm/mach-imx/iomux-v3.h>
 
 /* Pad control groupings */
 #define VF610_UART_PAD_CTRL	(PAD_CTL_PUS_100K_UP | PAD_CTL_DSE_25ohm | \

@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Embest/Timll DevKit3250 board configuration file
  *
  * Copyright (C) 2011-2015 Vladimir Zapolskiy <vz@mleia.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_DEVKIT3250_H__
@@ -28,7 +27,6 @@
 #define CONFIG_SYS_MALLOC_LEN		SZ_1M
 #define CONFIG_SYS_SDRAM_BASE		EMC_DYCS0_BASE
 #define CONFIG_SYS_SDRAM_SIZE		SZ_64M
-#define CONFIG_SYS_TEXT_BASE		0x83F00000
 #define CONFIG_SYS_MEMTEST_START	(CONFIG_SYS_SDRAM_BASE + SZ_32K)
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_TEXT_BASE - SZ_1M)
 
@@ -64,7 +62,6 @@
 /*
  * SSP/SPI
  */
-#define CONFIG_LPC32XX_SSP
 #define CONFIG_LPC32XX_SSP_TIMEOUT	100000
 
 /*
@@ -73,8 +70,6 @@
 #define CONFIG_RMII
 #define CONFIG_PHY_SMSC
 #define CONFIG_LPC32XX_ETH
-#define CONFIG_PHYLIB
-#define CONFIG_PHY_ADDR			0x1F
 #define CONFIG_SYS_FAULT_ECHO_LINK_DOWN
 
 /*
@@ -110,8 +105,6 @@
 #define CONFIG_SYS_NAND_PAGE_SIZE		NAND_LARGE_BLOCK_PAGE_SIZE
 #define CONFIG_SYS_NAND_USE_FLASH_BBT
 
-#define CONFIG_CMD_NAND
-
 /*
  * USB
  */
@@ -121,15 +114,8 @@
 /*
  * U-Boot General Configurations
  */
-#define CONFIG_SYS_LONGHELP
 #define CONFIG_SYS_CBSIZE		1024
-#define CONFIG_SYS_PBSIZE		\
-	(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
-#define CONFIG_SYS_MAXARGS		16
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
-
-#define CONFIG_AUTO_COMPLETE
-#define CONFIG_CMDLINE_EDITING
 
 /*
  * Pass open firmware flat tree
@@ -138,7 +124,6 @@
 /*
  * Environment
  */
-#define CONFIG_ENV_IS_IN_NAND		1
 #define CONFIG_ENV_SIZE			SZ_128K
 #define CONFIG_ENV_OFFSET		0x000A0000
 
@@ -169,7 +154,6 @@
 #define CONFIG_SETUP_MEMORY_TAGS
 
 #define CONFIG_BOOTFILE			"uImage"
-#define CONFIG_BOOTARGS			"console=ttyS0,115200n8"
 #define CONFIG_LOADADDR			0x80008000
 
 /*
@@ -182,12 +166,10 @@
 #define CONFIG_SPL_STACK		0x0000FFF8
 
 /* Use the framework and generic lib */
-#define CONFIG_SPL_FRAMEWORK
 
 /* SPL will use serial */
 
 /* SPL loads an image from NAND */
-#define CONFIG_SPL_NAND_SIMPLE
 #define CONFIG_SPL_NAND_RAW_ONLY
 #define CONFIG_SPL_NAND_DRIVERS
 

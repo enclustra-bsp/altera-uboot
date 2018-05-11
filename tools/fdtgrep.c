@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2013, Google Inc.
  * Written by Simon Glass <sjg@chromium.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * Perform a grep of an FDT either displaying the source subset or producing
  * a new .dtb subset which can be used as required.
@@ -10,14 +9,17 @@
 
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
 #include <getopt.h>
+#include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <../include/libfdt.h>
-#include <libfdt_internal.h>
+#include "fdt_host.h"
+#include "libfdt_internal.h"
 
 /* Define DEBUG to get some debugging output on stderr */
 #ifdef DEBUG

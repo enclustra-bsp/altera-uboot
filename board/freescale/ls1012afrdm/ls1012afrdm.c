@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2016 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -57,11 +56,6 @@ int dram_init(void)
 	return 0;
 }
 
-int board_eth_init(bd_t *bis)
-{
-	return pci_eth_init(bis);
-}
-
 int board_early_init_f(void)
 {
 	fsl_lsch2_early_init_f();
@@ -71,7 +65,9 @@ int board_early_init_f(void)
 
 int board_init(void)
 {
-	struct ccsr_cci400 *cci = (struct ccsr_cci400 *)CONFIG_SYS_CCI400_ADDR;
+	struct ccsr_cci400 *cci = (struct ccsr_cci400 *)(CONFIG_SYS_IMMR +
+					CONFIG_SYS_CCI400_OFFSET);
+
 	/*
 	 * Set CCI-400 control override register to enable barrier
 	 * transaction

@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * LPC32xx MLC NAND flash controller driver
  *
  * (C) Copyright 2014 3ADEV <http://3adev.com>
  * Written by Albert ARIBAUD <albert.aribaud@3adev.fr>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * NOTE:
  *
@@ -583,21 +582,21 @@ void board_nand_init(void)
 	/* identify chip */
 	ret = nand_scan_ident(mtd, CONFIG_SYS_MAX_NAND_CHIPS, NULL);
 	if (ret) {
-		error("nand_scan_ident returned %i", ret);
+		pr_err("nand_scan_ident returned %i", ret);
 		return;
 	}
 
 	/* finish scanning the chip */
 	ret = nand_scan_tail(mtd);
 	if (ret) {
-		error("nand_scan_tail returned %i", ret);
+		pr_err("nand_scan_tail returned %i", ret);
 		return;
 	}
 
 	/* chip is good, register it */
 	ret = nand_register(0, mtd);
 	if (ret)
-		error("nand_register returned %i", ret);
+		pr_err("nand_register returned %i", ret);
 }
 
 #else /* defined(CONFIG_SPL_BUILD) */

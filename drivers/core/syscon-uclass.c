@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2015 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -104,5 +103,8 @@ static const struct udevice_id generic_syscon_ids[] = {
 U_BOOT_DRIVER(generic_syscon) = {
 	.name	= "syscon",
 	.id	= UCLASS_SYSCON,
+#if !CONFIG_IS_ENABLED(OF_PLATDATA)
+	.bind           = dm_scan_fdt_dev,
+#endif
 	.of_match = generic_syscon_ids,
 };

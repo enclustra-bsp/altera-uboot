@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2012 Linutronix GmbH
  * Copyright (c) 2014 sigma star gmbh
  * Author: Richard Weinberger <richard@nod.at>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  */
 
@@ -337,11 +336,6 @@ static void ubi_fastmap_close(struct ubi_device *ubi)
 {
 	int i;
 
-#ifndef __UBOOT__
-	flush_work(&ubi->fm_work);
-#else
-	update_fastmap_work_fn(ubi);
-#endif
 	return_unused_pool_pebs(ubi, &ubi->fm_pool);
 	return_unused_pool_pebs(ubi, &ubi->fm_wl_pool);
 

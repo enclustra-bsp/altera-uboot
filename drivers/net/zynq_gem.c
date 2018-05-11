@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2011 Michal Simek
  *
@@ -5,8 +6,6 @@
  *
  * Based on Xilinx gmac driver:
  * (C) Copyright 2011 Xilinx
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <clk.h>
@@ -182,6 +181,8 @@ struct zynq_gem_priv {
 	int phy_of_handle;
 	struct mii_dev *bus;
 	struct clk clk;
+	u32 max_speed;
+	bool int_pcs;
 };
 
 static u32 phy_setup_op(struct zynq_gem_priv *priv, u32 phy_addr, u32 regnum,
@@ -191,8 +192,8 @@ static u32 phy_setup_op(struct zynq_gem_priv *priv, u32 phy_addr, u32 regnum,
 	struct zynq_gem_regs *regs = priv->iobase;
 	int err;
 
-	err = wait_for_bit(__func__, &regs->nwsr, ZYNQ_GEM_NWSR_MDIOIDLE_MASK,
-			    true, 20000, false);
+	err = wait_for_bit_le32(&regs->nwsr, ZYNQ_GEM_NWSR_MDIOIDLE_MASK,
+				true, 20000, false);
 	if (err)
 		return err;
 
@@ -204,8 +205,8 @@ static u32 phy_setup_op(struct zynq_gem_priv *priv, u32 phy_addr, u32 regnum,
 	/* Write mgtcr and wait for completion */
 	writel(mgtcr, &regs->phymntnc);
 
-	err = wait_for_bit(__func__, &regs->nwsr, ZYNQ_GEM_NWSR_MDIOIDLE_MASK,
-			    true, 20000, false);
+	err = wait_for_bit_le32(&regs->nwsr, ZYNQ_GEM_NWSR_MDIOIDLE_MASK,
+				true, 20000, false);
 	if (err)
 		return err;
 
@@ -324,7 +325,8 @@ static int zynq_phy_init(struct udevice *dev)
 	/* Enable only MDIO bus */
 	writel(ZYNQ_GEM_NWCTRL_MDEN_MASK, &regs->nwctrl);
 
-	if (priv->interface != PHY_INTERFACE_MODE_SGMII) {
+	if ((priv->interface != PHY_INTERFACE_MODE_SGMII) &&
+	    (priv->interface != PHY_INTERFACE_MODE_GMII)) {
 		ret = phy_detection(dev);
 		if (ret) {
 			printf("GEM PHY init failed\n");
@@ -339,6 +341,12 @@ static int zynq_phy_init(struct udevice *dev)
 
 	priv->phydev->supported &= supported | ADVERTISED_Pause |
 				  ADVERTISED_Asym_Pause;
+	if (priv->max_speed) {
+		ret = phy_set_supported(priv->phydev, priv->max_speed);
+		if (ret)
+			return ret;
+	}
+
 	priv->phydev->advertising = priv->phydev->supported;
 
 	if (priv->phy_of_handle > 0)
@@ -425,7 +433,12 @@ static int zynq_gem_init(struct udevice *dev)
 
 	nwconfig = ZYNQ_GEM_NWCFG_INIT;
 
-	if (priv->interface == PHY_INTERFACE_MODE_SGMII) {
+	/*
+	 * Set SGMII enable PCS selection only if internal PCS/PMA
+	 * core is used and interface is SGMII.
+	 */
+	if (priv->interface == PHY_INTERFACE_MODE_SGMII &&
+	    priv->int_pcs) {
 		nwconfig |= ZYNQ_GEM_NWCFG_SGMII_ENBL |
 			    ZYNQ_GEM_NWCFG_PCS_SEL;
 #ifdef CONFIG_ARM64
@@ -508,8 +521,8 @@ static int zynq_gem_send(struct udevice *dev, void *ptr, int len)
 	if (priv->tx_bd->status & ZYNQ_GEM_TXBUF_EXHAUSTED)
 		printf("TX buffers exhausted in mid frame\n");
 
-	return wait_for_bit(__func__, &regs->txsr, ZYNQ_GEM_TSR_DONE,
-			    true, 20000, true);
+	return wait_for_bit_le32(&regs->txsr, ZYNQ_GEM_TSR_DONE,
+				 true, 20000, true);
 }
 
 /* Do not check frame_recd flag in rx_status register 0x20 - just poll BD */
@@ -696,6 +709,11 @@ static int zynq_gem_ofdata_to_platdata(struct udevice *dev)
 		return -EINVAL;
 	}
 	priv->interface = pdata->phy_interface;
+
+	priv->max_speed = fdtdec_get_uint(gd->fdt_blob, priv->phy_of_handle,
+					  "max-speed", SPEED_1000);
+	priv->int_pcs = fdtdec_get_bool(gd->fdt_blob, node,
+					"is-internal-pcspma");
 
 	printf("ZYNQ GEM: %lx, phyaddr %x, interface %s\n", (ulong)priv->iobase,
 	       priv->phyaddr, phy_string_for_interface(priv->interface));

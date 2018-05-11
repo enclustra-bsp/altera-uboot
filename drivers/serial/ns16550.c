@@ -8,7 +8,6 @@
 #include <clk.h>
 #include <dm.h>
 #include <errno.h>
-#include <fdtdec.h>
 #include <ns16550.h>
 #include <serial.h>
 #include <watchdog.h>
@@ -56,7 +55,7 @@ static inline void serial_out_shift(void *addr, int shift, int value)
 {
 #ifdef CONFIG_SYS_NS16550_PORT_MAPPED
 	outb(value, (ulong)addr);
-#elif defined(CONFIG_SYS_NS16550_MEM32) && !defined(CONFIG_SYS_BIG_ENDIAN)
+#elif defined(CONFIG_SYS_NS16550_MEM32) && defined(CONFIG_SYS_LITTLE_ENDIAN)
 	out_le32(addr, value);
 #elif defined(CONFIG_SYS_NS16550_MEM32) && defined(CONFIG_SYS_BIG_ENDIAN)
 	out_be32(addr, value);
@@ -73,7 +72,7 @@ static inline int serial_in_shift(void *addr, int shift)
 {
 #ifdef CONFIG_SYS_NS16550_PORT_MAPPED
 	return inb((ulong)addr);
-#elif defined(CONFIG_SYS_NS16550_MEM32) && !defined(CONFIG_SYS_BIG_ENDIAN)
+#elif defined(CONFIG_SYS_NS16550_MEM32) && defined(CONFIG_SYS_LITTLE_ENDIAN)
 	return in_le32(addr);
 #elif defined(CONFIG_SYS_NS16550_MEM32) && defined(CONFIG_SYS_BIG_ENDIAN)
 	return in_be32(addr);
@@ -340,9 +339,9 @@ static int ns16550_serial_pending(struct udevice *dev, bool input)
 	struct NS16550 *const com_port = dev_get_priv(dev);
 
 	if (input)
-		return serial_in(&com_port->lsr) & UART_LSR_DR ? 1 : 0;
+		return (serial_in(&com_port->lsr) & UART_LSR_DR) ? 1 : 0;
 	else
-		return serial_in(&com_port->lsr) & UART_LSR_THRE ? 0 : 1;
+		return (serial_in(&com_port->lsr) & UART_LSR_THRE) ? 0 : 1;
 }
 
 static int ns16550_serial_getc(struct udevice *dev)
@@ -395,7 +394,7 @@ int ns16550_serial_ofdata_to_platdata(struct udevice *dev)
 	int err;
 
 	/* try Processor Local Bus device first */
-	addr = devfdt_get_addr(dev);
+	addr = dev_read_addr(dev);
 #if defined(CONFIG_PCI) && defined(CONFIG_DM_PCI)
 	if (addr == FDT_ADDR_T_NONE) {
 		/* then try pci device */
@@ -434,10 +433,8 @@ int ns16550_serial_ofdata_to_platdata(struct udevice *dev)
 	plat->base = (unsigned long)map_physmem(addr, 0, MAP_NOCACHE);
 #endif
 
-	plat->reg_offset = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
-				     "reg-offset", 0);
-	plat->reg_shift = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
-					 "reg-shift", 0);
+	plat->reg_offset = dev_read_u32_default(dev, "reg-offset", 0);
+	plat->reg_shift = dev_read_u32_default(dev, "reg-shift", 0);
 
 	err = clk_get_by_index(dev, 0, &clk);
 	if (!err) {
@@ -450,9 +447,8 @@ int ns16550_serial_ofdata_to_platdata(struct udevice *dev)
 	}
 
 	if (!plat->clock)
-		plat->clock = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
-					     "clock-frequency",
-					     CONFIG_SYS_NS16550_CLK);
+		plat->clock = dev_read_u32_default(dev, "clock-frequency",
+						   CONFIG_SYS_NS16550_CLK);
 	if (!plat->clock) {
 		debug("ns16550 clock not defined\n");
 		return -EINVAL;

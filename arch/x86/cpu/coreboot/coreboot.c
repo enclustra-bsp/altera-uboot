@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2011 The Chromium OS Authors.
  * (C) Copyright 2008
  * Graeme Russ, graeme.russ@gmail.com.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -27,11 +26,6 @@ int arch_cpu_init(void)
 	timestamp_init();
 
 	return x86_cpu_init_f();
-}
-
-int board_early_init_f(void)
-{
-	return 0;
 }
 
 int checkcpu(void)
@@ -87,11 +81,6 @@ int last_stage_init(void)
 }
 
 int misc_init_r(void)
-{
-	return 0;
-}
-
-int arch_misc_init(void)
 {
 	return 0;
 }

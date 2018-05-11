@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright 2007-2011 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 /*
@@ -13,8 +12,6 @@
 
 /* High Level Configuration Options */
 #define CONFIG_LINUX_RESET_VEC	0x100	/* Reset vector used by Linux */
-
-#define	CONFIG_SYS_TEXT_BASE	0xfff00000
 
 /* video */
 #define CONFIG_FSL_DIU_FB
@@ -203,7 +200,6 @@
 #define CONFIG_SYS_MALLOC_LEN		(6 * 1024 * 1024)	/* Reserved for malloc */
 
 /* Serial Port */
-#define CONFIG_CONS_INDEX	1
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_bus_freq(0)
@@ -262,8 +258,6 @@
 
 #define CONFIG_PCI_SCAN_SHOW		/* show pci devices on startup */
 
-#define CONFIG_CMD_REGINFO
-
 #define CONFIG_ULI526X
 #ifdef CONFIG_ULI526X
 #endif
@@ -273,7 +267,6 @@
  ************************************************************/
 #define CONFIG_PCI_OHCI		1
 #define CONFIG_USB_OHCI_NEW		1
-#define CONFIG_SYS_USB_EVENT_POLL	1
 #define CONFIG_SYS_USB_OHCI_SLOT_NAME	"ohci_pci"
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS 15
 #define CONFIG_SYS_OHCI_SWAP_REG_ACCESS	1
@@ -284,10 +277,7 @@
 #define PCI_IDSEL_NUMBER	0x0c	/* slot0->3(IDSEL)=12->15 */
 #endif
 
-#define CONFIG_SCSI_AHCI
-
 #ifdef CONFIG_SCSI_AHCI
-#define CONFIG_LIBATA
 #define CONFIG_SATA_ULI5288
 #define CONFIG_SYS_SCSI_MAX_SCSI_ID	4
 #define CONFIG_SYS_SCSI_MAX_LUN	1
@@ -403,12 +393,10 @@
  * Environment
  */
 #ifndef CONFIG_SYS_RAMBOOT
-#define CONFIG_ENV_IS_IN_FLASH	1
 #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN)
 #define CONFIG_ENV_SECT_SIZE	0x20000	/* 126k (one sector) for env */
 #define CONFIG_ENV_SIZE		0x2000
 #else
-#define CONFIG_ENV_IS_NOWHERE	1	/* Store ENV in memory only */
 #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE - 0x1000)
 #define CONFIG_ENV_SIZE		0x2000
 #endif
@@ -420,18 +408,10 @@
  * BOOTP options
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
-#define CONFIG_BOOTP_BOOTPATH
-#define CONFIG_BOOTP_GATEWAY
-#define CONFIG_BOOTP_HOSTNAME
 
 /*
  * Command line configuration.
  */
-
-#if defined(CONFIG_PCI)
-#define CONFIG_CMD_PCI
-#define CONFIG_SCSI
-#endif
 
 #define CONFIG_WATCHDOG			/* watchdog enabled */
 #define CONFIG_SYS_WATCHDOG_FREQ	5000	/* Feed interval, 5s */
@@ -439,19 +419,7 @@
 /*
  * Miscellaneous configurable options
  */
-#define CONFIG_SYS_LONGHELP			/* undef to save memory	*/
-#define CONFIG_CMDLINE_EDITING          /* Command-line editing */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
-
-#if defined(CONFIG_CMD_KGDB)
-#define CONFIG_SYS_CBSIZE	1024		/* Console I/O Buffer Size */
-#else
-#define CONFIG_SYS_CBSIZE	256		/* Console I/O Buffer Size */
-#endif
-
-#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16) /* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS	16		/* max number of command args */
-#define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE	/* Boot Argument Buffer Size */
 
 /*
  * For booting Linux, the board info and command line data
@@ -470,7 +438,7 @@
  */
 #define CONFIG_IPADDR		192.168.1.100
 
-#define CONFIG_HOSTNAME		unknown
+#define CONFIG_HOSTNAME		"unknown"
 #define CONFIG_ROOTPATH		"/opt/nfsroot"
 #define CONFIG_BOOTFILE		"uImage"
 #define CONFIG_UBOOTPATH	8610hpcd/u-boot.bin
@@ -481,8 +449,6 @@
 
 /* default location for tftp and bootm */
 #define CONFIG_LOADADDR		0x10000000
-
-#undef	CONFIG_BOOTARGS		/* the boot command will set bootargs */
 
 #if defined(CONFIG_PCI1)
 #define PCI_ENV \

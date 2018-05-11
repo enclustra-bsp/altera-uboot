@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) Marvell International Ltd. and its affiliates
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -326,8 +325,6 @@ int ddr3_tip_print_log(u32 dev_num, u32 mem_addr)
 {
 	u32 if_id = 0;
 	struct hws_topology_map *tm = ddr3_get_topology_map();
-
-	mem_addr = mem_addr;
 
 #ifndef EXCLUDE_SWITCH_DEBUG
 	if ((is_validate_window_per_if != 0) ||
@@ -820,7 +817,6 @@ static int ddr3_tip_access_atr(u32 dev_num, u32 flag_id, u32 value, u32 **ptr)
 	u32 tmp_val = 0, if_id = 0, pup_id = 0;
 	struct hws_topology_map *tm = ddr3_get_topology_map();
 
-	dev_num = dev_num;
 	*ptr = NULL;
 
 	switch (flag_id) {
@@ -1169,8 +1165,6 @@ int print_adll(u32 dev_num, u32 adll[MAX_INTERFACE_NUM * MAX_BUS_NUM])
 	u32 i, j;
 	struct hws_topology_map *tm = ddr3_get_topology_map();
 
-	dev_num = dev_num;
-
 	for (j = 0; j < tm->num_of_bus_per_interface; j++) {
 		VALIDATE_ACTIVE(tm->bus_act_mask, j);
 		for (i = 0; i < MAX_INTERFACE_NUM; i++) {
@@ -1228,8 +1222,6 @@ int ddr3_tip_sweep_test(u32 dev_num, u32 test_type,
 		end_adll, start_adll;
 	u32 reg_addr = 0;
 	struct hws_topology_map *tm = ddr3_get_topology_map();
-
-	mem_addr = mem_addr;
 
 	if (test_type == 0) {
 		reg_addr = 1;
@@ -1300,8 +1292,6 @@ int ddr3_tip_run_sweep_test(int dev_num, u32 repeat_num, u32 direction,
 	u32 cs;
 	u32 max_cs = hws_ddr3_tip_max_cs_get();
 	struct hws_topology_map *tm = ddr3_get_topology_map();
-
-	repeat_num = repeat_num;
 
 	if (mode == 1) {
 		/* per pup */

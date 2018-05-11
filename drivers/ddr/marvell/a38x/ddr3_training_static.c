@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) Marvell International Ltd. and its affiliates
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -21,7 +20,8 @@ u32 g_zpodt_data = 45;		/* controller data - P ODT */
 u32 g_znodt_data = 45;		/* controller data - N ODT */
 u32 g_zpodt_ctrl = 45;		/* controller data - P ODT */
 u32 g_znodt_ctrl = 45;		/* controller data - N ODT */
-u32 g_odt_config = 0x120012;
+u32 g_odt_config_2cs = 0x120012;
+u32 g_odt_config_1cs = 0x10000;
 u32 g_rtt_nom = 0x44;
 u32 g_dic = 0x2;
 

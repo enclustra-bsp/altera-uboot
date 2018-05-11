@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2010
  * Vipin Kumar, ST Microelectronics, vipin.kumar@st.com.
  *
  * (C) Copyright 2012
  * Amit Virdi, ST Microelectronics, amit.virdi@st.com.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -409,7 +408,7 @@ int fsmc_nand_switch_ecc(uint32_t eccstrength)
 	 * Nomadik SoC is currently supporting this fsmc_nand_switch_ecc()
 	 * function, as it doesn't need to switch to a different ECC layout.
 	 */
-	mtd = nand_info[nand_curr_device];
+	mtd = get_nand_dev_by_index(nand_curr_device);
 	nand = mtd_to_nand(mtd);
 
 	/* Setup the ecc configurations again */

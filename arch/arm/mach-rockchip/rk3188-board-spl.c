@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2015 Google, Inc
- *
- * SPDX-License-Identifier:     GPL-2.0+
  */
 
 #include <clk.h>
@@ -72,11 +71,6 @@ fallback:
 	return BOOT_DEVICE_MMC1;
 }
 
-u32 spl_boot_mode(const u32 boot_device)
-{
-	return MMCSD_MODE_RAW;
-}
-
 static int setup_arm_clock(void)
 {
 	struct udevice *dev;
@@ -101,7 +95,6 @@ static int setup_arm_clock(void)
 void board_init_f(ulong dummy)
 {
 	struct udevice *pinctrl, *dev;
-	struct rk3188_pmu *pmu;
 	int ret;
 
 	/* Example code showing how to enable the debug UART on RK3188 */
@@ -137,22 +130,11 @@ void board_init_f(ulong dummy)
 		hang();
 	}
 
-	rockchip_timer_init();
-
 	ret = rockchip_get_clk(&dev);
 	if (ret) {
 		debug("CLK init failed: %d\n", ret);
 		return;
 	}
-
-	/*
-	 * Recover the bootrom's stackpointer.
-	 * For whatever reason needs to run after rockchip_get_clk.
-	 */
-	pmu = syscon_get_first_range(ROCKCHIP_SYSCON_PMU);
-	if (IS_ERR(pmu))
-		error("pmu syscon returned %ld\n", PTR_ERR(pmu));
-	SAVE_SP_ADDR = readl(&pmu->sys_reg[2]);
 
 	ret = uclass_get_device(UCLASS_PINCTRL, 0, &pinctrl);
 	if (ret) {
@@ -167,9 +149,8 @@ void board_init_f(ulong dummy)
 	}
 
 	setup_arm_clock();
-
-#if defined(CONFIG_ROCKCHIP_SPL_BACK_TO_BROM) && !defined(CONFIG_SPL_BOARD_INIT)
-	back_to_bootrom();
+#if CONFIG_IS_ENABLED(ROCKCHIP_BACK_TO_BROM) && !defined(CONFIG_SPL_BOARD_INIT)
+	back_to_bootrom(BROM_BOOT_NEXTSTAGE);
 #endif
 }
 
@@ -229,8 +210,8 @@ void spl_board_init(void)
 	}
 
 	preloader_console_init();
-#ifdef CONFIG_ROCKCHIP_SPL_BACK_TO_BROM
-	back_to_bootrom();
+#if CONFIG_IS_ENABLED(ROCKCHIP_BACK_TO_BROM)
+	back_to_bootrom(BROM_BOOT_NEXTSTAGE);
 #endif
 	return;
 

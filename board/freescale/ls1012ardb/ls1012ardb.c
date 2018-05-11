@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2016 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -28,6 +27,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 int checkboard(void)
 {
+#ifdef CONFIG_TARGET_LS1012ARDB
 	u8 in1;
 
 	puts("Board: LS1012ARDB ");
@@ -35,29 +35,52 @@ int checkboard(void)
 	/* Initialize i2c early for Serial flash bank information */
 	i2c_set_bus_num(0);
 
-	if (i2c_read(I2C_MUX_IO1_ADDR, 1, 1, &in1, 1) < 0) {
+	if (i2c_read(I2C_MUX_IO_ADDR, I2C_MUX_IO_1, 1, &in1, 1) < 0) {
 		printf("Error reading i2c boot information!\n");
 		return 0; /* Don't want to hang() on this error */
 	}
 
 	puts("Version");
-	if ((in1 & (~__SW_REV_MASK)) == __SW_REV_A)
+	switch (in1 & SW_REV_MASK) {
+	case SW_REV_A:
 		puts(": RevA");
-	else if ((in1 & (~__SW_REV_MASK)) == __SW_REV_B)
+		break;
+	case SW_REV_B:
 		puts(": RevB");
-	else
+		break;
+	case SW_REV_C:
+		puts(": RevC");
+		break;
+	case SW_REV_C1:
+		puts(": RevC1");
+		break;
+	case SW_REV_C2:
+		puts(": RevC2");
+		break;
+	case SW_REV_D:
+		puts(": RevD");
+		break;
+	case SW_REV_E:
+		puts(": RevE");
+		break;
+	default:
 		puts(": unknown");
+		break;
+	}
 
 	printf(", boot from QSPI");
-	if ((in1 & (~__SW_BOOT_MASK)) == __SW_BOOT_EMU)
+	if ((in1 & SW_BOOT_MASK) == SW_BOOT_EMU)
 		puts(": emu\n");
-	else if ((in1 & (~__SW_BOOT_MASK)) == __SW_BOOT_BANK1)
+	else if ((in1 & SW_BOOT_MASK) == SW_BOOT_BANK1)
 		puts(": bank1\n");
-	else if ((in1 & (~__SW_BOOT_MASK)) == __SW_BOOT_BANK2)
+	else if ((in1 & SW_BOOT_MASK) == SW_BOOT_BANK2)
 		puts(": bank2\n");
 	else
 		puts("unknown\n");
+#else
 
+	puts("Board: LS1012A2G5RDB ");
+#endif
 	return 0;
 }
 
@@ -90,10 +113,6 @@ int dram_init(void)
 	return 0;
 }
 
-int board_eth_init(bd_t *bis)
-{
-	return pci_eth_init(bis);
-}
 
 int board_early_init_f(void)
 {
@@ -104,7 +123,8 @@ int board_early_init_f(void)
 
 int board_init(void)
 {
-	struct ccsr_cci400 *cci = (struct ccsr_cci400 *)CONFIG_SYS_CCI400_ADDR;
+	struct ccsr_cci400 *cci = (struct ccsr_cci400 *)(CONFIG_SYS_IMMR +
+					CONFIG_SYS_CCI400_OFFSET);
 	/*
 	 * Set CCI-400 control override register to enable barrier
 	 * transaction
@@ -129,36 +149,51 @@ int board_init(void)
 	return 0;
 }
 
+#ifdef CONFIG_TARGET_LS1012ARDB
 int esdhc_status_fixup(void *blob, const char *compat)
 {
-	char esdhc0_path[] = "/soc/esdhc@1560000";
 	char esdhc1_path[] = "/soc/esdhc@1580000";
-	u8 io = 0;
+	bool sdhc2_en = false;
 	u8 mux_sdhc2;
-
-	do_fixup_by_path(blob, esdhc0_path, "status", "okay",
-			 sizeof("okay"), 1);
+	u8 io = 0;
 
 	i2c_set_bus_num(0);
 
-	/*
-	 * The I2C IO-expander for mux select is used to control the muxing
-	 * of various onboard interfaces.
-	 *
-	 * IO1[3:2] indicates SDHC2 interface demultiplexer select lines.
-	 *	00 - SDIO wifi
-	 *	01 - GPIO (to Arduino)
-	 *	10 - eMMC Memory
-	 *	11 - SPI
-	 */
-	if (i2c_read(I2C_MUX_IO1_ADDR, 0, 1, &io, 1) < 0) {
+	/* IO1[7:3] is the field of board revision info. */
+	if (i2c_read(I2C_MUX_IO_ADDR, I2C_MUX_IO_1, 1, &io, 1) < 0) {
 		printf("Error reading i2c boot information!\n");
-		return 0; /* Don't want to hang() on this error */
+		return 0;
 	}
 
-	mux_sdhc2 = (io & 0x0c) >> 2;
-	/* Enable SDHC2 only when use SDIO wifi and eMMC */
-	if (mux_sdhc2 == 2 || mux_sdhc2 == 0)
+	/* hwconfig method is used for RevD and later versions. */
+	if ((io & SW_REV_MASK) <= SW_REV_D) {
+#ifdef CONFIG_HWCONFIG
+		if (hwconfig("esdhc1"))
+			sdhc2_en = true;
+#endif
+	} else {
+		/*
+		 * The I2C IO-expander for mux select is used to control
+		 * the muxing of various onboard interfaces.
+		 *
+		 * IO0[3:2] indicates SDHC2 interface demultiplexer
+		 * select lines.
+		 *	00 - SDIO wifi
+		 *	01 - GPIO (to Arduino)
+		 *	10 - eMMC Memory
+		 *	11 - SPI
+		 */
+		if (i2c_read(I2C_MUX_IO_ADDR, I2C_MUX_IO_0, 1, &io, 1) < 0) {
+			printf("Error reading i2c boot information!\n");
+			return 0;
+		}
+
+		mux_sdhc2 = (io & 0x0c) >> 2;
+		/* Enable SDHC2 only when use SDIO wifi and eMMC */
+		if (mux_sdhc2 == 2 || mux_sdhc2 == 0)
+			sdhc2_en = true;
+	}
+	if (sdhc2_en)
 		do_fixup_by_path(blob, esdhc1_path, "status", "okay",
 				 sizeof("okay"), 1);
 	else
@@ -166,6 +201,7 @@ int esdhc_status_fixup(void *blob, const char *compat)
 				 sizeof("disabled"), 1);
 	return 0;
 }
+#endif
 
 int ft_board_setup(void *blob, bd_t *bd)
 {

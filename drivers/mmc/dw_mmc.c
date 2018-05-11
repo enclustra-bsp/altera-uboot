@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2012 SAMSUNG Electronics
  * Jaehoon Chung <jh80.chung@samsung.com>
  * Rajeshawari Shinde <rajeshwari.s@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <bouncebuf.h>
@@ -184,7 +183,7 @@ static int dwmci_set_transfer_mode(struct dwmci_host *host,
 	return mode;
 }
 
-#ifdef CONFIG_DM_MMC_OPS
+#ifdef CONFIG_DM_MMC
 static int dwmci_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
 		   struct mmc_data *data)
 {
@@ -383,7 +382,7 @@ static int dwmci_setup_bus(struct dwmci_host *host, u32 freq)
 	return 0;
 }
 
-#ifdef CONFIG_DM_MMC_OPS
+#ifdef CONFIG_DM_MMC
 static int dwmci_set_ios(struct udevice *dev)
 {
 	struct mmc *mmc = mmc_get_mmc_dev(dev);
@@ -466,7 +465,7 @@ static int dwmci_init(struct mmc *mmc)
 	return 0;
 }
 
-#ifdef CONFIG_DM_MMC_OPS
+#ifdef CONFIG_DM_MMC
 int dwmci_probe(struct udevice *dev)
 {
 	struct mmc *mmc = mmc_get_mmc_dev(dev);
@@ -491,7 +490,7 @@ void dwmci_setup_cfg(struct mmc_config *cfg, struct dwmci_host *host,
 		u32 max_clk, u32 min_clk)
 {
 	cfg->name = host->name;
-#ifndef CONFIG_DM_MMC_OPS
+#ifndef CONFIG_DM_MMC
 	cfg->ops = &dwmci_ops;
 #endif
 	cfg->f_min = min_clk;

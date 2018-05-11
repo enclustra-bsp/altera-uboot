@@ -1,10 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Configuation settings for the Freescale MCF54455 EVB board.
  *
  * Copyright (C) 2004-2007 Freescale Semiconductor, Inc.
  * TsiChung Liew (Tsi-Chung.Liew@freescale.com)
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -23,6 +22,8 @@
 #define CONFIG_MCFUART
 #define CONFIG_SYS_UART_PORT		(0)
 
+#define LDS_BOARD_TEXT                  board/freescale/m54455evb/sbf_dram_init.o (.text*)
+
 #undef CONFIG_WATCHDOG
 
 #define CONFIG_TIMESTAMP	/* Print image info with timestamp */
@@ -31,13 +32,6 @@
  * BOOTP options
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
-#define CONFIG_BOOTP_BOOTPATH
-#define CONFIG_BOOTP_GATEWAY
-#define CONFIG_BOOTP_HOSTNAME
-
-/* Command line configuration */
-#undef CONFIG_CMD_PCI
-#define CONFIG_CMD_REGINFO
 
 /* Network configuration */
 #define CONFIG_MCFFEC
@@ -55,7 +49,6 @@
 #	define MCFFEC_TOUT_LOOP 50000
 #	define CONFIG_HAS_ETH1
 
-#	define CONFIG_BOOTARGS		"root=/dev/mtdblock1 rw rootfstype=jffs2 ip=none mtdparts=physmap-flash.0:5M(kernel)ro,-(jffs2)"
 #	define CONFIG_ETHPRIME		"FEC0"
 #	define CONFIG_IPADDR		192.162.1.2
 #	define CONFIG_NETMASK		255.255.255.0
@@ -73,7 +66,7 @@
 #	endif			/* CONFIG_SYS_DISCOVER_PHY */
 #endif
 
-#define CONFIG_HOSTNAME		M54455EVB
+#define CONFIG_HOSTNAME		"M54455EVB"
 #ifdef CONFIG_SYS_STMICRO_BOOT
 /* ST Micro serial flash */
 #define	CONFIG_SYS_LOAD_ADDR2		0x40010013
@@ -149,7 +142,6 @@
 #define CONFIG_SYS_IMMR		CONFIG_SYS_MBAR
 
 /* DSPI and Serial Flash */
-#define CONFIG_CF_SPI
 #define CONFIG_CF_DSPI
 #define CONFIG_HARD_SPI
 #define CONFIG_SYS_SBFHDR_SIZE		0x13
@@ -185,7 +177,6 @@
 
 /* FPGA - Spartan 2 */
 /* experiment
-#define CONFIG_FPGA
 #define CONFIG_FPGA_COUNT	1
 #define CONFIG_SYS_FPGA_PROG_FEEDBACK
 #define CONFIG_SYS_FPGA_CHECK_CTRLC
@@ -195,17 +186,6 @@
 #define CONFIG_EXTRA_CLOCK
 
 #define CONFIG_PRAM		2048	/* 2048 KB */
-
-#define CONFIG_SYS_LONGHELP		/* undef to save memory */
-
-#if defined(CONFIG_CMD_KGDB)
-#define CONFIG_SYS_CBSIZE			1024	/* Console I/O Buffer Size */
-#else
-#define CONFIG_SYS_CBSIZE			256	/* Console I/O Buffer Size */
-#endif
-#define CONFIG_SYS_PBSIZE		(CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)	/* Print Buffer Size */
-#define CONFIG_SYS_MAXARGS		16	/* max number of command args */
-#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE	/* Boot Argument Buffer Size    */
 
 #define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x10000)
 
@@ -271,10 +251,7 @@
  * crc error warning if there is no correct environment on the flash.
  */
 #ifdef CONFIG_CF_SBF
-#	define CONFIG_ENV_IS_IN_SPI_FLASH
 #	define CONFIG_ENV_SPI_CS		1
-#else
-#	define CONFIG_ENV_IS_IN_FLASH	1
 #endif
 #undef CONFIG_ENV_OVERWRITE
 

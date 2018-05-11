@@ -1,18 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * K2E EVM : Board initialization
  *
  * (C) Copyright 2014
  *     Texas Instruments Incorporated, <www.ti.com>
- *
- * SPDX-License-Identifier:     GPL-2.0+
  */
 
 #include <common.h>
 #include <asm/arch/ddr3.h>
 #include <asm/arch/hardware.h>
 #include <asm/ti-common/keystone_net.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 unsigned int get_external_clk(u32 clk)
 {
@@ -163,6 +160,16 @@ struct eth_priv_t eth_priv_cfg[] = {
 int get_num_eth_ports(void)
 {
 	return sizeof(eth_priv_cfg) / sizeof(struct eth_priv_t);
+}
+#endif
+
+#if defined(CONFIG_MULTI_DTB_FIT)
+int board_fit_config_name_match(const char *name)
+{
+	if (!strcmp(name, "keystone-k2e-evm"))
+		return 0;
+
+	return -1;
 }
 #endif
 

@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2016 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -10,6 +9,7 @@
 #include <dm.h>
 #include <dm/device-internal.h>
 #include <dm/lists.h>
+#include <dm/uclass-internal.h>
 
 static const char *if_typename_str[IF_TYPE_COUNT] = {
 	[IF_TYPE_IDE]		= "ide",
@@ -21,11 +21,12 @@ static const char *if_typename_str[IF_TYPE_COUNT] = {
 	[IF_TYPE_SD]		= "sd",
 	[IF_TYPE_SATA]		= "sata",
 	[IF_TYPE_HOST]		= "host",
-	[IF_TYPE_SYSTEMACE]	= "ace",
+	[IF_TYPE_NVME]		= "nvme",
+	[IF_TYPE_EFI]		= "efi",
 };
 
 static enum uclass_id if_type_uclass_id[IF_TYPE_COUNT] = {
-	[IF_TYPE_IDE]		= UCLASS_INVALID,
+	[IF_TYPE_IDE]		= UCLASS_IDE,
 	[IF_TYPE_SCSI]		= UCLASS_SCSI,
 	[IF_TYPE_ATAPI]		= UCLASS_INVALID,
 	[IF_TYPE_USB]		= UCLASS_MASS_STORAGE,
@@ -34,7 +35,8 @@ static enum uclass_id if_type_uclass_id[IF_TYPE_COUNT] = {
 	[IF_TYPE_SD]		= UCLASS_INVALID,
 	[IF_TYPE_SATA]		= UCLASS_AHCI,
 	[IF_TYPE_HOST]		= UCLASS_ROOT,
-	[IF_TYPE_SYSTEMACE]	= UCLASS_INVALID,
+	[IF_TYPE_NVME]		= UCLASS_NVME,
+	[IF_TYPE_EFI]		= UCLASS_EFI,
 };
 
 static enum if_type if_typename_to_iftype(const char *if_typename)
@@ -53,6 +55,11 @@ static enum if_type if_typename_to_iftype(const char *if_typename)
 static enum uclass_id if_type_to_uclass_id(enum if_type if_type)
 {
 	return if_type_uclass_id[if_type];
+}
+
+const char *blk_get_if_type_name(enum if_type if_type)
+{
+	return if_typename_str[if_type];
 }
 
 struct blk_desc *blk_get_devnum_by_type(enum if_type if_type, int devnum)
@@ -287,9 +294,6 @@ ulong blk_read_devnum(enum if_type if_type, int devnum, lbaint_t start,
 	if (IS_ERR_VALUE(n))
 		return n;
 
-	/* flush cache after read */
-	flush_cache((ulong)buffer, blkcnt * desc->blksz);
-
 	return n;
 }
 
@@ -327,7 +331,7 @@ int blk_first_device(int if_type, struct udevice **devp)
 	struct blk_desc *desc;
 	int ret;
 
-	ret = uclass_first_device(UCLASS_BLK, devp);
+	ret = uclass_find_first_device(UCLASS_BLK, devp);
 	if (ret)
 		return ret;
 	if (!*devp)
@@ -336,7 +340,7 @@ int blk_first_device(int if_type, struct udevice **devp)
 		desc = dev_get_uclass_platdata(*devp);
 		if (desc->if_type == if_type)
 			return 0;
-		ret = uclass_next_device(devp);
+		ret = uclass_find_next_device(devp);
 		if (ret)
 			return ret;
 	} while (*devp);
@@ -352,7 +356,7 @@ int blk_next_device(struct udevice **devp)
 	desc = dev_get_uclass_platdata(*devp);
 	if_type = desc->if_type;
 	do {
-		ret = uclass_next_device(devp);
+		ret = uclass_find_next_device(devp);
 		if (ret)
 			return ret;
 		if (!*devp)
@@ -539,7 +543,7 @@ static int blk_claim_devnum(enum if_type if_type, int devnum)
 
 int blk_create_device(struct udevice *parent, const char *drv_name,
 		      const char *name, int if_type, int devnum, int blksz,
-		      lbaint_t size, struct udevice **devp)
+		      lbaint_t lba, struct udevice **devp)
 {
 	struct blk_desc *desc;
 	struct udevice *dev;
@@ -560,7 +564,7 @@ int blk_create_device(struct udevice *parent, const char *drv_name,
 	desc = dev_get_uclass_platdata(dev);
 	desc->if_type = if_type;
 	desc->blksz = blksz;
-	desc->lba = size / blksz;
+	desc->lba = lba;
 	desc->part_type = PART_TYPE_UNKNOWN;
 	desc->bdev = dev;
 	desc->devnum = devnum;
@@ -571,7 +575,7 @@ int blk_create_device(struct udevice *parent, const char *drv_name,
 
 int blk_create_devicef(struct udevice *parent, const char *drv_name,
 		       const char *name, int if_type, int devnum, int blksz,
-		       lbaint_t size, struct udevice **devp)
+		       lbaint_t lba, struct udevice **devp)
 {
 	char dev_name[30], *str;
 	int ret;
@@ -582,14 +586,14 @@ int blk_create_devicef(struct udevice *parent, const char *drv_name,
 		return -ENOMEM;
 
 	ret = blk_create_device(parent, drv_name, str, if_type, devnum,
-				blksz, size, devp);
+				blksz, lba, devp);
 	if (ret) {
 		free(str);
 		return ret;
 	}
 	device_set_name_alloced(*devp);
 
-	return ret;
+	return 0;
 }
 
 int blk_unbind_all(int if_type)

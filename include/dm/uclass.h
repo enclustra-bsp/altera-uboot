@@ -1,10 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (c) 2013 Google, Inc
  *
  * (C) Copyright 2012
  * Pavel Herrmann <morpheus.ibis@gmail.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _DM_UCLASS_H
@@ -72,11 +71,11 @@ struct udevice;
  * then this will be automatically allocated.
  * @per_child_auto_alloc_size: Each child device (of a parent in this
  * uclass) can hold parent data for the device/uclass. This value is only
- * used as a falback if this member is 0 in the driver.
+ * used as a fallback if this member is 0 in the driver.
  * @per_child_platdata_auto_alloc_size: A bus likes to store information about
  * its children. If non-zero this is the size of this data, to be allocated
  * in the child device's parent_platdata pointer. This value is only used as
- * a falback if this member is 0 in the driver.
+ * a fallback if this member is 0 in the driver.
  * @ops: Uclass operations, providing the consistent interface to devices
  * within the uclass.
  * @flags: Flags for this uclass (DM_UC_...)
@@ -126,6 +125,14 @@ int uclass_get(enum uclass_id key, struct uclass **ucp);
  * @returns the name of the uclass driver for that ID, or NULL if none
  */
 const char *uclass_get_name(enum uclass_id id);
+
+/**
+ * uclass_get_by_name() - Look up a uclass by its driver name
+ *
+ * @name: Name to look up
+ * @returns the associated uclass ID, or UCLASS_INVALID if not found
+ */
+enum uclass_id uclass_get_by_name(const char *name);
 
 /**
  * uclass_get_device() - Get a uclass device based on an ID and index
@@ -203,6 +210,22 @@ int uclass_get_device_by_ofnode(enum uclass_id id, ofnode node,
 				struct udevice **devp);
 
 /**
+ * uclass_get_device_by_phandle_id() - Get a uclass device by phandle id
+ *
+ * This searches the devices in the uclass for one with the given phandle id.
+ *
+ * The device is probed to activate it ready for use.
+ *
+ * @id: uclass ID to look up
+ * @phandle_id: the phandle id to look up
+ * @devp: Returns pointer to device (there is only one for each node)
+ * @return 0 if OK, -ENODEV if there is no device match the phandle, other
+ *	-ve on error
+ */
+int uclass_get_device_by_phandle_id(enum uclass_id id, uint phandle_id,
+				    struct udevice **devp);
+
+/**
  * uclass_get_device_by_phandle() - Get a uclass device by phandle
  *
  * This searches the devices in the uclass for one with the given phandle.
@@ -241,8 +264,13 @@ int uclass_get_device_by_driver(enum uclass_id id, const struct driver *drv,
  *
  * The device returned is probed if necessary, and ready for use
  *
+ * This function is useful to start iterating through a list of devices which
+ * are functioning correctly and can be probed.
+ *
  * @id: Uclass ID to look up
- * @devp: Returns pointer to the first device in that uclass, or NULL if none
+ * @devp: Returns pointer to the first device in that uclass if no error
+ * occurred, or NULL if there is no first device, or an error occurred with
+ * that device.
  * @return 0 if OK (found or not found), other -ve on error
  */
 int uclass_first_device(enum uclass_id id, struct udevice **devp);
@@ -263,11 +291,46 @@ int uclass_first_device_err(enum uclass_id id, struct udevice **devp);
  *
  * The device returned is probed if necessary, and ready for use
  *
+ * This function is useful to start iterating through a list of devices which
+ * are functioning correctly and can be probed.
+ *
  * @devp: On entry, pointer to device to lookup. On exit, returns pointer
- * to the next device in the same uclass, or NULL if none
+ * to the next device in the uclass if no error occurred, or NULL if there is
+ * no next device, or an error occurred with that next device.
  * @return 0 if OK (found or not found), other -ve on error
  */
 int uclass_next_device(struct udevice **devp);
+
+/**
+ * uclass_first_device() - Get the first device in a uclass
+ *
+ * The device returned is probed if necessary, and ready for use
+ *
+ * This function is useful to start iterating through a list of devices which
+ * are functioning correctly and can be probed.
+ *
+ * @id: Uclass ID to look up
+ * @devp: Returns pointer to the first device in that uclass, or NULL if there
+ * is no first device
+ * @return 0 if OK (found or not found), other -ve on error. If an error occurs
+ * it is still possible to move to the next device.
+ */
+int uclass_first_device_check(enum uclass_id id, struct udevice **devp);
+
+/**
+ * uclass_next_device() - Get the next device in a uclass
+ *
+ * The device returned is probed if necessary, and ready for use
+ *
+ * This function is useful to start iterating through a list of devices which
+ * are functioning correctly and can be probed.
+ *
+ * @devp: On entry, pointer to device to lookup. On exit, returns pointer
+ * to the next device in the uclass if any
+ * @return 0 if OK (found or not found), other -ve on error. If an error occurs
+ * it is still possible to move to the next device.
+ */
+int uclass_next_device_check(struct udevice **devp);
 
 /**
  * uclass_resolve_seq() - Resolve a device's sequence number

@@ -1,17 +1,16 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2013 Google, Inc
  *
  * (C) Copyright 2012
  * Pavel Herrmann <morpheus.ibis@gmail.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <errno.h>
 #include <fdtdec.h>
 #include <malloc.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <dm/device.h>
 #include <dm/device-internal.h>
 #include <dm/lists.h>
@@ -227,7 +226,7 @@ static int dm_scan_fdt_live(struct udevice *parent,
 		    !of_find_property(np, "u-boot,dm-pre-reloc", NULL))
 			continue;
 		if (!of_device_is_available(np)) {
-			dm_dbg("   - ignoring disabled device\n");
+			pr_debug("   - ignoring disabled device\n");
 			continue;
 		}
 		err = lists_bind_fdt(parent, np_to_ofnode(np), NULL);
@@ -266,11 +265,22 @@ static int dm_scan_fdt_node(struct udevice *parent, const void *blob,
 	for (offset = fdt_first_subnode(blob, offset);
 	     offset > 0;
 	     offset = fdt_next_subnode(blob, offset)) {
+		/* "chosen" node isn't a device itself but may contain some: */
+		if (!strcmp(fdt_get_name(blob, offset, NULL), "chosen")) {
+			pr_debug("parsing subnodes of \"chosen\"\n");
+
+			err = dm_scan_fdt_node(parent, blob, offset,
+					       pre_reloc_only);
+			if (err && !ret)
+				ret = err;
+			continue;
+		}
+
 		if (pre_reloc_only &&
 		    !dm_fdt_pre_reloc(blob, offset))
 			continue;
 		if (!fdtdec_get_is_enabled(blob, offset)) {
-			dm_dbg("   - ignoring disabled device\n");
+			pr_debug("   - ignoring disabled device\n");
 			continue;
 		}
 		err = lists_bind_fdt(parent, offset_to_ofnode(offset), NULL);
@@ -312,7 +322,43 @@ int dm_scan_fdt(const void *blob, bool pre_reloc_only)
 #endif
 	return dm_scan_fdt_node(gd->dm_root, blob, 0, pre_reloc_only);
 }
+#else
+static int dm_scan_fdt_node(struct udevice *parent, const void *blob,
+			    int offset, bool pre_reloc_only)
+{
+	return 0;
+}
 #endif
+
+int dm_extended_scan_fdt(const void *blob, bool pre_reloc_only)
+{
+	int ret;
+	ofnode node;
+
+	ret = dm_scan_fdt(gd->fdt_blob, pre_reloc_only);
+	if (ret) {
+		debug("dm_scan_fdt() failed: %d\n", ret);
+		return ret;
+	}
+
+	/* bind fixed-clock */
+	node = ofnode_path("/clocks");
+	/* if no DT "clocks" node, no need to go further */
+	if (!ofnode_valid(node))
+		return ret;
+
+#if CONFIG_IS_ENABLED(OF_LIVE)
+	if (of_live_active())
+		ret = dm_scan_fdt_live(gd->dm_root, node.np, pre_reloc_only);
+	else
+#endif
+		ret = dm_scan_fdt_node(gd->dm_root, gd->fdt_blob, node.of_offset,
+				       pre_reloc_only);
+	if (ret)
+		debug("dm_scan_fdt_node() failed: %d\n", ret);
+
+	return ret;
+}
 
 __weak int dm_scan_other(bool pre_reloc_only)
 {
@@ -335,9 +381,9 @@ int dm_init_and_scan(bool pre_reloc_only)
 	}
 
 	if (CONFIG_IS_ENABLED(OF_CONTROL) && !CONFIG_IS_ENABLED(OF_PLATDATA)) {
-		ret = dm_scan_fdt(gd->fdt_blob, pre_reloc_only);
+		ret = dm_extended_scan_fdt(gd->fdt_blob, pre_reloc_only);
 		if (ret) {
-			debug("dm_scan_fdt() failed: %d\n", ret);
+			debug("dm_extended_scan_dt() failed: %d\n", ret);
 			return ret;
 		}
 	}

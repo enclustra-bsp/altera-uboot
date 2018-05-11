@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  *  Sandbox PMIC dts node
  *
  *  Copyright (C) 2015 Samsung Electronics
  *  Przemyslaw Marczak  <p.marczak@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <dt-bindings/pmic/sandbox_pmic.h>
@@ -74,5 +73,11 @@
 		regulator-name = "VDD_LCD_3.3V";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
+	};
+
+	no_match_by_nodename {
+		regulator-name = "buck_SUPPLY_1.5V";
+		regulator-min-microvolt = <1500000>;
+		regulator-max-microvolt = <1500000>;
 	};
 };

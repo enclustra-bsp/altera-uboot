@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2013
  * David Feng <fenghua@phytium.com.cn>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <asm-offsets.h>
@@ -19,7 +18,9 @@
 
 .globl	_start
 _start:
-#ifdef CONFIG_ENABLE_ARM_SOC_BOOT0_HOOK
+#if defined(LINUX_KERNEL_IMAGE_HEADER)
+#include <asm/boot0-linux-kernel-header.h>
+#elif defined(CONFIG_ENABLE_ARM_SOC_BOOT0_HOOK)
 /*
  * Various SoCs need something special and SoC-specific up front in
  * order to boot, allow them to set that in their boot0.h file and then
@@ -56,6 +57,32 @@ reset:
 	b	save_boot_params
 .globl	save_boot_params_ret
 save_boot_params_ret:
+
+#if CONFIG_POSITION_INDEPENDENT
+	/*
+	 * Fix .rela.dyn relocations. This allows U-Boot to be loaded to and
+	 * executed at a different address than it was linked at.
+	 */
+pie_fixup:
+	adr	x0, _start		/* x0 <- Runtime value of _start */
+	ldr	x1, _TEXT_BASE		/* x1 <- Linked value of _start */
+	sub	x9, x0, x1		/* x9 <- Run-vs-link offset */
+	adr	x2, __rel_dyn_start	/* x2 <- Runtime &__rel_dyn_start */
+	adr	x3, __rel_dyn_end	/* x3 <- Runtime &__rel_dyn_end */
+pie_fix_loop:
+	ldp	x0, x1, [x2], #16	/* (x0, x1) <- (Link location, fixup) */
+	ldr	x4, [x2], #8		/* x4 <- addend */
+	cmp	w1, #1027		/* relative fixup? */
+	bne	pie_skip_reloc
+	/* relative fix: store addend plus offset at dest location */
+	add	x0, x0, x9
+	add	x4, x4, x9
+	str	x4, [x0]
+pie_skip_reloc:
+	cmp	x2, x3
+	b.lo	pie_fix_loop
+pie_fixup_done:
+#endif
 
 #ifdef CONFIG_SYS_RESET_SCTRL
 	bl reset_sctrl
@@ -170,13 +197,35 @@ reset_sctrl:
 WEAK(apply_core_errata)
 
 	mov	x29, lr			/* Save LR */
-	/* For now, we support Cortex-A57 specific errata only */
+	/* For now, we support Cortex-A53, Cortex-A57 specific errata */
+
+	/* Check if we are running on a Cortex-A53 core */
+	branch_if_a53_core x0, apply_a53_core_errata
 
 	/* Check if we are running on a Cortex-A57 core */
 	branch_if_a57_core x0, apply_a57_core_errata
 0:
 	mov	lr, x29			/* Restore LR */
 	ret
+
+apply_a53_core_errata:
+
+#ifdef CONFIG_ARM_ERRATA_855873
+	mrs	x0, midr_el1
+	tst	x0, #(0xf << 20)
+	b.ne	0b
+
+	mrs	x0, midr_el1
+	and	x0, x0, #0xf
+	cmp	x0, #3
+	b.lt	0b
+
+	mrs	x0, S3_1_c15_c2_0	/* cpuactlr_el1 */
+	/* Enable data cache clean as data cache clean/invalidate */
+	orr	x0, x0, #1 << 44
+	msr	S3_1_c15_c2_0, x0	/* cpuactlr_el1 */
+#endif
+	b 0b
 
 apply_a57_core_errata:
 

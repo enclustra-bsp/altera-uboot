@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2006 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -14,8 +13,6 @@
 #define CONFIG_QE		1	/* Has QE */
 #define CONFIG_MPC832x		1	/* MPC832x CPU specific */
 #define CONFIG_MPC832XEMDS	1	/* MPC832XEMDS board specific */
-
-#define	CONFIG_SYS_TEXT_BASE	0xFE000000
 
 /*
  * System Clock Setup
@@ -71,8 +68,6 @@
  * System IO Config
  */
 #define CONFIG_SYS_SICRL		0x00000000
-
-#define CONFIG_BOARD_EARLY_INIT_R
 
 /*
  * IMMR new address
@@ -288,7 +283,6 @@
 /*
  * Serial Port
  */
-#define CONFIG_CONS_INDEX	1
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_bus_freq(0)
@@ -298,9 +292,6 @@
 
 #define CONFIG_SYS_NS16550_COM1	(CONFIG_SYS_IMMR+0x4500)
 #define CONFIG_SYS_NS16550_COM2	(CONFIG_SYS_IMMR+0x4600)
-
-#define CONFIG_CMDLINE_EDITING	1	/* add command line history	*/
-#define CONFIG_AUTO_COMPLETE		/* add autocompletion support   */
 
 /* I2C */
 #define CONFIG_SYS_I2C
@@ -379,13 +370,11 @@
  * Environment
  */
 #ifndef CONFIG_SYS_RAMBOOT
-	#define CONFIG_ENV_IS_IN_FLASH	1
 	#define CONFIG_ENV_ADDR		\
 			(CONFIG_SYS_MONITOR_BASE + CONFIG_SYS_MONITOR_LEN)
 	#define CONFIG_ENV_SECT_SIZE	0x20000
 	#define CONFIG_ENV_SIZE		0x2000
 #else
-	#define CONFIG_ENV_IS_NOWHERE	1	/* Store ENV in memory only */
 	#define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE - 0x1000)
 	#define CONFIG_ENV_SIZE		0x2000
 #endif
@@ -397,37 +386,17 @@
  * BOOTP options
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
-#define CONFIG_BOOTP_BOOTPATH
-#define CONFIG_BOOTP_GATEWAY
-#define CONFIG_BOOTP_HOSTNAME
 
 /*
  * Command line configuration.
  */
-
-#if defined(CONFIG_PCI)
-    #define CONFIG_CMD_PCI
-#endif
 
 #undef CONFIG_WATCHDOG		/* watchdog disabled */
 
 /*
  * Miscellaneous configurable options
  */
-#define CONFIG_SYS_LONGHELP	/* undef to save memory */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
-
-#if defined(CONFIG_CMD_KGDB)
-	#define CONFIG_SYS_CBSIZE	1024	/* Console I/O Buffer Size */
-#else
-	#define CONFIG_SYS_CBSIZE	256	/* Console I/O Buffer Size */
-#endif
-
-				/* Print Buffer Size */
-#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)
-#define CONFIG_SYS_MAXARGS	16	/* max number of command args */
-				/* Boot Argument Buffer Size */
-#define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE
 
 /*
  * For booting Linux, the board info and command line data
@@ -562,8 +531,6 @@
 #endif
 
 #define CONFIG_LOADADDR	800000	/* default location for tftp and bootm */
-
-#undef  CONFIG_BOOTARGS		/* the boot command will set bootargs */
 
 #define CONFIG_EXTRA_ENV_SETTINGS					\
 	"netdev=eth0\0"							\

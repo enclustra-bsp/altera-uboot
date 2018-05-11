@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2015 Google, Inc
  *
  * (C) Copyright 2008-2014 Rockchip Electronics
  * Peter, Software Engineering, <superpeter.cai@gmail.com>.
- *
- * SPDX-License-Identifier:     GPL-2.0+
  */
 
 #include <common.h>
@@ -18,8 +17,6 @@
 #include <asm/arch/periph.h>
 #include <dm/pinctrl.h>
 #include <linux/sizes.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 /* i2c timerout */
 #define I2C_TIMEOUT_MS		100
@@ -164,6 +161,7 @@ static int rk_i2c_read(struct rk_i2c *i2c, uchar chip, uint reg, uint r_len,
 	uint rxdata;
 	uint i, j;
 	int err;
+	bool snd_chunk = false;
 
 	debug("rk_i2c_read: chip = %d, reg = %d, r_len = %d, b_len = %d\n",
 	      chip, reg, r_len, b_len);
@@ -184,14 +182,25 @@ static int rk_i2c_read(struct rk_i2c *i2c, uchar chip, uint reg, uint r_len,
 
 	while (bytes_remain_len) {
 		if (bytes_remain_len > RK_I2C_FIFO_SIZE) {
-			con = I2C_CON_EN | I2C_CON_MOD(I2C_MODE_TRX);
+			con = I2C_CON_EN;
 			bytes_xferred = 32;
 		} else {
-			con = I2C_CON_EN | I2C_CON_MOD(I2C_MODE_TRX) |
-				I2C_CON_LASTACK;
+			/*
+			 * The hw can read up to 32 bytes at a time. If we need
+			 * more than one chunk, send an ACK after the last byte.
+			 */
+			con = I2C_CON_EN | I2C_CON_LASTACK;
 			bytes_xferred = bytes_remain_len;
 		}
 		words_xferred = DIV_ROUND_UP(bytes_xferred, 4);
+
+		/*
+		 * make sure we are in plain RX mode if we read a second chunk
+		 */
+		if (snd_chunk)
+			con |= I2C_CON_MOD(I2C_MODE_RX);
+		else
+			con |= I2C_CON_MOD(I2C_MODE_TRX);
 
 		writel(con, &regs->con);
 		writel(bytes_xferred, &regs->mrxcnt);
@@ -227,6 +236,7 @@ static int rk_i2c_read(struct rk_i2c *i2c, uchar chip, uint reg, uint r_len,
 		}
 
 		bytes_remain_len -= bytes_xferred;
+		snd_chunk = true;
 		debug("I2C Read bytes_remain_len %d\n", bytes_remain_len);
 	}
 
@@ -369,7 +379,7 @@ static int rockchip_i2c_probe(struct udevice *bus)
 {
 	struct rk_i2c *priv = dev_get_priv(bus);
 
-	priv->regs = (void *)devfdt_get_addr(bus);
+	priv->regs = dev_read_addr_ptr(bus);
 
 	return 0;
 }
@@ -383,6 +393,7 @@ static const struct udevice_id rockchip_i2c_ids[] = {
 	{ .compatible = "rockchip,rk3066-i2c" },
 	{ .compatible = "rockchip,rk3188-i2c" },
 	{ .compatible = "rockchip,rk3288-i2c" },
+	{ .compatible = "rockchip,rk3328-i2c" },
 	{ .compatible = "rockchip,rk3399-i2c" },
 	{ }
 };

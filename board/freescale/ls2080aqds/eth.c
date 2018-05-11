@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2015 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -449,7 +448,7 @@ static void initialize_dpmac_to_slot(void)
 		>> FSL_CHASSIS3_RCWSR28_SRDS2_PRTCL_SHIFT;
 
 	char *env_hwconfig;
-	env_hwconfig = getenv("hwconfig");
+	env_hwconfig = env_get("hwconfig");
 
 	switch (serdes1_prtcl) {
 	case 0x07:
@@ -603,7 +602,7 @@ void ls2080a_handle_phy_interface_sgmii(int dpmac_id)
 		>> FSL_CHASSIS3_RCWSR28_SRDS2_PRTCL_SHIFT;
 
 	int *riser_phy_addr;
-	char *env_hwconfig = getenv("hwconfig");
+	char *env_hwconfig = env_get("hwconfig");
 
 	if (hwconfig_f("xqsgmii", env_hwconfig))
 		riser_phy_addr = &xqsgii_riser_phy_addr[0];
@@ -849,7 +848,7 @@ int board_eth_init(bd_t *bis)
 	unsigned int i;
 	char *env_hwconfig;
 
-	env_hwconfig = getenv("hwconfig");
+	env_hwconfig = env_get("hwconfig");
 
 	initialize_dpmac_to_slot();
 

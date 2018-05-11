@@ -1,6 +1,5 @@
+# SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2011 The Chromium OS Authors.
-#
-# SPDX-License-Identifier:	GPL-2.0+
 #
 
 from __future__ import print_function
@@ -10,6 +9,7 @@ import os
 
 import get_maintainer
 import gitutil
+import settings
 import terminal
 
 # Series-xxx tags that we understand
@@ -218,6 +218,7 @@ class Series(dict):
         Return:
             Filename of temp file created
         """
+        col = terminal.Color()
         # Look for commit tags (of the form 'xxx:' at the start of the subject)
         fname = '/tmp/patman.%d' % os.getpid()
         fd = open(fname, 'w')
@@ -233,6 +234,9 @@ class Series(dict):
                 cc += add_maintainers
             elif add_maintainers:
                 cc += get_maintainer.GetMaintainer(commit.patch)
+            for x in set(cc) & set(settings.bounces):
+                print(col.Color(col.YELLOW, 'Skipping "%s"' % x))
+            cc = set(cc) - set(settings.bounces)
             cc = [m.encode('utf-8') if type(m) != str else m for m in cc]
             all_ccs += cc
             print(commit.patch, ', '.join(set(cc)), file=fd)

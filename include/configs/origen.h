@@ -1,9 +1,8 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2011 Samsung Electronics
  *
  * Configuration settings for the SAMSUNG ORIGEN (EXYNOS4210) board.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_ORIGEN_H
@@ -28,8 +27,6 @@
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_SDRAM_BASE + 0x6000000)
 #define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x3E00000)
 
-#define CONFIG_SYS_TEXT_BASE		0x43E00000
-
 #define CONFIG_MACH_TYPE		MACH_TYPE_ORIGEN
 
 /* select serial console configuration */
@@ -46,8 +43,6 @@
 #define S5P_CHECK_SLEEP			0x00000BAD
 #define S5P_CHECK_DIDLE			0xBAD00000
 #define S5P_CHECK_LPA			0xABAD0000
-
-#define CONFIG_SUPPORT_RAW_INITRD
 
 /* MMC SPL */
 #define COPY_BL2_FNPTR_ADDR	0x02020030
@@ -89,14 +84,12 @@
 /* MIU (Memory Interleaving Unit) */
 #define CONFIG_MIU_2BIT_21_7_INTERLEAVED
 
-#define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		0
 #define CONFIG_ENV_SIZE			(16 << 10)	/* 16 KB */
 #define RESERVE_BLOCK_SIZE		(512)
 #define BL1_SIZE			(16 << 10) /*16 K reserved for BL1*/
 #define CONFIG_ENV_OFFSET		(RESERVE_BLOCK_SIZE + BL1_SIZE)
 
-#define CONFIG_SPL_LDSCRIPT	"board/samsung/common/exynos-uboot-spl.lds"
 #define CONFIG_SPL_MAX_FOOTPRINT	(14 * 1024)
 
 #define CONFIG_SYS_INIT_SP_ADDR		0x02040000

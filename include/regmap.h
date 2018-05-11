@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (c) 2015 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __REGMAP_H
@@ -69,7 +68,7 @@ int regmap_init_mem(struct udevice *dev, struct regmap **mapp);
  * @count:	Number of pairs (e.g. 1 if the regmap has a single entry)
  * @mapp:	Returns allocated map
  */
-int regmap_init_mem_platdata(struct udevice *dev, u32 *reg, int count,
+int regmap_init_mem_platdata(struct udevice *dev, fdt_val_t *reg, int count,
 			     struct regmap **mapp);
 
 /**

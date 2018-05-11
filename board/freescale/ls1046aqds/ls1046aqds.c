@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2016 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -259,10 +258,6 @@ int board_init(void)
 
 #ifdef CONFIG_SYS_FSL_SERDES
 	config_serdes_mux();
-#endif
-
-#ifdef CONFIG_LAYERSCAPE_NS_ACCESS
-	enable_layerscape_ns_access();
 #endif
 
 	if (adjust_vdd(0))

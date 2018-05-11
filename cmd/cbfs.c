@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (c) 2011 The Chromium OS Authors. All rights reserved.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -22,7 +21,7 @@ static int do_cbfs_init(cmd_tbl_t *cmdtp, int flag, int argc,
 		return 0;
 	}
 	if (argc == 2) {
-		end_of_rom = (int)simple_strtoul(argv[1], &ep, 16);
+		end_of_rom = simple_strtoul(argv[1], &ep, 16);
 		if (*ep) {
 			puts("\n** Invalid end of ROM **\n");
 			return 1;
@@ -80,7 +79,7 @@ static int do_cbfs_fsload(cmd_tbl_t *cmdtp, int flag, int argc,
 
 	printf("\n%ld bytes read\n", size);
 
-	setenv_hex("filesize", size);
+	env_set_hex("filesize", size);
 
 	return 0;
 }

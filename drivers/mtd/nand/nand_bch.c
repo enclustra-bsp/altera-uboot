@@ -1,10 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * This file provides ECC correction for more than 1 bit per block of data,
  * using binary BCH codes. It relies on the generic BCH library lib/bch.c.
  *
  * Copyright © 2011 Ivan Djelic <ivan.djelic@parrot.com>
  *
-  * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -13,7 +13,7 @@
 
 #include <linux/bitops.h>
 #include <linux/mtd/mtd.h>
-#include <linux/mtd/nand.h>
+#include <linux/mtd/rawnand.h>
 #include <linux/mtd/nand_bch.h>
 #include <linux/bch.h>
 #include <malloc.h>
@@ -81,8 +81,8 @@ int nand_bch_correct_data(struct mtd_info *mtd, unsigned char *buf,
 				buf[errloc[i] >> 3] ^= (1 << (errloc[i] & 7));
 			/* else error in ecc, no action needed */
 
-			MTDDEBUG(MTD_DEBUG_LEVEL0, "%s: corrected bitflip %u\n",
-			      __func__, errloc[i]);
+			pr_debug("%s: corrected bitflip %u\n",
+				 __func__, errloc[i]);
 		}
 	} else if (count < 0) {
 		printk(KERN_ERR "ecc unrecoverable error\n");

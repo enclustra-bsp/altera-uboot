@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2000-2009
  * Wolfgang Denk, DENX Software Engineering, wd@denx.de.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __COMMON_H_
@@ -23,12 +22,15 @@ typedef volatile unsigned char	vu_char;
 #include <time.h>
 #include <asm-offsets.h>
 #include <linux/bitops.h>
+#include <linux/bug.h>
 #include <linux/delay.h>
 #include <linux/types.h>
+#include <linux/printk.h>
 #include <linux/string.h>
 #include <linux/stringify.h>
 #include <asm/ptrace.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <linux/kernel.h>
 
 #include <part.h>
@@ -42,69 +44,7 @@ typedef volatile unsigned char	vu_char;
 #define CONFIG_SYS_SUPPORT_64BIT_DATA
 #endif
 
-#ifdef DEBUG
-#define _DEBUG	1
-#else
-#define _DEBUG	0
-#endif
-
-#ifdef CONFIG_SPL_BUILD
-#define _SPL_BUILD	1
-#else
-#define _SPL_BUILD	0
-#endif
-
-/* Define this at the top of a file to add a prefix to debug messages */
-#ifndef pr_fmt
-#define pr_fmt(fmt) fmt
-#endif
-
-/*
- * Output a debug text when condition "cond" is met. The "cond" should be
- * computed by a preprocessor in the best case, allowing for the best
- * optimization.
- */
-#define debug_cond(cond, fmt, args...)			\
-	do {						\
-		if (cond)				\
-			printf(pr_fmt(fmt), ##args);	\
-	} while (0)
-
-/* Show a message if DEBUG is defined in a file */
-#define debug(fmt, args...)			\
-	debug_cond(_DEBUG, fmt, ##args)
-
-/* Show a message if not in SPL */
-#define warn_non_spl(fmt, args...)			\
-	debug_cond(!_SPL_BUILD, fmt, ##args)
-
-/*
- * An assertion is run-time check done in debug mode only. If DEBUG is not
- * defined then it is skipped. If DEBUG is defined and the assertion fails,
- * then it calls panic*( which may or may not reset/halt U-Boot (see
- * CONFIG_PANIC_HANG), It is hoped that all failing assertions are found
- * before release, and after release it is hoped that they don't matter. But
- * in any case these failing assertions cannot be fixed with a reset (which
- * may just do the same assertion again).
- */
-void __assert_fail(const char *assertion, const char *file, unsigned line,
-		   const char *function);
-#define assert(x) \
-	({ if (!(x) && _DEBUG) \
-		__assert_fail(#x, __FILE__, __LINE__, __func__); })
-
-#define error(fmt, args...) do {					\
-		printf("ERROR: " pr_fmt(fmt) "\nat %s:%d/%s()\n",	\
-			##args, __FILE__, __LINE__, __func__);		\
-} while (0)
-
-#ifndef BUG
-#define BUG() do { \
-	printf("BUG: failure at %s:%d/%s()!\n", __FILE__, __LINE__, __FUNCTION__); \
-	panic("BUG!"); \
-} while (0)
-#define BUG_ON(condition) do { if (unlikely((condition)!=0)) BUG(); } while(0)
-#endif /* BUG */
+#include <log.h>
 
 typedef void (interrupt_handler_t)(void *);
 
@@ -121,31 +61,19 @@ typedef void (interrupt_handler_t)(void *);
 #define	TOTAL_MALLOC_LEN	CONFIG_SYS_MALLOC_LEN
 #endif
 
+/* startup functions, used in:
+ * common/board_f.c
+ * common/init/board_init.c
+ * common/board_r.c
+ * common/board_info.c
+ */
+#include <init.h>
+
 /*
  * Function Prototypes
  */
-int dram_init(void);
-
-/**
- * dram_init_banksize() - Set up DRAM bank sizes
- *
- * This can be implemented by boards to set up the DRAM bank information in
- * gd->bd->bi_dram(). It is called just before relocation, after dram_init()
- * is called.
- *
- * If this is not provided, a default implementation will try to set up a
- * single bank. It will do this if CONFIG_NR_DRAM_BANKS and
- * CONFIG_SYS_SDRAM_BASE are set. The bank will have a start address of
- * CONFIG_SYS_SDRAM_BASE and the size will be determined by a call to
- * get_effective_memsize().
- *
- * @return 0 if OK, -ve on error
- */
-int dram_init_banksize(void);
-
 void	hang		(void) __attribute__ ((noreturn));
 
-int	timer_init(void);
 int	cpu_init(void);
 
 #include <display_options.h>
@@ -168,104 +96,11 @@ int run_command_repeatable(const char *cmd, int flag);
  */
 int run_command_list(const char *cmd, int len, int flag);
 
-/* arch/$(ARCH)/lib/board.c */
-void board_init_f(ulong);
-void board_init_r(gd_t *, ulong) __attribute__ ((noreturn));
-
-/**
- * ulong board_init_f_alloc_reserve - allocate reserved area
- *
- * This function is called by each architecture very early in the start-up
- * code to allow the C runtime to reserve space on the stack for writable
- * 'globals' such as GD and the malloc arena.
- *
- * @top:	top of the reserve area, growing down.
- * @return:	bottom of reserved area
- */
-ulong board_init_f_alloc_reserve(ulong top);
-
-/**
- * board_init_f_init_reserve - initialize the reserved area(s)
- *
- * This function is called once the C runtime has allocated the reserved
- * area on the stack. It must initialize the GD at the base of that area.
- *
- * @base:	top from which reservation was done
- */
-void board_init_f_init_reserve(ulong base);
-
-/**
- * arch_setup_gd() - Set up the global_data pointer
- *
- * This pointer is special in some architectures and cannot easily be assigned
- * to. For example on x86 it is implemented by adding a specific record to its
- * Global Descriptor Table! So we we provide a function to carry out this task.
- * For most architectures this can simply be:
- *
- *    gd = gd_ptr;
- *
- * @gd_ptr:	Pointer to global data
- */
-void arch_setup_gd(gd_t *gd_ptr);
-
-int checkboard(void);
-int show_board_info(void);
 int checkflash(void);
 int checkdram(void);
-int last_stage_init(void);
-extern ulong monitor_flash_len;
-int mac_read_from_eeprom(void);
 extern u8 __dtb_dt_begin[];	/* embedded device tree blob */
-int set_cpu_clk_info(void);
+extern u8 __dtb_dt_spl_begin[];	/* embedded device tree blob for SPL/TPL */
 int mdm_init(void);
-int print_cpuinfo(void);
-int update_flash_size(int flash_size);
-int arch_early_init_r(void);
-
-/*
- * setup_board_extra() - Fill in extra details in the bd_t structure
- *
- * @return 0 if OK, -ve on error
- */
-int setup_board_extra(void);
-
-/**
- * arch_fsp_init() - perform firmware support package init
- *
- * Where U-Boot relies on binary blobs to handle part of the system init, this
- * function can be used to set up the blobs. This is used on some Intel
- * platforms.
- */
-int arch_fsp_init(void);
-
-/**
- * arch_cpu_init_dm() - init CPU after driver model is available
- *
- * This is called immediately after driver model is available before
- * relocation. This is similar to arch_cpu_init() but is able to reference
- * devices
- *
- * @return 0 if OK, -ve on error
- */
-int arch_cpu_init_dm(void);
-
-/**
- * Reserve all necessary stacks
- *
- * This is used in generic board init sequence in common/board_f.c. Each
- * architecture could provide this function to tailor the required stacks.
- *
- * On entry gd->start_addr_sp is pointing to the suggested top of the stack.
- * The callee ensures gd->start_add_sp is 16-byte aligned, so architectures
- * require only this can leave it untouched.
- *
- * On exit gd->start_addr_sp and gd->irq_sp should be set to the respective
- * positions of the stack. The stack pointer(s) will be set to this later.
- * gd->irq_sp is only required, if the architecture needs it.
- *
- * @return 0 if no error
- */
-__weak int arch_reserve_stacks(void);
 
 /**
  * Show the DRAM size in a board-specific way
@@ -310,16 +145,45 @@ int	env_init     (void);
 void	env_relocate (void);
 int	envmatch     (uchar *, int);
 
-/* Avoid unfortunate conflict with libc's getenv() */
-#ifdef CONFIG_SANDBOX
-#define getenv uboot_getenv
-#endif
-char	*getenv	     (const char *);
-int	getenv_f     (const char *name, char *buf, unsigned len);
-ulong getenv_ulong(const char *name, int base, ulong default_val);
+/**
+ * env_get() - Look up the value of an environment variable
+ *
+ * In U-Boot proper this can be called before relocation (which is when the
+ * environment is loaded from storage, i.e. GD_FLG_ENV_READY is 0). In that
+ * case this function calls env_get_f().
+ *
+ * @varname:	Variable to look up
+ * @return value of variable, or NULL if not found
+ */
+char *env_get(const char *varname);
 
 /**
- * getenv_hex() - Return an environment variable as a hex value
+ * env_get_f() - Look up the value of an environment variable (early)
+ *
+ * This function is called from env_get() if the environment has not been
+ * loaded yet (GD_FLG_ENV_READY flag is 0). Some environment locations will
+ * support reading the value (slowly) and some will not.
+ *
+ * @varname:	Variable to look up
+ * @return value of variable, or NULL if not found
+ */
+int env_get_f(const char *name, char *buf, unsigned len);
+
+/**
+ * env_get_ulong() - Return an environment variable as an integer value
+ *
+ * Most U-Boot environment variables store hex values. For those which store
+ * (e.g.) base-10 integers, this function can be used to read the value.
+ *
+ * @name:	Variable to look up
+ * @base:	Base to use (e.g. 10 for base 10, 2 for binary)
+ * @default_val: Default value to return if no value is found
+ * @return the value found, or @default_val if none
+ */
+ulong env_get_ulong(const char *name, int base, ulong default_val);
+
+/**
+ * env_get_hex() - Return an environment variable as a hex value
  *
  * Decode an environment as a hex number (it may or may not have a 0x
  * prefix). If the environment variable cannot be found, or does not start
@@ -328,27 +192,54 @@ ulong getenv_ulong(const char *name, int base, ulong default_val);
  * @varname:		Variable to decode
  * @default_val:	Value to return on error
  */
-ulong getenv_hex(const char *varname, ulong default_val);
+ulong env_get_hex(const char *varname, ulong default_val);
 
 /*
  * Read an environment variable as a boolean
  * Return -1 if variable does not exist (default to true)
  */
-int getenv_yesno(const char *var);
-int	saveenv	     (void);
-int	setenv	     (const char *, const char *);
-int setenv_ulong(const char *varname, ulong value);
-int setenv_hex(const char *varname, ulong value);
+int env_get_yesno(const char *var);
+
 /**
- * setenv_addr - Set an environment variable to an address in hex
+ * env_set() - set an environment variable
+ *
+ * This sets or deletes the value of an environment variable. For setting the
+ * value the variable is created if it does not already exist.
+ *
+ * @varname: Variable to adjust
+ * @value: Value to set for the variable, or NULL or "" to delete the variable
+ * @return 0 if OK, 1 on error
+ */
+int env_set(const char *varname, const char *value);
+
+/**
+ * env_set_ulong() - set an environment variable to an integer
+ *
+ * @varname: Variable to adjust
+ * @value: Value to set for the variable (will be converted to a string)
+ * @return 0 if OK, 1 on error
+ */
+int env_set_ulong(const char *varname, ulong value);
+
+/**
+ * env_set_hex() - set an environment variable to a hex value
+ *
+ * @varname: Variable to adjust
+ * @value: Value to set for the variable (will be converted to a hex string)
+ * @return 0 if OK, 1 on error
+ */
+int env_set_hex(const char *varname, ulong value);
+
+/**
+ * env_set_addr - Set an environment variable to an address in hex
  *
  * @varname:	Environment variable to set
  * @addr:	Value to set it to
  * @return 0 if ok, 1 on error
  */
-static inline int setenv_addr(const char *varname, const void *addr)
+static inline int env_set_addr(const char *varname, const void *addr)
 {
-	return setenv_hex(varname, (ulong)addr);
+	return env_set_hex(varname, (ulong)addr);
 }
 
 #ifdef CONFIG_AUTO_COMPLETE
@@ -356,11 +247,7 @@ int env_complete(char *var, int maxv, char *cmdv[], int maxsz, char *buf);
 #endif
 int get_env_id (void);
 
-void	pci_init      (void);
 void	pci_init_board(void);
-
-int	misc_init_f   (void);
-int	misc_init_r   (void);
 
 /* common/exports.c */
 void	jumptable_init(void);
@@ -391,19 +278,11 @@ int  eeprom_write (unsigned dev_addr, unsigned offset, uchar *buffer, unsigned c
 #define eeprom_write(dev_addr, offset, buffer, cnt) ((void)-ENOSYS)
 #endif
 
-/*
- * Set this up regardless of board
- * type, to prevent errors.
- */
-#if defined(CONFIG_SPI) || !defined(CONFIG_SYS_I2C_EEPROM_ADDR)
-# define CONFIG_SYS_DEF_EEPROM_ADDR 0
-#else
-#if !defined(CONFIG_ENV_EEPROM_IS_ON_I2C)
+#if !defined(CONFIG_ENV_EEPROM_IS_ON_I2C) && defined(CONFIG_SYS_I2C_EEPROM_ADDR)
 # define CONFIG_SYS_DEF_EEPROM_ADDR CONFIG_SYS_I2C_EEPROM_ADDR
 #endif
-#endif /* CONFIG_SPI || !defined(CONFIG_SYS_I2C_EEPROM_ADDR) */
 
-#if defined(CONFIG_SPI)
+#if defined(CONFIG_MPC8XX_SPI)
 extern void spi_init_f (void);
 extern void spi_init_r (void);
 extern ssize_t spi_read	 (uchar *, int, uchar *, int);
@@ -416,7 +295,6 @@ int board_fix_fdt (void *rw_fdt_blob); /* manipulate the U-Boot fdt before its r
 int board_late_init (void);
 int board_postclk_init (void); /* after clocks/timebase, before env/serial */
 int board_early_init_r (void);
-void board_poweroff (void);
 
 #if defined(CONFIG_SYS_DRAM_TEST)
 int testdram(void);
@@ -458,15 +336,7 @@ u32	cpu_mask      (void);
 u32	cpu_dsp_mask(void);
 int	is_core_valid (unsigned int);
 
-/**
- * arch_cpu_init() - basic cpu-dependent setup for an architecture
- *
- * This is called after early malloc is available. It should handle any
- * CPU- or SoC- specific init needed to continue the init sequence. See
- * board_f.c for where it is called. If this is not provided, a default
- * version (which does nothing) will be used.
- */
-int arch_cpu_init(void);
+void s_init(void);
 
 int	checkcpu      (void);
 int	checkicache   (void);
@@ -494,8 +364,6 @@ int	serial_tstc   (void);
 int	get_clocks (void);
 ulong	get_bus_freq  (ulong);
 int get_serial_clock(void);
-
-int	cpu_init_r    (void);
 
 /* $(CPU)/interrupts.c */
 int	interrupt_init	   (void);
@@ -563,6 +431,7 @@ ulong	usec2ticks    (unsigned long usec);
 ulong	ticks2usec    (unsigned long ticks);
 
 /* lib/gunzip.c */
+int gzip_parse_header(const unsigned char *src, unsigned long len);
 int gunzip(void *, int, unsigned char *, unsigned long *);
 int zunzip(void *dst, int dstlen, unsigned char *src, unsigned long *lenp,
 						int stoponerr, int offset);
@@ -638,46 +507,6 @@ unsigned int rand_r(unsigned int *seedp);
 /* serial stuff */
 int	serial_printf (const char *fmt, ...)
 		__attribute__ ((format (__printf__, 1, 2)));
-/* stdin */
-int	getc(void);
-int	tstc(void);
-
-/* stdout */
-#if !defined(CONFIG_SPL_BUILD) || \
-	(defined(CONFIG_TPL_BUILD) && defined(CONFIG_TPL_SERIAL_SUPPORT)) || \
-	(defined(CONFIG_SPL_BUILD) && !defined(CONFIG_TPL_BUILD) && \
-		defined(CONFIG_SPL_SERIAL_SUPPORT))
-void	putc(const char c);
-void	puts(const char *s);
-int	printf(const char *fmt, ...)
-		__attribute__ ((format (__printf__, 1, 2)));
-int	vprintf(const char *fmt, va_list args);
-#else
-#define	putc(...) do { } while (0)
-#define puts(...) do { } while (0)
-#define printf(...) do { } while (0)
-#define vprintf(...) do { } while (0)
-#endif
-
-/* stderr */
-#define eputc(c)		fputc(stderr, c)
-#define eputs(s)		fputs(stderr, s)
-#define eprintf(fmt,args...)	fprintf(stderr,fmt ,##args)
-
-/*
- * FILE based functions (can only be used AFTER relocation!)
- */
-#define stdin		0
-#define stdout		1
-#define stderr		2
-#define MAX_FILES	3
-
-int	fprintf(int file, const char *fmt, ...)
-		__attribute__ ((format (__printf__, 2, 3)));
-void	fputs(int file, const char *s);
-void	fputc(int file, const char c);
-int	ftstc(int file);
-int	fgetc(int file);
 
 /* lib/gzip.c */
 int gzip(void *dst, unsigned long *lenp,
@@ -688,9 +517,9 @@ int zzip(void *dst, unsigned long *lenp, unsigned char *src,
 
 /* lib/net_utils.c */
 #include <net.h>
-static inline struct in_addr getenv_ip(char *var)
+static inline struct in_addr env_get_ip(char *var)
 {
-	return string_to_ip(getenv(var));
+	return string_to_ip(env_get(var));
 }
 
 int	pcmcia_init (void);

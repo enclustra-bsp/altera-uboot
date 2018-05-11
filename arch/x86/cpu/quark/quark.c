@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2015, Bin Meng <bmeng.cn@gmail.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -15,11 +14,6 @@
 #include <asm/arch/device.h>
 #include <asm/arch/msg_port.h>
 #include <asm/arch/quark.h>
-
-static struct pci_device_id mmc_supported[] = {
-	{ PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_QRK_SDIO },
-	{},
-};
 
 static void quark_setup_mtrr(void)
 {
@@ -326,11 +320,6 @@ int arch_early_init_r(void)
 	quark_usb_init();
 
 	return 0;
-}
-
-int cpu_mmc_init(bd_t *bis)
-{
-	return pci_mmc_init("Quark SDHCI", mmc_supported);
 }
 
 int arch_misc_init(void)

@@ -1,11 +1,10 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2008 - 2009 Windriver, <www.windriver.com>
  * Author: Tom Rix <Tom.Rix@windriver.com>
  *
  * (C) Copyright 2014 Linaro, Ltd.
  * Rob Herring <robh@kernel.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <command.h>
@@ -27,7 +26,7 @@ static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 
 	ret = board_usb_init(controller_index, USB_INIT_DEVICE);
 	if (ret) {
-		error("USB init failed: %d", ret);
+		pr_err("USB init failed: %d", ret);
 		return CMD_RET_FAILURE;
 	}
 

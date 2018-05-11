@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2008
  * Texas Instruments, <www.ti.com>
@@ -8,8 +9,6 @@
  * Derived from Beagle Board and OMAP3 SDP code by
  *      Richard Woodruff <r-woodruff2@ti.com>
  *      Syed Mohammed Khasim <khasim@ti.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -772,7 +771,7 @@ void per_clocks_enable(void)
 	setbits_le32(&prcm_base->iclken_per, 0x00020000);
 #endif
 
-#ifdef CONFIG_SYS_I2C_OMAP34XX
+#ifdef CONFIG_SYS_I2C_OMAP24XX
 	/* Turn on all 3 I2C clocks */
 	setbits_le32(&prcm_base->fclken1_core, 0x00038000);
 	setbits_le32(&prcm_base->iclken1_core, 0x00038000); /* I2C1,2,3 = on */

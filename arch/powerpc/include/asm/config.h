@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2009-2011 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef _ASM_CONFIG_H_
@@ -31,8 +30,6 @@
 
 #define CONFIG_LMB
 #define CONFIG_SYS_BOOT_RAMDISK_HIGH
-#define CONFIG_SYS_BOOT_GET_CMDLINE
-#define CONFIG_SYS_BOOT_GET_KBD
 
 #ifndef CONFIG_MAX_MEM_MAPPED
 #if	defined(CONFIG_E500)		|| \
@@ -72,18 +69,11 @@
 #endif
 
 /* The TSEC driver uses the PHYLIB infrastructure */
-#ifndef CONFIG_PHYLIB
-#if defined(CONFIG_TSEC_ENET)
-#define CONFIG_PHYLIB
-
+#if defined(CONFIG_TSEC_ENET) && defined(CONFIG_PHYLIB)
 #include <config_phylib_all_drivers.h>
 #endif /* TSEC_ENET */
-#endif /* !CONFIG_PHYLIB */
 
 /* The FMAN driver uses the PHYLIB infrastructure */
-#if defined(CONFIG_FMAN_ENET)
-#define CONFIG_PHYLIB
-#endif
 
 /* All PPC boards must swap IDE bytes */
 #define CONFIG_IDE_SWAP_IO

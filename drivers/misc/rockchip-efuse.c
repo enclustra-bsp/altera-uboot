@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * eFuse driver for Rockchip devices
  *
  * Copyright 2017, Theobroma Systems Design und Consulting GmbH
  * Written by Philipp Tomsich <philipp.tomsich@theobroma-systems.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -142,7 +141,7 @@ static int rockchip_efuse_ofdata_to_platdata(struct udevice *dev)
 {
 	struct rockchip_efuse_platdata *plat = dev_get_platdata(dev);
 
-	plat->base = (void *)devfdt_get_addr(dev);
+	plat->base = dev_read_addr_ptr(dev);
 	return 0;
 }
 

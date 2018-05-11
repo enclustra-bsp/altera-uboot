@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Freescale USB Controller
  *
  * Copyright 2013 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -198,15 +197,22 @@ bool has_erratum_a010151(void)
 	u32 svr = get_svr();
 	u32 soc = SVR_SOC_VER(svr);
 
+#ifdef CONFIG_ARM64
+	if (IS_SVR_DEV(svr, SVR_DEV(SVR_LS1043A)))
+		return IS_SVR_REV(svr, 1, 0) || IS_SVR_REV(svr, 1, 1);
+#endif
+
 	switch (soc) {
 #ifdef CONFIG_ARM64
 	case SVR_LS2080A:
 	case SVR_LS2085A:
+			/* fallthrough */
+	case SVR_LS2088A:
+			/* fallthrough */
+	case SVR_LS2081A:
 	case SVR_LS1046A:
 	case SVR_LS1012A:
 		return IS_SVR_REV(svr, 1, 0);
-	case SVR_LS1043A:
-		return IS_SVR_REV(svr, 1, 0) || IS_SVR_REV(svr, 1, 1);
 #endif
 #ifdef CONFIG_ARCH_LS1021A
 	case SOC_VER_LS1020:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Driver for Marvell NETA network card for Armada XP and Armada 370 SoCs.
  *
@@ -9,8 +10,6 @@
  *
  * Rami Rosen <rosenr@marvell.com>
  * Thomas Petazzoni <thomas.petazzoni@free-electrons.com>
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -540,7 +539,7 @@ static void mvneta_txq_pend_desc_add(struct mvneta_port *pp,
 	u32 val;
 
 	/* Only 255 descriptors can be added at once ; Assume caller
-	 * process TX desriptors in quanta less than 256
+	 * process TX descriptors in quanta less than 256
 	 */
 	val = pend_desc;
 	mvreg_write(pp, MVNETA_TXQ_UPDATE_REG(txq->id), val);
@@ -888,6 +887,15 @@ static void mvneta_mac_addr_set(struct mvneta_port *pp, unsigned char *addr,
 
 	/* Accept frames of this address */
 	mvneta_set_ucast_addr(pp, addr[5], queue);
+}
+
+static int mvneta_write_hwaddr(struct udevice *dev)
+{
+	mvneta_mac_addr_set(dev_get_priv(dev),
+		((struct eth_pdata *)dev_get_platdata(dev))->enetaddr,
+		rxq_def);
+
+	return 0;
 }
 
 /* Handle rx descriptor fill by setting buf_cookie and buf_phys_addr */
@@ -1654,7 +1662,11 @@ static int mvneta_recv(struct udevice *dev, int flags, uchar **packetp)
 		 */
 		*packetp = data;
 
-		mvneta_rxq_desc_num_update(pp, rxq, rx_done, rx_done);
+		/*
+		 * Only mark one descriptor as free
+		 * since only one was processed
+		 */
+		mvneta_rxq_desc_num_update(pp, rxq, 1, 1);
 	}
 
 	return rx_bytes;
@@ -1749,6 +1761,7 @@ static const struct eth_ops mvneta_ops = {
 	.send		= mvneta_send,
 	.recv		= mvneta_recv,
 	.stop		= mvneta_stop,
+	.write_hwaddr	= mvneta_write_hwaddr,
 };
 
 static int mvneta_ofdata_to_platdata(struct udevice *dev)

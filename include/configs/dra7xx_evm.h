@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2013
  * Texas Instruments Incorporated.
@@ -5,8 +6,6 @@
  *
  * Configuration settings for the TI DRA7XX board.
  * See ti_omap5_common.h for omap5 common settings.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_DRA7XX_EVM_H
@@ -14,9 +13,7 @@
 
 #include <environment/ti/dfu.h>
 
-#ifdef CONFIG_SPL_BUILD
 #define CONFIG_IODELAY_RECALIBRATION
-#endif
 
 #define CONFIG_VERY_BIG_RAM
 #define CONFIG_NR_DRAM_BANKS		2
@@ -24,7 +21,6 @@
 
 #ifndef CONFIG_QSPI_BOOT
 /* MMC ENV related defines */
-#define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV		1	/* SLOT2: eMMC(1) */
 #define CONFIG_ENV_SIZE			(128 << 10)
 #define CONFIG_ENV_OFFSET		0x260000
@@ -52,7 +48,8 @@
 #define PARTS_DEFAULT \
 	/* Linux partitions */ \
 	"uuid_disk=${uuid_gpt_disk};" \
-	"name=rootfs,start=2MiB,size=-,uuid=${uuid_gpt_rootfs}\0" \
+	"name=bootloader,start=384K,size=1792K,uuid=${uuid_gpt_bootloader};" \
+	"name=rootfs,start=2688K,size=-,uuid=${uuid_gpt_rootfs}\0" \
 	/* Android partitions */ \
 	"partitions_android=" \
 	"uuid_disk=${uuid_gpt_disk};" \
@@ -63,9 +60,10 @@
 	"name=reserved,size=256K,uuid=${uuid_gpt_reserved};" \
 	"name=efs,size=16M,uuid=${uuid_gpt_efs};" \
 	"name=crypto,size=16K,uuid=${uuid_gpt_crypto};" \
-	"name=recovery,size=10M,uuid=${uuid_gpt_recovery};" \
+	"name=recovery,size=40M,uuid=${uuid_gpt_recovery};" \
 	"name=boot,size=10M,uuid=${uuid_gpt_boot};" \
 	"name=system,size=768M,uuid=${uuid_gpt_system};" \
+	"name=vendor,size=256M,uuid=${uuid_gpt_vendor};" \
 	"name=cache,size=256M,uuid=${uuid_gpt_cache};" \
 	"name=ipu1,size=1M,uuid=${uuid_gpt_ipu1};" \
 	"name=ipu2,size=1M,uuid=${uuid_gpt_ipu2};" \
@@ -77,15 +75,6 @@
 	DFU_ALT_INFO_EMMC \
 	DFU_ALT_INFO_RAM \
 	DFU_ALT_INFO_QSPI
-#else
-/* Discard fastboot in SPL build, to spare some space */
-#undef CONFIG_FASTBOOT
-#undef CONFIG_USB_FUNCTION_FASTBOOT
-#undef CONFIG_CMD_FASTBOOT
-#undef CONFIG_ANDROID_BOOT_IMAGE
-#undef CONFIG_FASTBOOT_BUF_ADDR
-#undef CONFIG_FASTBOOT_BUF_SIZE
-#undef CONFIG_FASTBOOT_FLASH
 #endif
 
 #ifdef CONFIG_SPL_BUILD
@@ -101,24 +90,16 @@
 #include <configs/ti_omap5_common.h>
 
 /* Enhance our eMMC support / experience. */
-#define CONFIG_RANDOM_UUID
 #define CONFIG_HSMMC2_8BIT
 
 /* CPSW Ethernet */
-#define CONFIG_BOOTP_DNS		/* Configurable parts of CMD_DHCP */
 #define CONFIG_BOOTP_DNS2
 #define CONFIG_BOOTP_SEND_HOSTNAME
-#define CONFIG_BOOTP_GATEWAY
-#define CONFIG_BOOTP_SUBNETMASK
 #define CONFIG_NET_RETRY_COUNT		10
-#define CONFIG_DRIVER_TI_CPSW		/* Driver for IP block */
 #define CONFIG_MII			/* Required in net/eth.c */
-#define CONFIG_PHY_GIGE			/* per-board part of CPSW */
-#define CONFIG_PHYLIB
 #define CONFIG_PHY_TI
 
 /* SPI */
-#undef	CONFIG_OMAP3_SPI
 #define CONFIG_TI_SPI_MMAP
 #define CONFIG_SF_DEFAULT_SPEED                76800000
 #define CONFIG_SF_DEFAULT_MODE                 SPI_MODE_0
@@ -138,7 +119,6 @@
 #define CONFIG_SYS_SPI_ARGS_OFFS	0x140000
 #define CONFIG_SYS_SPI_ARGS_SIZE	0x80000
 #if defined(CONFIG_QSPI_BOOT)
-#define CONFIG_ENV_IS_IN_SPI_FLASH
 #define CONFIG_SYS_REDUNDAND_ENVIRONMENT
 #define CONFIG_ENV_SPI_MAX_HZ           CONFIG_SF_DEFAULT_SPEED
 #define CONFIG_ENV_SIZE			(64 << 10)
@@ -149,22 +129,16 @@
 
 /* SPI SPL */
 #define CONFIG_TI_EDMA3
-#define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SYS_SPI_U_BOOT_OFFS     0x40000
 
 #define CONFIG_SUPPORT_EMMC_BOOT
 
 /* USB xHCI HOST */
 #define CONFIG_USB_XHCI_OMAP
-#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS 2
 
-#define CONFIG_OMAP_USB_PHY
 #define CONFIG_OMAP_USB2PHY2_HOST
 
 /* SATA */
-#define CONFIG_SCSI
-#define CONFIG_LIBATA
-#define CONFIG_SCSI_AHCI
 #define CONFIG_SCSI_AHCI_PLAT
 #define CONFIG_SYS_SCSI_MAX_SCSI_ID	1
 #define CONFIG_SYS_SCSI_MAX_LUN		1
@@ -177,13 +151,10 @@
 #define CONFIG_SYS_NAND_PAGE_SIZE	2048
 #define CONFIG_SYS_NAND_OOBSIZE		64
 #define CONFIG_SYS_NAND_BLOCK_SIZE	(128*1024)
-#define CONFIG_SYS_NAND_BUSWIDTH_16BIT
 #define CONFIG_SYS_NAND_PAGE_COUNT	(CONFIG_SYS_NAND_BLOCK_SIZE / \
 					 CONFIG_SYS_NAND_PAGE_SIZE)
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
 /* NAND: driver related configs */
-#define CONFIG_NAND_OMAP_GPMC
-#define CONFIG_NAND_OMAP_ELM
 #define CONFIG_SYS_NAND_ONFI_DETECTION
 #define CONFIG_NAND_OMAP_ECCSCHEME	OMAP_ECC_BCH8_CODE_HW
 #define CONFIG_SYS_NAND_BAD_BLOCK_POS	NAND_LARGE_BADBLOCK_POS
@@ -196,28 +167,11 @@
 					 50, 51, 52, 53, 54, 55, 56, 57, }
 #define CONFIG_SYS_NAND_ECCSIZE		512
 #define CONFIG_SYS_NAND_ECCBYTES	14
-#define MTDIDS_DEFAULT			"nand0=nand.0"
-#define MTDPARTS_DEFAULT		"mtdparts=nand.0:" \
-					"128k(NAND.SPL)," \
-					"128k(NAND.SPL.backup1)," \
-					"128k(NAND.SPL.backup2)," \
-					"128k(NAND.SPL.backup3)," \
-					"256k(NAND.u-boot-spl-os)," \
-					"1m(NAND.u-boot)," \
-					"128k(NAND.u-boot-env)," \
-					"128k(NAND.u-boot-env.backup1)," \
-					"8m(NAND.kernel)," \
-					"-(NAND.file-system)"
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x000c0000
 /* NAND: SPL related configs */
-#ifdef CONFIG_SPL_NAND_SUPPORT
-#define CONFIG_SPL_NAND_AM33XX_BCH
-#endif
 /* NAND: SPL falcon mode configs */
 #ifdef CONFIG_SPL_OS_BOOT
-#define CONFIG_CMD_SPL_NAND_OFS		0x00080000 /* os-boot params*/
 #define CONFIG_SYS_NAND_SPL_KERNEL_OFFS	0x00200000 /* kernel offset */
-#define CONFIG_CMD_SPL_WRITE_SIZE	0x2000
 #endif
 #endif /* !CONFIG_NAND */
 
@@ -238,20 +192,7 @@
 #define CONFIG_SYS_MONITOR_BASE		CONFIG_SYS_FLASH_BASE
 /* Reduce SPL size by removing unlikey targets */
 #ifdef CONFIG_NOR_BOOT
-#define CONFIG_ENV_IS_IN_FLASH
 #define CONFIG_ENV_SECT_SIZE		(128 * 1024)	/* 128 KiB */
-#define MTDIDS_DEFAULT			"nor0=physmap-flash.0"
-#define MTDPARTS_DEFAULT		"mtdparts=physmap-flash.0:" \
-					"128k(NOR.SPL)," \
-					"128k(NOR.SPL.backup1)," \
-					"128k(NOR.SPL.backup2)," \
-					"128k(NOR.SPL.backup3)," \
-					"256k(NOR.u-boot-spl-os)," \
-					"1m(NOR.u-boot)," \
-					"128k(NOR.u-boot-env)," \
-					"128k(NOR.u-boot-env.backup1)," \
-					"8m(NOR.kernel)," \
-					"-(NOR.rootfs)"
 #define CONFIG_ENV_OFFSET		0x001c0000
 #define CONFIG_ENV_OFFSET_REDUND	0x001e0000
 #endif

@@ -1,7 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2016 Rockchip Electronics Co., Ltd
  * Author: Andy Yan <andy.yan@rock-chips.com>
- * SPDX-License-Identifier:     GPL-2.0+
  */
 #ifndef _ASM_ARCH_CRU_RV1108_H
 #define _ASM_ARCH_CRU_RV1108_H
@@ -89,6 +89,11 @@ enum {
 	CORE_PLL_SEL_DPLL	= 2,
 	CORE_CLK_DIV_SHIFT	= 0,
 	CORE_CLK_DIV_MASK	= 0x1f << CORE_CLK_DIV_SHIFT,
+
+	/* CLKSEL_CON22 */
+	CLK_SARADC_DIV_CON_SHIFT= 0,
+	CLK_SARADC_DIV_CON_MASK	= GENMASK(9, 0),
+	CLK_SARADC_DIV_CON_WIDTH= 10,
 
 	/* CLKSEL24_CON */
 	MAC_PLL_SEL_SHIFT	= 12,

@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * board/renesas/blanche/blanche.c
  *     This file is blanche board support.
  *
  * Copyright (C) 2016 Renesas Electronics Corporation
- *
- * SPDX-License-Identifier: GPL-2.0
  */
 
 #include <common.h>
@@ -12,6 +11,7 @@
 #include <netdev.h>
 #include <dm.h>
 #include <dm/platform_data/serial_sh.h>
+#include <environment.h>
 #include <asm/processor.h>
 #include <asm/mach-types.h>
 #include <asm/io.h>
@@ -418,10 +418,10 @@ int board_eth_init(bd_t *bis)
 
 	rc = smc911x_initialize(0, CONFIG_SMC911X_BASE);
 
-	if (!eth_getenv_enetaddr(STR_ENV_ETHADDR, eth_addr)) {
+	if (!eth_env_get_enetaddr(STR_ENV_ETHADDR, eth_addr)) {
 		dev = eth_get_dev_by_index(0);
 		if (dev) {
-			eth_setenv_enetaddr(STR_ENV_ETHADDR, dev->enetaddr);
+			eth_env_set_enetaddr(STR_ENV_ETHADDR, dev->enetaddr);
 		} else {
 			printf("blanche: Couldn't get eth device\n");
 			rc = -1;
@@ -466,10 +466,6 @@ int dram_init(void)
 
 	return 0;
 }
-
-const struct rmobile_sysinfo sysinfo = {
-	CONFIG_RMOBILE_BOARD_STRING
-};
 
 void reset_cpu(ulong addr)
 {

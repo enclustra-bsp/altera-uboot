@@ -30,6 +30,7 @@
 #
 # Top-level generic files
 #
+fit-dtb.blob
 /MLO*
 /SPL*
 /System.map
@@ -89,3 +90,7 @@ GTAGS
 postfetch.sh
 postbuild.sh
 *scr
+
+# gcc code coverage files
+*.gcda
+*.gcno

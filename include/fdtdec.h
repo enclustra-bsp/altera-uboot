@@ -1,6 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (c) 2011 The Chromium OS Authors.
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __fdtdec_h
@@ -14,7 +14,7 @@
  * changes to support FDT are minimized.
  */
 
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <pci.h>
 
 /*
@@ -24,13 +24,15 @@
 typedef phys_addr_t fdt_addr_t;
 typedef phys_size_t fdt_size_t;
 #ifdef CONFIG_PHYS_64BIT
-#define FDT_ADDR_T_NONE (-1ULL)
+#define FDT_ADDR_T_NONE (-1U)
 #define fdt_addr_to_cpu(reg) be64_to_cpu(reg)
 #define fdt_size_to_cpu(reg) be64_to_cpu(reg)
+typedef fdt64_t fdt_val_t;
 #else
 #define FDT_ADDR_T_NONE (-1U)
 #define fdt_addr_to_cpu(reg) be32_to_cpu(reg)
 #define fdt_size_to_cpu(reg) be32_to_cpu(reg)
+typedef fdt32_t fdt_val_t;
 #endif
 
 /* Information obtained about memory from the FDT */
@@ -119,12 +121,6 @@ enum fdt_compat_id {
 	COMPAT_NVIDIA_TEGRA20_EMC,	/* Tegra20 memory controller */
 	COMPAT_NVIDIA_TEGRA20_EMC_TABLE, /* Tegra20 memory timing table */
 	COMPAT_NVIDIA_TEGRA20_NAND,	/* Tegra2 NAND controller */
-	COMPAT_NVIDIA_TEGRA124_PMC,	/* Tegra 124 power mgmt controller */
-	COMPAT_NVIDIA_TEGRA186_SDMMC,	/* Tegra186 SDMMC controller */
-	COMPAT_NVIDIA_TEGRA210_SDMMC,	/* Tegra210 SDMMC controller */
-	COMPAT_NVIDIA_TEGRA124_SDMMC,	/* Tegra124 SDMMC controller */
-	COMPAT_NVIDIA_TEGRA30_SDMMC,	/* Tegra30 SDMMC controller */
-	COMPAT_NVIDIA_TEGRA20_SDMMC,	/* Tegra20 SDMMC controller */
 	COMPAT_NVIDIA_TEGRA124_XUSB_PADCTL,
 					/* Tegra124 XUSB pad controller */
 	COMPAT_NVIDIA_TEGRA210_XUSB_PADCTL,
@@ -163,6 +159,8 @@ enum fdt_compat_id {
 	COMPAT_ALTERA_SOCFPGA_F2SDR0,           /* SoCFPGA fpga2SDRAM0 bridge */
 	COMPAT_ALTERA_SOCFPGA_F2SDR1,           /* SoCFPGA fpga2SDRAM1 bridge */
 	COMPAT_ALTERA_SOCFPGA_F2SDR2,           /* SoCFPGA fpga2SDRAM2 bridge */
+	COMPAT_ALTERA_SOCFPGA_FPGA0,		/* SOCFPGA FPGA manager */
+	COMPAT_ALTERA_SOCFPGA_NOC,		/* SOCFPGA Arria 10 NOC */
 
 	COMPAT_COUNT,
 };
@@ -992,7 +990,8 @@ int fdtdec_setup(void);
 
 /**
  * Board-specific FDT initialization. Returns the address to a device tree blob.
- * Called when CONFIG_OF_BOARD is defined.
+ * Called when CONFIG_OF_BOARD is defined, or if CONFIG_OF_SEPARATE is defined
+ * and the board implements it.
  */
 void *board_fdt_blob_setup(void);
 

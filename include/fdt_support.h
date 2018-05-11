@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2007
  * Gerald Van Baren, Custom IDEAS, vanbaren@cideas.com
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __FDT_SUPPORT_H
@@ -10,7 +9,7 @@
 
 #ifdef CONFIG_OF_LIBFDT
 
-#include <libfdt.h>
+#include <linux/libfdt.h>
 
 u32 fdt_getprop_u32_default_node(const void *fdt, int off, int cell,
 				const char *prop, const u32 dflt);
@@ -132,6 +131,24 @@ void fdt_fixup_crypto_node(void *blob, int sec_rev);
 #else
 static inline void fdt_fixup_crypto_node(void *blob, int sec_rev) {}
 #endif
+
+/**
+ * Record information about a processed loadable in /fit-images (creating
+ * /fit-images if necessary).
+ *
+ * @param blob		FDT blob to update
+ * @param index	        index of this loadable
+ * @param name          name of the loadable
+ * @param load_addr     address the loadable was loaded to
+ * @param size          number of bytes loaded
+ * @param entry_point   entry point (if specified, otherwise pass -1)
+ * @param type          type (if specified, otherwise pass NULL)
+ * @param os            os-type (if specified, otherwise pass NULL)
+ * @return 0 if ok, or -1 or -FDT_ERR_... on error
+ */
+int fdt_record_loadable(void *blob, u32 index, const char *name,
+			uintptr_t load_addr, u32 size, uintptr_t entry_point,
+			const char *type, const char *os);
 
 #ifdef CONFIG_PCI
 #include <pci.h>
@@ -264,10 +281,18 @@ int arch_fixup_memory_node(void *blob);
 int fdt_setup_simplefb_node(void *fdt, int node, u64 base_address, u32 width,
 			    u32 height, u32 stride, const char *format);
 
+int fdt_overlay_apply_verbose(void *fdt, void *fdto);
+
 #endif /* ifdef CONFIG_OF_LIBFDT */
 
 #ifdef USE_HOSTCC
 int fdtdec_get_int(const void *blob, int node, const char *prop_name,
 		int default_val);
+#endif
+#ifdef CONFIG_FMAN_ENET
+int fdt_update_ethernet_dt(void *blob);
+#endif
+#ifdef CONFIG_FSL_MC_ENET
+void fdt_fixup_board_enet(void *blob);
 #endif
 #endif /* ifndef __FDT_SUPPORT_H */

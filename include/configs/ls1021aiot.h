@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2016 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -18,21 +17,6 @@
 
 #define CONFIG_SYS_INIT_RAM_ADDR	OCRAM_BASE_ADDR
 #define CONFIG_SYS_INIT_RAM_SIZE	OCRAM_SIZE
-
-/* XHCI Support - enabled by default */
-#define CONFIG_HAS_FSL_XHCI_USB
-
-#ifdef CONFIG_HAS_FSL_XHCI_USB
-#define CONFIG_USB_XHCI_FSL
-#define CONFIG_USB_XHCI_DWC3
-#define CONFIG_USB_MAX_CONTROLLER_COUNT		1
-#define CONFIG_SYS_USB_XHCI_MAX_ROOT_PORTS	2
-#endif
-
-#if defined(CONFIG_HAS_FSL_DR_USB) || defined(CONFIG_HAS_FSL_XHCI_USB)
-#define CONFIG_USB_STORAGE
-#define CONFIG_CMD_EXT2
-#endif
 
 #define CONFIG_SYS_CLK_FREQ		100000000
 #define CONFIG_DDR_CLK_FREQ		100000000
@@ -76,15 +60,12 @@
 #ifdef CONFIG_SD_BOOT
 #define CONFIG_SYS_FSL_PBL_RCW	\
 	board/freescale/ls1021aiot/ls102xa_rcw_sd.cfg
-#define CONFIG_SPL_FRAMEWORK
-#define CONFIG_SPL_LDSCRIPT	"arch/$(ARCH)/cpu/u-boot-spl.lds"
 #define CONFIG_SPL_LIBCOMMON_SUPPORT
 #define CONFIG_SPL_LIBGENERIC_SUPPORT
 #define CONFIG_SPL_ENV_SUPPORT
 #define CONFIG_SPL_MPC8XXX_INIT_DDR_SUPPORT
 #define CONFIG_SPL_I2C_SUPPORT
 #define CONFIG_SPL_WATCHDOG_SUPPORT
-#define CONFIG_SPL_SERIAL_SUPPORT
 #define CONFIG_SPL_MMC_SUPPORT
 #define CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR	0xe8
 
@@ -92,7 +73,6 @@
 #define CONFIG_SPL_MAX_SIZE		0x1a000
 #define CONFIG_SPL_STACK		0x1001d000
 #define CONFIG_SPL_PAD_TO		0x1c000
-#define CONFIG_SYS_TEXT_BASE	0x82000000
 
 #define CONFIG_SYS_SPL_MALLOC_START	(CONFIG_SYS_TEXT_BASE + \
 		CONFIG_SYS_MONITOR_LEN)
@@ -100,10 +80,6 @@
 #define CONFIG_SPL_BSS_START_ADDR	0x80100000
 #define CONFIG_SPL_BSS_MAX_SIZE		0x80000
 #define CONFIG_SYS_MONITOR_LEN		0x80000
-#endif
-
-#ifdef CONFIG_QSPI_BOOT
-#define CONFIG_SYS_TEXT_BASE		0x40010000
 #endif
 
 #define CONFIG_NR_DRAM_BANKS		1
@@ -114,7 +90,6 @@
 /*
  * Serial Port
  */
-#define CONFIG_CONS_INDEX		1
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_serial_clock()
@@ -140,12 +115,8 @@
  * MMC
  */
 #define CONFIG_CMD_MMC
-#define CONFIG_FSL_ESDHC
 
 /* SATA */
-#define CONFIG_CMD_SCSI
-#define CONFIG_LIBATA
-#define CONFIG_SCSI_AHCI
 #define CONFIG_SCSI_AHCI_PLAT
 #ifndef PCI_DEVICE_ID_FREESCALE_AHCI
 #define PCI_DEVICE_ID_FREESCALE_AHCI	0x0440
@@ -179,7 +150,6 @@
 /*
  * eTSEC
  */
-#define CONFIG_TSEC_ENET
 
 #ifdef CONFIG_TSEC_ENET
 #define CONFIG_MII
@@ -200,8 +170,6 @@
 
 #define CONFIG_ETHPRIME			"eTSEC2"
 
-#define CONFIG_PHY_GIGE
-#define CONFIG_PHYLIB
 #define CONFIG_PHY_ATHEROS
 
 #define CONFIG_HAS_ETH0
@@ -217,19 +185,11 @@
 
 #ifdef CONFIG_PCI
 #define CONFIG_PCI_SCAN_SHOW
-#define CONFIG_CMD_PCI
 #endif
 
-#define CONFIG_CMD_PING
-#define CONFIG_CMD_DHCP
 #define CONFIG_CMD_MII
 
 #define CONFIG_CMDLINE_TAG
-#define CONFIG_CMDLINE_EDITING
-
-#if defined(CONFIG_QSPI_BOOT) || defined(CONFIG_SD_BOOT)
-#undef	CONFIG_CMD_IMLS
-#endif
 
 #define CONFIG_PEN_ADDR_BIG_ENDIAN
 #define CONFIG_LAYERSCAPE_NS_ACCESS
@@ -249,14 +209,7 @@
 /*
  * Miscellaneous configurable options
  */
-#define CONFIG_SYS_LONGHELP		/* undef to save memory */
 #define CONFIG_SYS_PROMPT_HUSH_PS2	"> "
-#define CONFIG_AUTO_COMPLETE
-#define CONFIG_SYS_CBSIZE	256	/* Console I/O Buffer Size */
-#define CONFIG_SYS_PBSIZE		\
-	(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
-#define CONFIG_SYS_MAXARGS	16	/* max number of command args */
-#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 
 #define CONFIG_CMD_GREPENV
 #define CONFIG_CMD_MEMINFO
@@ -287,11 +240,9 @@
 
 #if defined(CONFIG_SD_BOOT)
 #define CONFIG_ENV_OFFSET		0x100000
-#define CONFIG_ENV_IS_IN_MMC
 #define CONFIG_SYS_MMC_ENV_DEV	0
 #define CONFIG_ENV_SIZE			0x2000
 #elif defined(CONFIG_QSPI_BOOT)
-#define CONFIG_ENV_IS_IN_SPI_FLASH
 #define CONFIG_ENV_SIZE			0x2000
 #define CONFIG_ENV_OFFSET		0x100000
 #define CONFIG_ENV_SECT_SIZE	0x10000
@@ -299,7 +250,6 @@
 
 #define CONFIG_OF_BOARD_SETUP
 #define CONFIG_OF_STDOUT_VIA_ALIAS
-#define CONFIG_CMD_BOOTZ
 
 #define CONFIG_MISC_INIT_R
 

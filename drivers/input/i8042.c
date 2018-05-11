@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2002 ELTEC Elektronik AG
  * Frank Gottschling <fgottschling@eltec.de>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /* i8042.c - Intel 8042 keyboard driver routines */
@@ -274,7 +273,7 @@ static int i8042_start(struct udevice *dev)
 
 	/* Init keyboard device (default US layout) */
 	keymap = KBD_US;
-	penv = getenv("keymap");
+	penv = env_get("keymap");
 	if (penv != NULL) {
 		if (strncmp(penv, "de", 3) == 0)
 			keymap = KBD_GER;

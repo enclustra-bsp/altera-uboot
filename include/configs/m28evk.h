@@ -1,21 +1,15 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2011 Marek Vasut <marek.vasut@gmail.com>
  * on behalf of DENX Software Engineering GmbH
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #ifndef __CONFIGS_M28EVK_H__
 #define __CONFIGS_M28EVK_H__
 
 /* System configurations */
-#define CONFIG_MX28				/* i.MX28 SoC */
 #define CONFIG_MACH_TYPE	MACH_TYPE_M28EVK
 
 #define CONFIG_TIMESTAMP		/* Print image info with timestamp */
-
-/* U-Boot Commands */
-#define CONFIG_CMD_NAND
-#define CONFIG_CMD_NAND_TRIMFFS
 
 /* Memory configuration */
 #define CONFIG_NR_DRAM_BANKS		1		/* 1 bank of DRAM */
@@ -25,7 +19,6 @@
 
 /* Environment */
 #define CONFIG_ENV_SIZE			(16 * 1024)
-#define CONFIG_ENV_IS_IN_NAND
 
 /* Environment is in NAND */
 #if defined(CONFIG_CMD_NAND) && defined(CONFIG_ENV_IS_IN_NAND)
@@ -36,23 +29,8 @@
 #define CONFIG_ENV_OFFSET_REDUND	\
 		(CONFIG_ENV_OFFSET + CONFIG_ENV_RANGE)
 
-#define CONFIG_CMD_UBIFS
-#define CONFIG_CMD_MTDPARTS
-#define CONFIG_RBTREE
-#define CONFIG_LZO
 #define CONFIG_MTD_DEVICE
 #define CONFIG_MTD_PARTITIONS
-#define MTDIDS_DEFAULT			"nand0=gpmi-nand"
-#define MTDPARTS_DEFAULT			\
-	"mtdparts=gpmi-nand:"			\
-		"3m(u-boot),"			\
-		"512k(env1),"			\
-		"512k(env2),"			\
-		"14m(boot),"			\
-		"238m(data),"			\
-		"-@4096k(UBI)"
-#else
-#define CONFIG_ENV_IS_NOWHERE
 #endif
 
 /* FEC Ethernet on SoC */
@@ -83,7 +61,6 @@
 /* SPI */
 #ifdef CONFIG_CMD_SPI
 #define CONFIG_DEFAULT_SPI_BUS		2
-#define CONFIG_DEFAULT_SPI_CS		0
 #define CONFIG_DEFAULT_SPI_MODE		SPI_MODE_0
 
 /* SPI FLASH */
@@ -113,14 +90,13 @@
 
 /* Booting Linux */
 #define CONFIG_BOOTFILE		"fitImage"
-#define CONFIG_BOOTARGS		"console=ttyAMA0,115200n8 "
 #define CONFIG_BOOTCOMMAND	"run mmc_mmc"
 #define CONFIG_LOADADDR		0x42000000
 #define CONFIG_SYS_LOAD_ADDR	CONFIG_LOADADDR
 
 /* Extra Environment */
 #define CONFIG_PREBOOT		"run try_bootscript"
-#define CONFIG_HOSTNAME		m28evk
+#define CONFIG_HOSTNAME		"m28evk"
 
 #define CONFIG_EXTRA_ENV_SETTINGS					\
 	"consdev=ttyAMA0\0"						\

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * am3517evm.c - board file for TI's AM3517 family of devices.
  *
@@ -7,11 +8,11 @@
  *
  * Copyright (C) 2010
  * Texas Instruments Incorporated - http://www.ti.com/
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
+#include <dm.h>
+#include <ns16550.h>
 #include <asm/io.h>
 #include <asm/omap_musb.h>
 #include <asm/arch/am35x_def.h>
@@ -34,6 +35,22 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define AM3517_IP_SW_RESET	0x48002598
 #define CPGMACSS_SW_RST		(1 << 1)
+#define PHY_GPIO		30
+
+/* This is only needed until SPL gets OF support */
+#ifdef CONFIG_SPL_BUILD
+static const struct ns16550_platdata am3517_serial = {
+	.base = OMAP34XX_UART3,
+	.reg_shift = 2,
+	.clock = V_NS16550_CLK,
+	.fcr = UART_FCR_DEFVAL,
+};
+
+U_BOOT_DEVICE(am3517_uart) = {
+	"ns16550_serial",
+	&am3517_serial
+};
+#endif
 
 /*
  * Routine: board_init
@@ -105,7 +122,7 @@ int misc_init_r(void)
 	volatile unsigned int ctr;
 	u32 reset;
 
-#ifdef CONFIG_SYS_I2C_OMAP34XX
+#ifdef CONFIG_SYS_I2C_OMAP24XX
 	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED, CONFIG_SYS_OMAP24_I2C_SLAVE);
 #endif
 
@@ -113,30 +130,35 @@ int misc_init_r(void)
 
 	am3517_evm_musb_init();
 
-	/* activate PHY reset */
-	gpio_direction_output(30, 0);
-	gpio_set_value(30, 0);
+	if (gpio_request(PHY_GPIO, "gpio_30") == 0) {
+		/* activate PHY reset */
+		gpio_direction_output(PHY_GPIO, 0);
+		gpio_set_value(PHY_GPIO, 0);
 
-	ctr  = 0;
-	do {
-		udelay(1000);
-		ctr++;
-	} while (ctr < 300);
+		ctr  = 0;
+		do {
+			udelay(1000);
+			ctr++;
+		} while (ctr < 300);
 
-	/* deactivate PHY reset */
-	gpio_set_value(30, 1);
+		/* deactivate PHY reset */
+		gpio_set_value(PHY_GPIO, 1);
 
-	/* allow the PHY to stabilize and settle down */
-	ctr = 0;
-	do {
-		udelay(1000);
-		ctr++;
-	} while (ctr < 300);
+		/* allow the PHY to stabilize and settle down */
+		ctr = 0;
+		do {
+			udelay(1000);
+			ctr++;
+		} while (ctr < 300);
 
-	/* ensure that the module is out of reset */
-	reset = readl(AM3517_IP_SW_RESET);
-	reset &= (~CPGMACSS_SW_RST);
-	writel(reset,AM3517_IP_SW_RESET);
+		/* ensure that the module is out of reset */
+		reset = readl(AM3517_IP_SW_RESET);
+		reset &= (~CPGMACSS_SW_RST);
+		writel(reset, AM3517_IP_SW_RESET);
+
+		/* Free requested GPIO */
+		gpio_free(PHY_GPIO);
+	}
 
 	return 0;
 }

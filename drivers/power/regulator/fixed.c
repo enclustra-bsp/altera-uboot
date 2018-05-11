@@ -1,9 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  *  Copyright (C) 2015 Samsung Electronics
  *
  *  Przemyslaw Marczak <p.marczak@samsung.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -13,8 +12,6 @@
 #include <asm/gpio.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 struct fixed_regulator_platdata {
 	struct gpio_desc gpio; /* GPIO for regulator enable control */
@@ -89,7 +86,7 @@ static int fixed_regulator_get_current(struct udevice *dev)
 	return uc_pdata->min_uA;
 }
 
-static bool fixed_regulator_get_enable(struct udevice *dev)
+static int fixed_regulator_get_enable(struct udevice *dev)
 {
 	struct fixed_regulator_platdata *dev_pdata = dev_get_platdata(dev);
 
@@ -117,7 +114,7 @@ static int fixed_regulator_set_enable(struct udevice *dev, bool enable)
 
 	ret = dm_gpio_set_value(&dev_pdata->gpio, enable);
 	if (ret) {
-		error("Can't set regulator : %s gpio to: %d\n", dev->name,
+		pr_err("Can't set regulator : %s gpio to: %d\n", dev->name,
 		      enable);
 		return ret;
 	}

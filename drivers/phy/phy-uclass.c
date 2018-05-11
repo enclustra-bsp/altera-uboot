@@ -1,15 +1,12 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2017 Texas Instruments Incorporated - http://www.ti.com/
  * Written by Jean-Jacques Hiblot  <jjhiblot@ti.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
 #include <dm.h>
 #include <generic-phy.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 static inline struct phy_ops *phy_dev_ops(struct udevice *dev)
 {
@@ -45,6 +42,7 @@ int generic_phy_get_by_index(struct udevice *dev, int index,
 	debug("%s(dev=%p, index=%d, phy=%p)\n", __func__, dev, index, phy);
 
 	assert(phy);
+	phy->dev = NULL;
 	ret = dev_read_phandle_with_args(dev, "phys", "#phy-cells", 0, index,
 					 &args);
 	if (ret) {

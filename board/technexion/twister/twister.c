@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2011
  * Stefano Babic, DENX Software Engineering, sbabic@denx.de.
  *
  * Copyright (C) 2009 TechNexion Ltd.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -94,7 +93,7 @@ int misc_init_r(void)
 
 	omap_die_id_display();
 
-	eth_addr = getenv("ethaddr");
+	eth_addr = env_get("ethaddr");
 	if (eth_addr)
 		return 0;
 

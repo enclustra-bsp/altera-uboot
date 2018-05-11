@@ -1,18 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * include/configs/blanche.h
  *     This file is blanche board configuration.
  *
  * Copyright (C) 2016 Renesas Electronics Corporation
- *
- * SPDX-License-Identifier: GPL-2.0
  */
 
 #ifndef __BLANCHE_H
 #define __BLANCHE_H
-
-#undef DEBUG
-#define CONFIG_R8A7792
-#define CONFIG_RMOBILE_BOARD_STRING "Blanche"
 
 #include "rcar-gen2-common.h"
 
@@ -28,24 +23,18 @@
 #define RCAR_GEN2_UBOOT_SDRAM_SIZE	(512 * 1024 * 1024)
 
 /* SCIF */
-#define CONFIG_SCIF_CONSOLE
 #define CONFIG_CONS_SCIF0
 
 #define CONFIG_SYS_MEMTEST_START	(RCAR_GEN2_SDRAM_BASE)
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 504 * 1024 * 1024)
 
-#undef	CONFIG_SYS_ALT_MEMTEST
 #undef	CONFIG_SYS_MEMTEST_SCRATCH
 #undef	CONFIG_SYS_LOADS_BAUD_CHANGE
 
 /* FLASH */
 #if !defined(CONFIG_MTD_NOR_FLASH)
-#define CONFIG_SYS_TEXT_BASE	0x40000000
-#define CONFIG_SPI
-#define CONFIG_SH_QSPI
 #define CONFIG_SH_QSPI_BASE	0xE6B10000
 #else
-#define CONFIG_SYS_TEXT_BASE		0x00000000
 #define CONFIG_SYS_FLASH_CFI
 #define CONFIG_SYS_FLASH_CFI_WIDTH	FLASH_CFI_16BIT
 #define CONFIG_FLASH_CFI_DRIVER
@@ -66,11 +55,6 @@
 #undef  CONFIG_CMD_SPI
 #endif
 
-/* BLANCHE on board LANC: SMC89218 (ExCS0) */
-#define CONFIG_NET_MULTI
-#define CONFIG_SMC911X                  1
-#define CONFIG_SMC911X_16_BIT           1
-#define CONFIG_SMC911X_BASE             0x18000000
 
 /* Board Clock */
 #define RMOBILE_XTAL_CLK	20000000u
@@ -81,18 +65,13 @@
 /* ENV setting */
 #if !defined(CONFIG_MTD_NOR_FLASH)
 #else
-#undef  CONFIG_ENV_IS_IN_SPI_FLASH
 #undef  CONFIG_ENV_ADDR
-#define CONFIG_ENV_IS_IN_FLASH
 #define CONFIG_ENV_SECT_SIZE	(256 * 1024)
 #define CONFIG_ENV_ADDR		(CONFIG_SYS_FLASH_BASE + CONFIG_SYS_MONITOR_LEN)
 #define CONFIG_ENV_OFFSET	(CONFIG_ENV_ADDR)
 #define CONFIG_ENV_SIZE		(CONFIG_ENV_SECT_SIZE)
 #define CONFIG_ENV_SIZE_REDUND	(CONFIG_SYS_MONITOR_LEN)
 #endif
-
-/* USB */
-#undef CONFIG_CMD_USB
 
 /* Module stop status bits */
 /* INTC-RT */
@@ -110,6 +89,5 @@
 
 /* SDHI */
 #define CONFIG_SH_SDHI_FREQ	97500000
-#define HAVE_BLOCK_DEVICE
 
 #endif	/* __BLANCHE_H */

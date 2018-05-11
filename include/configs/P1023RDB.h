@@ -1,18 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2013 Freescale Semiconductor, Inc.
  *
  * Authors:  Roy Zang <tie-fei.zang@freescale.com>
  *	     Chunhe Lan <Chunhe.Lan@freescale.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
 #define __CONFIG_H
-
-#ifndef CONFIG_SYS_TEXT_BASE
-#define CONFIG_SYS_TEXT_BASE	0xeff40000
-#endif
 
 #ifndef CONFIG_SYS_MONITOR_BASE
 #define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_TEXT_BASE	/* start of monitor */
@@ -51,8 +46,6 @@ extern unsigned long get_clock_freq(void);
 
 #define CONFIG_SYS_MEMTEST_START	0x01000000	/* memtest works on */
 #define CONFIG_SYS_MEMTEST_END		0x02000000
-
-#define CONFIG_PANIC_HANG	/* do not reset board on panic */
 
 /* Implement conversion of addresses in the LBC */
 #define CONFIG_SYS_LBC_LBCR		0x00000000
@@ -108,8 +101,6 @@ extern unsigned long get_clock_freq(void);
 #define CONFIG_SYS_FLASH_ERASE_TOUT	60000	/* Flash Erase Timeout (ms) */
 #define CONFIG_SYS_FLASH_WRITE_TOUT	500	/* Flash Write Timeout (ms) */
 
-#define CONFIG_BOARD_EARLY_INIT_R	/* call board_early_init_r function */
-
 #define CONFIG_SYS_INIT_RAM_LOCK
 #define CONFIG_SYS_INIT_RAM_ADDR	0xffd00000	/* Initial L1 address */
 #define CONFIG_SYS_INIT_RAM_SIZE	0x00004000/* Size of used area in RAM */
@@ -125,7 +116,6 @@ extern unsigned long get_clock_freq(void);
 
 #define CONFIG_SYS_NAND_BASE_LIST	{ CONFIG_SYS_NAND_BASE }
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
-#define CONFIG_CMD_NAND
 #define CONFIG_NAND_FSL_ELBC
 #define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
 
@@ -150,7 +140,6 @@ extern unsigned long get_clock_freq(void);
 #define CONFIG_SYS_OR1_PRELIM	CONFIG_SYS_NAND_OR_PRELIM /* NAND Options */
 
 /* Serial Port */
-#define CONFIG_CONS_INDEX		1
 #undef	CONFIG_SERIAL_SOFTWARE_FIFO
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
@@ -230,22 +219,12 @@ extern unsigned long get_clock_freq(void);
  */
 #define CONFIG_ENV_OVERWRITE
 
-#define CONFIG_ENV_IS_IN_FLASH
 #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE - CONFIG_ENV_SECT_SIZE)
 #define CONFIG_ENV_SIZE		0x2000
 #define CONFIG_ENV_SECT_SIZE	0x20000 /* 128K (one sector) */
 
 #define CONFIG_LOADS_ECHO		/* echo on for serial download */
 #define CONFIG_SYS_LOADS_BAUD_CHANGE	/* allow baudrate change */
-
-/*
- * Command line configuration.
- */
-#define CONFIG_CMD_REGINFO
-
-#if defined(CONFIG_PCI)
-#define CONFIG_CMD_PCI
-#endif
 
 /*
  * USB
@@ -261,19 +240,7 @@ extern unsigned long get_clock_freq(void);
 /*
  * Miscellaneous configurable options
  */
-#define CONFIG_SYS_LONGHELP			/* undef to save memory	*/
-#define CONFIG_CMDLINE_EDITING		/* Command-line editing */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
-#if defined(CONFIG_CMD_KGDB)
-#define CONFIG_SYS_CBSIZE	1024		/* Console I/O Buffer Size */
-#else
-#define CONFIG_SYS_CBSIZE	256		/* Console I/O Buffer Size */
-#endif
-/* Print Buffer Size */
-#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT)+16)
-#define CONFIG_SYS_MAXARGS	16		/* max number of command args */
-/* Boot Argument Buffer Size */
-#define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE
 
 /*
  * For booting Linux, the board info and command line data
@@ -293,7 +260,6 @@ extern unsigned long get_clock_freq(void);
 #define CONFIG_LOADADDR		1000000
 
 /* Qman/Bman */
-#define CONFIG_SYS_DPAA_QBMAN		/* support Q/Bman */
 #define CONFIG_SYS_QMAN_MEM_BASE	0xff000000
 #define CONFIG_SYS_QMAN_MEM_PHYS	CONFIG_SYS_QMAN_MEM_BASE
 #define CONFIG_SYS_QMAN_MEM_SIZE	0x00200000
@@ -319,7 +285,6 @@ extern unsigned long get_clock_freq(void);
 
 /* For FM */
 #define CONFIG_SYS_DPAA_FMAN
-#define CONFIG_PHY_GIGE		/* Include GbE speed/duplex detection */
 
 #ifdef CONFIG_SYS_DPAA_FMAN
 #define CONFIG_FMAN_ENET

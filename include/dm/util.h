@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (c) 2013 Google, Inc
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __DM_UTIL_H
@@ -11,14 +10,6 @@
 void dm_warn(const char *fmt, ...);
 #else
 static inline void dm_warn(const char *fmt, ...)
-{
-}
-#endif
-
-#ifdef DEBUG
-void dm_dbg(const char *fmt, ...);
-#else
-static inline void dm_dbg(const char *fmt, ...)
 {
 }
 #endif

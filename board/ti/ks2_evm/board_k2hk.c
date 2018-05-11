@@ -1,18 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * K2HK EVM : Board initialization
  *
  * (C) Copyright 2012-2014
  *     Texas Instruments Incorporated, <www.ti.com>
- *
- * SPDX-License-Identifier:     GPL-2.0+
  */
 
 #include <common.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/hardware.h>
 #include <asm/ti-common/keystone_net.h>
-
-DECLARE_GLOBAL_DATA_PTR;
 
 unsigned int external_clk[ext_clk_count] = {
 	[sys_clk]	=	122880000,
@@ -147,6 +144,16 @@ int board_early_init_f(void)
 	init_plls();
 
 	return 0;
+}
+#endif
+
+#if defined(CONFIG_MULTI_DTB_FIT)
+int board_fit_config_name_match(const char *name)
+{
+	if (!strcmp(name, "keystone-k2hk-evm"))
+		return 0;
+
+	return -1;
 }
 #endif
 

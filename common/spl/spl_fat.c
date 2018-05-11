@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2014
  * Texas Instruments, <www.ti.com>
  *
  * Dan Murphy <dmurphy@ti.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * FAT Image Functions copied from spl_mmc.c
  */
@@ -15,7 +14,7 @@
 #include <fat.h>
 #include <errno.h>
 #include <image.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 
 static int fat_registered;
 
@@ -113,7 +112,7 @@ int spl_load_image_fat_os(struct spl_image_info *spl_image,
 		return err;
 
 #if defined(CONFIG_SPL_ENV_SUPPORT) && defined(CONFIG_SPL_OS_BOOT)
-	file = getenv("falcon_args_file");
+	file = env_get("falcon_args_file");
 	if (file) {
 		err = file_fat_read(file, (void *)CONFIG_SYS_SPL_ARGS_ADDR, 0);
 		if (err <= 0) {
@@ -121,7 +120,7 @@ int spl_load_image_fat_os(struct spl_image_info *spl_image,
 			       file, err);
 			goto defaults;
 		}
-		file = getenv("falcon_image_file");
+		file = env_get("falcon_image_file");
 		if (file) {
 			err = spl_load_image_fat(spl_image, block_dev,
 						 partition, file);

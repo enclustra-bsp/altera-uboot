@@ -1,10 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Configuration settings for the SOM-6896
  *
  * Copyright (C) 2015 NovaTech LLC
  * George McCollister <george.mccollister@gmail.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_H
@@ -15,9 +14,6 @@
 #define CONFIG_SYS_MONITOR_LEN		(1 << 20)
 
 #define CONFIG_MISC_INIT_R
-
-#define CONFIG_SCSI_DEV_LIST	\
-	{PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_WILDCATPOINT_AHCI}
 
 #define VIDEO_IO_OFFSET			0
 #define CONFIG_X86EMU_RAW_IO

@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2014 Gateworks Corporation
  * Author: Tim Harvey <tharvey@gateworks.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <nand.h>
@@ -153,7 +152,6 @@ static int mxs_nand_init(void)
 	nand_chip.numchips = 1;
 
 	/* identify flash device */
-	puts(": ");
 	if (mxs_flash_ident(mtd)) {
 		printf("Failed to identify\n");
 		return -1;
@@ -167,7 +165,6 @@ static int mxs_nand_init(void)
 	mtd->size = nand_chip.chipsize;
 	nand_chip.scan_bbt(mtd);
 
-	printf("%llu MiB\n", (mtd->size / (1024 * 1024)));
 	return 0;
 }
 

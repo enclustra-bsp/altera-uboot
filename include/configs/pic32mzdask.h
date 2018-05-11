@@ -1,7 +1,6 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (c) 2015 Purna Chandra Mandal <purna.mandal@microchip.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * Microchip PIC32MZ[DA] Starter Kit.
  */
@@ -52,16 +51,11 @@
 /*----------------------------------------------------------------------
  * Commands
  */
-#define CONFIG_SYS_LONGHELP		/* undef to save memory */
 
 /*------------------------------------------------------------
  * Console Configuration
  */
 #define CONFIG_SYS_CBSIZE		1024 /* Console I/O Buffer Size   */
-#define CONFIG_SYS_MAXARGS		16   /* max number of command args*/
-#define CONFIG_SYS_PBSIZE		\
-		(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
-#define CONFIG_CMDLINE_EDITING		1
 
 /*-----------------------------------------------------------------------
  * Networking Configuration
@@ -76,28 +70,14 @@
  * BOOTP options
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
-#define CONFIG_BOOTP_BOOTPATH
-#define CONFIG_BOOTP_GATEWAY
-#define CONFIG_BOOTP_HOSTNAME
 
 /*--------------------------------------------------
  * USB Configuration
  */
-#define CONFIG_USB_MUSB_PIO_ONLY
-
-/*-----------------------------------------------------------------------
- * File System Configuration
- */
-/* FAT FS */
-#define CONFIG_SUPPORT_VFAT
-
-/* EXT4 FS */
-#define CONFIG_FS_EXT4
 
 /* -------------------------------------------------
  * Environment
  */
-#define CONFIG_ENV_IS_NOWHERE	1
 #define CONFIG_ENV_SIZE		0x4000
 
 /* ---------------------------------------------------------------------

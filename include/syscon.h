@@ -1,12 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (c) 2015 Google, Inc
  * Written by Simon Glass <sjg@chromium.org>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __SYSCON_H
 #define __SYSCON_H
+
+#include <fdtdec.h>
 
 /**
  * struct syscon_uc_info - Information stored by the syscon UCLASS_UCLASS
@@ -28,9 +29,11 @@ struct syscon_ops {
  * We don't support 64-bit machines. If they are so resource-contrained that
  * they need to use OF_PLATDATA, something is horribly wrong with the
  * education of our hardware engineers.
+ *
+ * Update: 64-bit is now supported and we have an education crisis.
  */
 struct syscon_base_platdata {
-	u32 reg[2];
+	fdt_val_t reg[2];
 };
 #endif
 

@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * SPI Flash ID's.
  *
  * Copyright (C) 2016 Jagan Teki <jagan@openedev.com>
  * Copyright (C) 2013 Jagannadha Sutradharudu Teki, Xilinx Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -67,9 +66,11 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"gd25lq32",	   INFO(0xc86016, 0x0, 64 * 1024,    64, SECT_4K) },
 #endif
 #ifdef CONFIG_SPI_FLASH_ISSI		/* ISSI */
+	{"is25lq040b",	   INFO(0x9d4013, 0x0, 64 * 1024,    8, 0)  },
 	{"is25lp032",	   INFO(0x9d6016, 0x0, 64 * 1024,    64, 0) },
 	{"is25lp064",	   INFO(0x9d6017, 0x0, 64 * 1024,   128, 0) },
 	{"is25lp128",	   INFO(0x9d6018, 0x0, 64 * 1024,   256, 0) },
+	{"is25lp256",	   INFO(0x9d6019, 0x0, 64 * 1024,   512, 0) },
 #endif
 #ifdef CONFIG_SPI_FLASH_MACRONIX	/* MACRONIX */
 	{"mx25l2006e",	   INFO(0xc22012, 0x0, 64 * 1024,     4, 0) },
@@ -81,7 +82,9 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"mx25l12805",	   INFO(0xc22018, 0x0, 64 * 1024,   256, RD_FULL | WR_QPP) },
 	{"mx25l25635f",	   INFO(0xc22019, 0x0, 64 * 1024,   512, RD_FULL | WR_QPP) },
 	{"mx25l51235f",	   INFO(0xc2201a, 0x0, 64 * 1024,  1024, RD_FULL | WR_QPP) },
+	{"mx25u6435f",	   INFO(0xc22537, 0x0, 64 * 1024,   128, RD_FULL | WR_QPP) },
 	{"mx25l12855e",	   INFO(0xc22618, 0x0, 64 * 1024,   256, RD_FULL | WR_QPP) },
+	{"mx25u1635e",     INFO(0xc22535, 0x0, 64 * 1024,  32, SECT_4K) },
 	{"mx66u51235f",    INFO(0xc2253a, 0x0, 64 * 1024,  1024, RD_FULL | WR_QPP) },
 	{"mx66l1g45g",     INFO(0xc2201b, 0x0, 64 * 1024,  2048, RD_FULL | WR_QPP) },
 #endif
@@ -90,7 +93,8 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"s25fl016a",	   INFO(0x010214, 0x0, 64 * 1024,    32, 0) },
 	{"s25fl032a",	   INFO(0x010215, 0x0, 64 * 1024,    64, 0) },
 	{"s25fl064a",	   INFO(0x010216, 0x0, 64 * 1024,   128, 0) },
-	{"s25fl116k",	   INFO(0x014015, 0x0, 64 * 1024,   128, 0) },
+	{"s25fl208k",	   INFO(0x014014, 0x0, 64 * 1024,    16, 0) },
+	{"s25fl116k",	   INFO(0x014015, 0x0, 64 * 1024,    32, 0) },
 	{"s25fl164k",	   INFO(0x014017, 0x0140,  64 * 1024,   128, 0) },
 	{"s25fl128p_256k", INFO(0x012018, 0x0300, 256 * 1024,    64, RD_FULL | WR_QPP) },
 	{"s25fl128p_64k",  INFO(0x012018, 0x0301,  64 * 1024,   256, RD_FULL | WR_QPP) },
@@ -99,8 +103,8 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"s25fl128s_256k", INFO(0x012018, 0x4d00, 256 * 1024,    64, RD_FULL | WR_QPP) },
 	{"s25fl128s_64k",  INFO(0x012018, 0x4d01,  64 * 1024,   256, RD_FULL | WR_QPP) },
 	{"s25fl256s_256k", INFO(0x010219, 0x4d00, 256 * 1024,   128, RD_FULL | WR_QPP) },
-	{"s25fl256s_64k",  INFO(0x010219, 0x4d01,  64 * 1024,   512, RD_FULL | WR_QPP) },
 	{"s25fs256s_64k",  INFO6(0x010219, 0x4d0181, 64 * 1024, 512, RD_FULL | WR_QPP | SECT_4K) },
+	{"s25fl256s_64k",  INFO(0x010219, 0x4d01,  64 * 1024,   512, RD_FULL | WR_QPP) },
 	{"s25fs512s",      INFO6(0x010220, 0x4d0081, 128 * 1024, 512, RD_FULL | WR_QPP | SECT_4K) },
 	{"s25fl512s_256k", INFO(0x010220, 0x4d00, 256 * 1024,   256, RD_FULL | WR_QPP) },
 	{"s25fl512s_64k",  INFO(0x010220, 0x4d01,  64 * 1024,  1024, RD_FULL | WR_QPP) },
@@ -133,6 +137,7 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"n25q1024a",	   INFO(0x20bb21, 0x0,  64 * 1024,  2048, RD_FULL | WR_QPP | E_FSR | SECT_4K) },
 	{"mt25qu02g",	   INFO(0x20bb22, 0x0,  64 * 1024,  4096, RD_FULL | WR_QPP | E_FSR | SECT_4K) },
 	{"mt25ql02g",	   INFO(0x20ba22, 0x0,  64 * 1024,  4096, RD_FULL | WR_QPP | E_FSR | SECT_4K) },
+	{"mt35xu512g",	   INFO6(0x2c5b1a, 0x104100,  128 * 1024,  512, E_FSR | SECT_4K) },
 #endif
 #ifdef CONFIG_SPI_FLASH_SST		/* SST */
 	{"sst25vf040b",	   INFO(0xbf258d, 0x0,	64 * 1024,     8, SECT_4K | SST_WR) },
@@ -146,6 +151,9 @@ const struct spi_flash_info spi_flash_ids[] = {
 	{"sst25wf040",	   INFO(0xbf2504, 0x0,	64 * 1024,     8, SECT_4K | SST_WR) },
 	{"sst25wf040b",	   INFO(0x621613, 0x0,	64 * 1024,     8, SECT_4K) },
 	{"sst25wf080",	   INFO(0xbf2505, 0x0,	64 * 1024,    16, SECT_4K | SST_WR) },
+	{"sst26wf016",	   INFO(0xbf2651, 0x0,	64 * 1024,    32, SECT_4K) },
+	{"sst26wf032",	   INFO(0xbf2622, 0x0,	64 * 1024,    64, SECT_4K) },
+	{"sst26wf064",	   INFO(0xbf2643, 0x0,	64 * 1024,   128, SECT_4K) },
 #endif
 #ifdef CONFIG_SPI_FLASH_WINBOND		/* WINBOND */
 	{"w25p80",	   INFO(0xef2014, 0x0,	64 * 1024,    16, 0) },

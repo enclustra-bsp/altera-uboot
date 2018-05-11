@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (C) 2011 Infineon Technologies
  *
@@ -16,8 +17,6 @@
  * Dorn, Dave Safford, Reiner Sailer, and Kyleen Hall.
  *
  * Version: 2.1.1
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
@@ -32,8 +31,6 @@
 
 #include "tpm_tis.h"
 #include "tpm_internal.h"
-
-DECLARE_GLOBAL_DATA_PTR;
 
 enum i2c_chip_type {
 	SLB9635,
@@ -374,7 +371,8 @@ static int tpm_tis_i2c_recv(struct udevice *dev, u8 *buf, size_t count)
 {
 	struct tpm_chip *chip = dev_get_priv(dev);
 	int size = 0;
-	int expected, status;
+	int status;
+	unsigned int expected;
 	int rc;
 
 	status = tpm_tis_i2c_status(dev);
@@ -394,7 +392,7 @@ static int tpm_tis_i2c_recv(struct udevice *dev, u8 *buf, size_t count)
 	}
 
 	expected = get_unaligned_be32(buf + TPM_RSP_SIZE_BYTE);
-	if ((size_t)expected > count) {
+	if ((size_t)expected > count || (size_t)expected < TPM_HEADER_SIZE) {
 		debug("Error size=%x, expected=%x, count=%x\n", size, expected,
 		      count);
 		return -ENOSPC;
@@ -539,7 +537,7 @@ static int tpm_tis_i2c_init(struct udevice *dev)
 	}
 
 	if (chip->chip_type != UNKNOWN && vendor != expected_did_vid) {
-		error("Vendor id did not match! ID was %08x\n", vendor);
+		pr_err("Vendor id did not match! ID was %08x\n", vendor);
 		return -ENODEV;
 	}
 

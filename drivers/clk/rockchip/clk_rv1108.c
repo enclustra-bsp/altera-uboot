@@ -1,10 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * (C) Copyright 2016 Rockchip Electronics Co., Ltd
  * Author: Andy Yan <andy.yan@rock-chips.com>
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
+#include <bitfield.h>
 #include <clk-uclass.h>
 #include <dm.h>
 #include <errno.h>
@@ -16,17 +17,12 @@
 #include <dm/lists.h>
 #include <dt-bindings/clock/rv1108-cru.h>
 
-DECLARE_GLOBAL_DATA_PTR;
-
 enum {
 	VCO_MAX_HZ	= 2400U * 1000000,
 	VCO_MIN_HZ	= 600 * 1000000,
 	OUTPUT_MAX_HZ	= 2400U * 1000000,
 	OUTPUT_MIN_HZ	= 24 * 1000000,
 };
-
-#define RATE_TO_DIV(input_rate, output_rate) \
-	((input_rate) / (output_rate) - 1);
 
 #define DIV_TO_RATE(input_rate, div)	((input_rate) / ((div) + 1))
 
@@ -39,7 +35,7 @@ enum {
 			 #hz "Hz cannot be hit with PLL "\
 			 "divisors on line " __stringify(__LINE__));
 
-/* use interge mode*/
+/* use integer mode */
 static inline int rv1108_pll_id(enum rk_clk_id clk_id)
 {
 	int id = 0;
@@ -133,6 +129,31 @@ static int rv1108_sfc_set_clk(struct rv1108_cru *cru, uint rate)
 	return DIV_TO_RATE(pll_rate, div);
 }
 
+static ulong rv1108_saradc_get_clk(struct rv1108_cru *cru)
+{
+	u32 div, val;
+
+	val = readl(&cru->clksel_con[22]);
+	div = bitfield_extract(val, CLK_SARADC_DIV_CON_SHIFT,
+			       CLK_SARADC_DIV_CON_WIDTH);
+
+	return DIV_TO_RATE(OSC_HZ, div);
+}
+
+static ulong rv1108_saradc_set_clk(struct rv1108_cru *cru, uint hz)
+{
+	int src_clk_div;
+
+	src_clk_div = DIV_ROUND_UP(OSC_HZ, hz) - 1;
+	assert(src_clk_div < 128);
+
+	rk_clrsetreg(&cru->clksel_con[22],
+		     CLK_SARADC_DIV_CON_MASK,
+		     src_clk_div << CLK_SARADC_DIV_CON_SHIFT);
+
+	return rv1108_saradc_get_clk(cru);
+}
+
 static ulong rv1108_clk_get_rate(struct clk *clk)
 {
 	struct rv1108_clk_priv *priv = dev_get_priv(clk->dev);
@@ -140,6 +161,8 @@ static ulong rv1108_clk_get_rate(struct clk *clk)
 	switch (clk->id) {
 	case 0 ... 63:
 		return rkclk_pll_get_rate(priv->cru, clk->id);
+	case SCLK_SARADC:
+		return rv1108_saradc_get_clk(priv->cru);
 	default:
 		return -ENOENT;
 	}
@@ -156,6 +179,9 @@ static ulong rv1108_clk_set_rate(struct clk *clk, ulong rate)
 		break;
 	case SCLK_SFC:
 		new_rate = rv1108_sfc_set_clk(priv->cru, rate);
+		break;
+	case SCLK_SARADC:
+		new_rate = rv1108_saradc_set_clk(priv->cru, rate);
 		break;
 	default:
 		return -ENOENT;
@@ -181,11 +207,18 @@ static void rkclk_init(struct rv1108_cru *cru)
 	printf("APLL: %d DPLL:%d GPLL:%d\n", apll, dpll, gpll);
 }
 
-static int rv1108_clk_probe(struct udevice *dev)
+static int rv1108_clk_ofdata_to_platdata(struct udevice *dev)
 {
 	struct rv1108_clk_priv *priv = dev_get_priv(dev);
 
-	priv->cru = (struct rv1108_cru *)devfdt_get_addr(dev);
+	priv->cru = dev_read_addr_ptr(dev);
+
+	return 0;
+}
+
+static int rv1108_clk_probe(struct udevice *dev)
+{
+	struct rv1108_clk_priv *priv = dev_get_priv(dev);
 
 	rkclk_init(priv->cru);
 
@@ -195,11 +228,29 @@ static int rv1108_clk_probe(struct udevice *dev)
 static int rv1108_clk_bind(struct udevice *dev)
 {
 	int ret;
+	struct udevice *sys_child;
+	struct sysreset_reg *priv;
 
 	/* The reset driver does not have a device node, so bind it here */
-	ret = device_bind_driver(gd->dm_root, "rv1108_sysreset", "reset", &dev);
+	ret = device_bind_driver(dev, "rockchip_sysreset", "sysreset",
+				 &sys_child);
+	if (ret) {
+		debug("Warning: No sysreset driver: ret=%d\n", ret);
+	} else {
+		priv = malloc(sizeof(struct sysreset_reg));
+		priv->glb_srst_fst_value = offsetof(struct rv1108_cru,
+						    glb_srst_fst_val);
+		priv->glb_srst_snd_value = offsetof(struct rv1108_cru,
+						    glb_srst_snd_val);
+		sys_child->priv = priv;
+	}
+
+#if CONFIG_IS_ENABLED(CONFIG_RESET_ROCKCHIP)
+	ret = offsetof(struct rk3368_cru, softrst_con[0]);
+	ret = rockchip_reset_bind(dev, ret, 13);
 	if (ret)
-		error("No Rv1108 reset driver: ret=%d\n", ret);
+		debug("Warning: software reset driver bind faile\n");
+#endif
 
 	return 0;
 }
@@ -214,6 +265,7 @@ U_BOOT_DRIVER(clk_rv1108) = {
 	.id		= UCLASS_CLK,
 	.of_match	= rv1108_clk_ids,
 	.priv_auto_alloc_size = sizeof(struct rv1108_clk_priv),
+	.ofdata_to_platdata = rv1108_clk_ofdata_to_platdata,
 	.ops		= &rv1108_clk_ops,
 	.bind		= rv1108_clk_bind,
 	.probe		= rv1108_clk_probe,

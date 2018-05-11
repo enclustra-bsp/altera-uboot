@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2011 Freescale Semiconductor, Inc.
  *	Andy Fleming <afleming@gmail.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * This file pretty much stolen from Linux's mii.h/ethtool.h/phy.h
  */
@@ -257,6 +256,7 @@ int gen10g_startup(struct phy_device *phydev);
 int gen10g_shutdown(struct phy_device *phydev);
 int gen10g_discover_mmds(struct phy_device *phydev);
 
+int phy_b53_init(void);
 int phy_mv88e61xx_init(void);
 int phy_aquantia_init(void);
 int phy_atheros_init(void);
@@ -266,7 +266,9 @@ int phy_davicom_init(void);
 int phy_et1011c_init(void);
 int phy_lxt_init(void);
 int phy_marvell_init(void);
-int phy_micrel_init(void);
+int phy_micrel_ksz8xxx_init(void);
+int phy_micrel_ksz90x1_init(void);
+int phy_meson_gxl_init(void);
 int phy_natsemi_init(void);
 int phy_realtek_init(void);
 int phy_smsc_init(void);

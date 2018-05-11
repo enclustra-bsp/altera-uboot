@@ -1,7 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2014-2015 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #include <common.h>
@@ -29,9 +28,14 @@ void update_os_arch_secondary_cores(uint8_t os_arch)
 	u64 *table = get_spin_tbl_addr();
 	int i;
 
-	for (i = 1; i < CONFIG_MAX_CPUS; i++)
-		table[i * WORDS_PER_SPIN_TABLE_ENTRY +
-			SPIN_TABLE_ELEM_OS_ARCH_IDX] = os_arch;
+	for (i = 1; i < CONFIG_MAX_CPUS; i++) {
+		if (os_arch == IH_ARCH_DEFAULT)
+			table[i * WORDS_PER_SPIN_TABLE_ENTRY +
+				SPIN_TABLE_ELEM_ARCH_COMP_IDX] = OS_ARCH_SAME;
+		else
+			table[i * WORDS_PER_SPIN_TABLE_ENTRY +
+				SPIN_TABLE_ELEM_ARCH_COMP_IDX] = OS_ARCH_DIFF;
+	}
 }
 
 #ifdef CONFIG_FSL_LSCH3

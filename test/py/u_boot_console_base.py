@@ -1,7 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0
 # Copyright (c) 2015 Stephen Warren
 # Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
-#
-# SPDX-License-Identifier: GPL-2.0
 
 # Common logic to interact with U-Boot via the console. This class provides
 # the interface that tests use to execute U-Boot shell commands and wait for
@@ -160,7 +159,7 @@ class ConsoleBase(object):
 
         Args:
             cmd: The command to send.
-            wait_for_each: Boolean indicating whether to wait for U-Boot to
+            wait_for_echo: Boolean indicating whether to wait for U-Boot to
                 echo the command text back to its output.
             send_nl: Boolean indicating whether to send a newline character
                 after the command string.
@@ -215,6 +214,8 @@ class ConsoleBase(object):
             self.log.error(str(ex))
             self.cleanup_spawn()
             raise
+        finally:
+            self.log.timestamp()
 
     def run_command_list(self, cmds):
         """Run a list of commands.
@@ -370,6 +371,7 @@ class ConsoleBase(object):
             self.cleanup_spawn()
             raise
         finally:
+            self.log.timestamp()
             self.log.end_section('Starting U-Boot')
 
     def cleanup_spawn(self):

@@ -1,8 +1,7 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * (C) Copyright 2010
  * Heiko Schocher, DENX Software Engineering, hs@denx.de.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __CONFIG_KM83XX_H
@@ -11,19 +10,6 @@
 /* include common defines/options for all Keymile boards */
 #include "keymile-common.h"
 #include "km-powerpc.h"
-
-#ifndef MTDIDS_DEFAULT
-# define MTDIDS_DEFAULT	"nor0=boot"
-#endif /* MTDIDS_DEFAULT */
-
-#ifndef MTDPARTS_DEFAULT
-# define MTDPARTS_DEFAULT	"mtdparts="			\
-	"boot:"							\
-		"768k(u-boot),"					\
-		"128k(env),"					\
-		"128k(envred),"					\
-		"-(" CONFIG_KM_UBI_PARTITION_NAME_BOOT ");"
-#endif /* MTDPARTS_DEFAULT */
 
 #define CONFIG_MISC_INIT_R
 /*
@@ -141,7 +127,6 @@
 /*
  * Serial Port
  */
-#define CONFIG_CONS_INDEX	1
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	1
 #define CONFIG_SYS_NS16550_CLK		get_bus_freq(0)
@@ -175,7 +160,6 @@
  */
 
 #ifndef CONFIG_SYS_RAMBOOT
-#define CONFIG_ENV_IS_IN_FLASH
 #ifndef CONFIG_ENV_ADDR
 #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE + \
 					CONFIG_SYS_MONITOR_LEN)
@@ -191,7 +175,6 @@
 #define CONFIG_ENV_SIZE_REDUND	(CONFIG_ENV_SIZE)
 
 #else /* CFG_SYS_RAMBOOT */
-#define CONFIG_ENV_IS_NOWHERE		/* Store ENV in memory only */
 #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE - 0x1000)
 #define CONFIG_ENV_SIZE		0x2000
 #endif /* CFG_SYS_RAMBOOT */
@@ -219,10 +202,6 @@
 #define CONFIG_NAND_KMETER1
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		CONFIG_SYS_KMBEC_FPGA_BASE
-#endif
-
-#if defined(CONFIG_PCI)
-#define CONFIG_CMD_PCI
 #endif
 
 /*

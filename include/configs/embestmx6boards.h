@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2014 Eukréa Electromatique
  * Author: Eric Bénard <eric@eukrea.com>
@@ -6,8 +7,6 @@
  *
  * based on mx6*sabre*.h which are :
  * Copyright (C) 2012 Freescale Semiconductor, Inc.
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 #ifndef __RIOTBOARD_CONFIG_H
@@ -15,7 +14,6 @@
 
 #define CONFIG_MXC_UART_BASE		UART2_BASE
 #define CONSOLE_DEV		"ttymxc1"
-#define CONFIG_MMCROOT			"/dev/mmcblk1p2"
 
 #define PHYS_SDRAM_SIZE		(1u * 1024 * 1024 * 1024)
 
@@ -35,8 +33,6 @@
 #define CONFIG_SYS_I2C_SPEED		100000
 
 /* USB Configs */
-#define CONFIG_USB_HOST_ETHER
-#define CONFIG_USB_ETHER_ASIX
 #define CONFIG_USB_MAX_CONTROLLER_COUNT 2
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET	/* For OTG port */
 #define CONFIG_MXC_USB_PORTSC	(PORT_PTS_UTMI | PORT_PTS_PTW)
@@ -52,11 +48,9 @@
 #define CONFIG_ETHPRIME			"FEC"
 #define CONFIG_FEC_MXC_PHYADDR		4
 
-#define CONFIG_PHYLIB
 #define CONFIG_PHY_ATHEROS
 
 #ifdef CONFIG_CMD_SF
-#define CONFIG_MXC_SPI
 #define CONFIG_SF_DEFAULT_BUS		0
 #define CONFIG_SF_DEFAULT_CS		0
 #define CONFIG_SF_DEFAULT_SPEED		20000000
@@ -64,9 +58,6 @@
 #endif
 
 #define CONFIG_ARP_TIMEOUT     200UL
-
-/* Print Buffer Size */
-#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
 
 #define CONFIG_SYS_MEMTEST_START       0x10000000
 #define CONFIG_SYS_MEMTEST_END         0x10010000
@@ -115,11 +106,9 @@
 #define CONFIG_BMP_16BPP
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_VIDEO_BMP_LOGO
-#define CONFIG_IPUV3_CLK 260000000
 #define CONFIG_IMX_HDMI
 #define CONFIG_IMX_VIDEO_SKIP
 
-#include <config_distro_defaults.h>
 #include "mx6_common.h"
 
 /* 256M RAM (minimum), 32M uncompressed kernel, 16M compressed kernel, 1M fdt,
@@ -157,6 +146,7 @@
 	CONSOLE_ENV_SETTINGS \
 	MEM_LAYOUT_ENV_SETTINGS \
 	"fdtfile=" CONFIG_FDTFILE "\0" \
+	"finduuid=part uuid mmc 0:1 uuid\0" \
 	BOOTENV
 
 #endif                         /* __RIOTBOARD_CONFIG_H */

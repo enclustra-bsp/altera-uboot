@@ -1,16 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) 2014 Google, Inc
  * Copyright (C) 2000 Ronald G. Minnich
  *
  * Microcode update for Intel PIII and later CPUs
- *
- * SPDX-License-Identifier:	GPL-2.0
  */
 
 #include <common.h>
 #include <errno.h>
 #include <fdtdec.h>
-#include <libfdt.h>
+#include <linux/libfdt.h>
 #include <asm/cpu.h>
 #include <asm/microcode.h>
 #include <asm/msr.h>

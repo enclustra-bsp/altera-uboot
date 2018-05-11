@@ -25,7 +25,6 @@
 #define CONFIG_MACH_TYPE		MACH_TYPE_PCM051
 
 /* set to negative value for no autoboot */
-#define CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"loadaddr=0x80007fc0\0" \
 	"fdtaddr=0x80000000\0" \
@@ -98,7 +97,6 @@
 
 #define CONFIG_SF_DEFAULT_SPEED		24000000
 
-#define CONFIG_CONS_INDEX		1
 /* NS16550 Configuration */
 #define CONFIG_SYS_NS16550_COM1		0x44e09000	/* Base EVM has UART0 */
 #define CONFIG_SYS_NS16550_COM2		0x48022000	/* UART1 */
@@ -116,12 +114,8 @@
 4800, 9600, 14400, 19200, 28800, 38400, 56000, 57600, 115200 }
 
 /* CPU */
-#define CONFIG_ENV_IS_NOWHERE
-
-#define CONFIG_SPL_LDSCRIPT		"arch/arm/mach-omap2/u-boot-spl.lds"
 
 #ifdef CONFIG_SPI_BOOT
-#define CONFIG_SPL_SPI_LOAD
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	0x20000
 #define CONFIG_SYS_SPI_U_BOOT_SIZE	0x40000
 #endif
@@ -129,20 +123,11 @@
 /*
  * USB configuration
  */
-#define CONFIG_USB_MUSB_DSPS
-#define CONFIG_USB_MUSB_PIO_ONLY
 #define CONFIG_AM335X_USB0
 #define CONFIG_AM335X_USB0_MODE	MUSB_PERIPHERAL
 #define CONFIG_AM335X_USB1
 #define CONFIG_AM335X_USB1_MODE MUSB_HOST
 
-#ifdef CONFIG_USB_MUSB_GADGET
-#define CONFIG_USB_ETHER
-#define CONFIG_USB_ETH_RNDIS
-#endif /* CONFIG_USB_MUSB_GADGET */
-
-#define CONFIG_PHY_GIGE
-#define CONFIG_PHYLIB
 #define CONFIG_PHY_SMSC
 
 #endif	/* ! __CONFIG_PCM051_H */

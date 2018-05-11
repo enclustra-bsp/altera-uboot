@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Atmel PIO4 device driver
  *
  * Copyright (C) 2015 Atmel Corporation
  *		 Wenyou.Yang <wenyou.yang@atmel.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 #include <common.h>
 #include <clk.h>
@@ -50,11 +49,11 @@ static int atmel_pio4_config_io_func(u32 port, u32 pin,
 	u32 reg, mask;
 
 	if (pin >= ATMEL_PIO_NPINS_PER_BANK)
-		return -ENODEV;
+		return -EINVAL;
 
 	port_base = atmel_pio4_port_base(port);
 	if (!port_base)
-		return -ENODEV;
+		return -EINVAL;
 
 	mask = 1 << pin;
 	reg = func;
@@ -128,11 +127,11 @@ int atmel_pio4_set_pio_output(u32 port, u32 pin, u32 value)
 	u32 reg, mask;
 
 	if (pin >= ATMEL_PIO_NPINS_PER_BANK)
-		return -ENODEV;
+		return -EINVAL;
 
 	port_base = atmel_pio4_port_base(port);
 	if (!port_base)
-		return -ENODEV;
+		return -EINVAL;
 
 	mask = 0x01 << pin;
 	reg = ATMEL_PIO_CFGR_FUNC_GPIO | ATMEL_PIO_DIR_MASK;
@@ -154,11 +153,11 @@ int atmel_pio4_get_pio_input(u32 port, u32 pin)
 	u32 reg, mask;
 
 	if (pin >= ATMEL_PIO_NPINS_PER_BANK)
-		return -ENODEV;
+		return -EINVAL;
 
 	port_base = atmel_pio4_port_base(port);
 	if (!port_base)
-		return -ENODEV;
+		return -EINVAL;
 
 	mask = 0x01 << pin;
 	reg = ATMEL_PIO_CFGR_FUNC_GPIO;

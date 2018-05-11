@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * (C) Copyright 2001
  * Kyle Harris, kharris@nexus-tech.net
- *
- * SPDX-License-Identifier:	GPL-2.0+
  */
 
 /*
@@ -40,7 +39,7 @@ source (ulong addr, const char *fit_uname)
 	size_t		fit_len;
 #endif
 
-	verify = getenv_yesno ("verify");
+	verify = env_get_yesno("verify");
 
 	buf = map_sysmem(addr, 0);
 	switch (genimg_get_format(buf)) {

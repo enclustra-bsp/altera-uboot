@@ -1,8 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2011, Marvell Semiconductor Inc.
  * Lei Wen <leiwen@marvell.com>
- *
- * SPDX-License-Identifier:	GPL-2.0+
  *
  * Back ported to the 8xx platform (from the 8260 platform) by
  * Murray.Jensen@cmst.csiro.au, 27-Jan-01.
@@ -86,8 +85,8 @@ static int sdhci_transfer_data(struct sdhci_host *host, struct mmc_data *data,
 	do {
 		stat = sdhci_readl(host, SDHCI_INT_STATUS);
 		if (stat & SDHCI_INT_ERROR) {
-			printf("%s: Error detected in status(0x%X)!\n",
-			       __func__, stat);
+			pr_debug("%s: Error detected in status(0x%X)!\n",
+				 __func__, stat);
 			return -EIO;
 		}
 		if (!transfer_done && (stat & rdy)) {
@@ -134,7 +133,7 @@ static int sdhci_transfer_data(struct sdhci_host *host, struct mmc_data *data,
 #define SDHCI_CMD_DEFAULT_TIMEOUT		100
 #define SDHCI_READ_STATUS_TIMEOUT		1000
 
-#ifdef CONFIG_DM_MMC_OPS
+#ifdef CONFIG_DM_MMC
 static int sdhci_send_command(struct udevice *dev, struct mmc_cmd *cmd,
 			      struct mmc_data *data)
 {
@@ -157,7 +156,6 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 	/* Timeout unit - ms */
 	static unsigned int cmd_timeout = SDHCI_CMD_DEFAULT_TIMEOUT;
 
-	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
 	mask = SDHCI_CMD_INHIBIT | SDHCI_DATA_INHIBIT;
 
 	/* We shouldn't wait for data inihibit for stop commands, even
@@ -181,6 +179,8 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 		udelay(1000);
 	}
 
+	sdhci_writel(host, SDHCI_INT_ALL_MASK, SDHCI_INT_STATUS);
+
 	mask = SDHCI_INT_RESPONSE;
 	if (!(cmd->resp_type & MMC_RSP_PRESENT))
 		flags = SDHCI_CMD_RESP_NONE;
@@ -201,7 +201,7 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 		flags |= SDHCI_CMD_DATA;
 
 	/* Set Transfer mode regarding to data flag */
-	if (data != 0) {
+	if (data) {
 		sdhci_writeb(host, 0xe, SDHCI_TIMEOUT_CONTROL);
 		mode = SDHCI_TRNS_BLK_CNT_EN;
 		trans_bytes = data->blocks * data->blocksize;
@@ -249,7 +249,7 @@ static int sdhci_send_command(struct mmc *mmc, struct mmc_cmd *cmd,
 
 	sdhci_writel(host, cmd->cmdarg, SDHCI_ARGUMENT);
 #ifdef CONFIG_MMC_SDHCI_SDMA
-	if (data != 0) {
+	if (data) {
 		trans_bytes = ALIGN(trans_bytes, CONFIG_SYS_CACHELINE_SIZE);
 		flush_cache(start_addr, trans_bytes);
 	}
@@ -422,7 +422,7 @@ static void sdhci_set_power(struct sdhci_host *host, unsigned short power)
 	sdhci_writeb(host, pwr, SDHCI_POWER_CONTROL);
 }
 
-#ifdef CONFIG_DM_MMC_OPS
+#ifdef CONFIG_DM_MMC
 static int sdhci_set_ios(struct udevice *dev)
 {
 	struct mmc *mmc = mmc_get_mmc_dev(dev);
@@ -461,7 +461,8 @@ static int sdhci_set_ios(struct mmc *mmc)
 	else
 		ctrl &= ~SDHCI_CTRL_HISPD;
 
-	if (host->quirks & SDHCI_QUIRK_NO_HISPD_BIT)
+	if ((host->quirks & SDHCI_QUIRK_NO_HISPD_BIT) ||
+	    (host->quirks & SDHCI_QUIRK_BROKEN_HISPD_MODE))
 		ctrl &= ~SDHCI_CTRL_HISPD;
 
 	sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
@@ -502,7 +503,7 @@ static int sdhci_init(struct mmc *mmc)
 	return 0;
 }
 
-#ifdef CONFIG_DM_MMC_OPS
+#ifdef CONFIG_DM_MMC
 int sdhci_probe(struct udevice *dev)
 {
 	struct mmc *mmc = mmc_get_mmc_dev(dev);
@@ -543,7 +544,7 @@ int sdhci_setup_cfg(struct mmc_config *cfg, struct sdhci_host *host,
 		host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
 
 	cfg->name = host->name;
-#ifndef CONFIG_DM_MMC_OPS
+#ifndef CONFIG_DM_MMC
 	cfg->ops = &sdhci_ops;
 #endif
 
@@ -593,12 +594,17 @@ int sdhci_setup_cfg(struct mmc_config *cfg, struct sdhci_host *host,
 	if (host->quirks & SDHCI_QUIRK_BROKEN_VOLTAGE)
 		cfg->voltages |= host->voltages;
 
-	cfg->host_caps = MMC_MODE_HS | MMC_MODE_HS_52MHz | MMC_MODE_4BIT;
+	cfg->host_caps |= MMC_MODE_HS | MMC_MODE_HS_52MHz | MMC_MODE_4BIT;
 
 	/* Since Host Controller Version3.0 */
 	if (SDHCI_GET_VERSION(host) >= SDHCI_SPEC_300) {
 		if (!(caps & SDHCI_CAN_DO_8BIT))
 			cfg->host_caps &= ~MMC_MODE_8BIT;
+	}
+
+	if (host->quirks & SDHCI_QUIRK_BROKEN_HISPD_MODE) {
+		cfg->host_caps &= ~MMC_MODE_HS;
+		cfg->host_caps &= ~MMC_MODE_HS_52MHz;
 	}
 
 	if (host->host_caps)
