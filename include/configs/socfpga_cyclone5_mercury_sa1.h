@@ -37,7 +37,6 @@
 #define QSPI_UBOOT_ERASE_ADDR		0x00040000  // We can erase only page aligned regions
 #define QSPI_UBOOT_ERASE_SIZE		0x00080000  // We can erase only page aligned regions
 #define QSPI_UBOOT_OFFSET		0x00060000  // Storage for U-Boot image
-#define QSPI_UBOOT_SIZE			0x00040000  // size 256 KiB
 #define QSPI_BITSTREAM_OFFSET		0x00100000  // Storage for FPGA bitstream
 #define QSPI_BITSTREAM_SIZE		0x00700000  // size 7MiB
 #define QSPI_ENV_OFFSET			0x00800000  // Storage for Uboot Environment
