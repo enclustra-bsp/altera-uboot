@@ -9,7 +9,7 @@ config WATCHDOG
 	  this option if you want U-Boot to start watchdog but never service it.
 
 config HW_WATCHDOG
-	bool
+	bool "Enable hardware watchdog"
 
 config BCM2835_WDT
 	bool "Enable BCM2835/2836 watchdog driver"
