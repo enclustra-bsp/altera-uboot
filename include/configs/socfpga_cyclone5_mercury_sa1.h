@@ -141,9 +141,18 @@
 		"run qspiboot;"\
 		"fi\0"
 
-#define CONFIG_ENV_SIZE			QSPI_ENV_SIZE
+#define CONFIG_ENV_SIZE                 QSPI_ENV_SIZE
 #define CONFIG_ENV_SECT_SIZE		CONFIG_ENV_SIZE
-#define CONFIG_ENV_OFFSET		QSPI_ENV_OFFSET
+
+/* U-Boot environment is placed at the end of the nor flash */
+#ifdef CONFIG_ENV_IS_IN_SPI_FLASH
+#define CONFIG_ENV_OFFSET               QSPI_ENV_OFFSET
+
+/* U-Boot environment is placed at the mmc device */
+#elif CONFIG_ENV_IS_IN_MMC
+#define CONFIG_SYS_MMC_ENV_DEV		0
+#define CONFIG_SYS_MMC_ENV_PART 	1
+#endif
 
 /* The rest of the configuration is shared */
 #include <configs/socfpga_common.h>
