@@ -117,7 +117,9 @@
 		"sf read ${bootscript_loadaddr} ${qspi_bootscript_offset} ${bootscript_size} && "\
 		"source ${bootscript_loadaddr}\0"       \
                                                 \
-	"mmcboot=echo Booting on SD Card/eMMC Flash...; "      \
+	"mmcboot=if test $sd_target = emmc; "           \
+		"then echo Booting from eMMC flash;"    \
+		"else echo Booting from SD card; fi; "  \
 		"bridge enable && "                     \
 		"mmc rescan && "                        \
 		"load mmc 0 ${bootscript_loadaddr} ${bootscript_image} && "\
