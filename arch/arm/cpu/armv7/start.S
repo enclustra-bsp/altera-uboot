@@ -72,14 +72,18 @@ switch_to_hypervisor_ret:
 	bic	r0, #CR_V		@ V = 0
 	mcr	p15, 0, r0, c1, c0, 0	@ Write CP15 SCTLR Register
 
+#ifdef CONFIG_HAS_VBAR
 	/* Set vector address in CP15 VBAR register */
 	ldr	r0, =_start
 	mcr	p15, 0, r0, c12, c0, 0	@Set VBAR
 #endif
+#endif
 
 	/* the mask ROM code should have PLL and others stable */
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT
+#ifdef CONFIG_CPU_V7A
 	bl	cpu_init_cp15
+#endif
 #ifndef CONFIG_SKIP_LOWLEVEL_INIT_ONLY
 	bl	cpu_init_crit
 #endif
@@ -201,6 +205,15 @@ ENTRY(cpu_init_cp15)
 	mov	r2, r3, lsl #4		@ shift variant field for combined value
 	orr	r2, r4, r2		@ r2 has combined CPU variant + revision
 
+/* Early stack for ERRATA that needs into call C code */
+#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_STACK)
+	ldr	r0, =(CONFIG_SPL_STACK)
+#else
+	ldr	r0, =(CONFIG_SYS_INIT_SP_ADDR)
+#endif
+	bic	r0, r0, #7	/* 8-byte alignment for ABI compliance */
+	mov	sp, r0
+
 #ifdef CONFIG_ARM_ERRATA_798870
 	cmp	r2, #0x30		@ Applies to lower than R3p0
 	bge	skip_errata_798870      @ skip if not affected rev
@@ -237,6 +250,14 @@ skip_errata_798870:
 skip_errata_801819:
 #endif
 
+#ifdef CONFIG_ARM_CORTEX_A15_CVE_2017_5715
+	mrc	p15, 0, r0, c1, c0, 1	@ read auxilary control register
+	orr	r0, r0, #1 << 0		@ Enable invalidates of BTB
+	push	{r1-r5}			@ Save the cpu info registers
+	bl	v7_arch_cp15_set_acr
+	pop	{r1-r5}			@ Restore the cpu info - fall through
+#endif
+
 #ifdef CONFIG_ARM_ERRATA_454179
 	mrc	p15, 0, r0, c1, c0, 1	@ Read ACR
 
@@ -248,12 +269,15 @@ skip_errata_801819:
 	pop	{r1-r5}			@ Restore the cpu info - fall through
 #endif
 
-#ifdef CONFIG_ARM_ERRATA_430973
+#if defined(CONFIG_ARM_ERRATA_430973) || defined (CONFIG_ARM_CORTEX_A8_CVE_2017_5715)
 	mrc	p15, 0, r0, c1, c0, 1	@ Read ACR
 
+#ifdef CONFIG_ARM_CORTEX_A8_CVE_2017_5715
+	orr	r0, r0, #(0x1 << 6)	@ Set IBE bit always to enable OS WA
+#else
 	cmp	r2, #0x21		@ Only on < r2p1
 	orrlt	r0, r0, #(0x1 << 6)	@ Set IBE bit
-
+#endif
 	push	{r1-r5}			@ Save the cpu info registers
 	bl	v7_arch_cp15_set_acr
 	pop	{r1-r5}			@ Restore the cpu info - fall through

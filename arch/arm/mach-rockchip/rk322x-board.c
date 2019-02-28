@@ -8,10 +8,10 @@
 #include <ram.h>
 #include <syscon.h>
 #include <asm/io.h>
+#include <asm/arch/boot_mode.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/periph.h>
 #include <asm/arch/grf_rk322x.h>
-#include <asm/arch/boot_mode.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -139,8 +139,8 @@ int board_usb_cleanup(int index, enum usb_init_type init)
 }
 #endif
 
-#if defined(CONFIG_USB_FUNCTION_FASTBOOT)
-int fb_set_reboot_flag(void)
+#if CONFIG_IS_ENABLED(FASTBOOT)
+int fastboot_set_reboot_flag(void)
 {
 	struct rk322x_grf *grf;
 

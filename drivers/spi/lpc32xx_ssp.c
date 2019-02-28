@@ -47,15 +47,6 @@ static inline struct lpc32xx_spi_slave *to_lpc32xx_spi_slave(
 	return container_of(slave, struct lpc32xx_spi_slave, slave);
 }
 
-/* spi_init is called during boot when CONFIG_CMD_SPI is defined */
-void spi_init(void)
-{
-	/*
-	 *  nothing to do: clocking was enabled in lpc32xx_ssp_enable()
-	 * and configuration will be done in spi_setup_slave()
-	*/
-}
-
 /* the following is called in sequence by do_spi_xfer() */
 
 struct spi_slave *spi_setup_slave(uint bus, uint cs, uint max_hz, uint mode)
@@ -129,7 +120,7 @@ int spi_xfer(struct spi_slave *slave, unsigned int bitlen,
 		int status = readl(&lslave->regs->sr);
 		if ((idx_out < bytelen) && (status & SSP_SR_TNF))
 			writel(((u8 *)dout)[idx_out++], &lslave->regs->data);
-		if ((idx_in < bytelen) && (status & status & SSP_SR_RNE))
+		if ((idx_in < bytelen) && (status & SSP_SR_RNE))
 			((u8 *)din)[idx_in++] = readl(&lslave->regs->data);
 		if (get_timer(start_time) >= CONFIG_LPC32XX_SSP_TIMEOUT)
 			return -1;

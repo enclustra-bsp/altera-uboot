@@ -137,8 +137,6 @@ config AUTOBOOT_STOP_STR_SHA256
 
 endmenu
 
-source "cmd/fastboot/Kconfig"
-
 config BUILD_BIN2C
 	bool
 
@@ -154,8 +152,8 @@ config CMD_BDI
 
 config CMD_CONFIG
 	bool "config"
-	select BUILD_BIN2C
 	default SANDBOX
+	select BUILD_BIN2C
 	help
 	  Print ".config" contents.
 
@@ -228,7 +226,7 @@ config CMD_BOOTEFI
 
 config CMD_BOOTEFI_HELLO_COMPILE
 	bool "Compile a standard EFI hello world binary for testing"
-	depends on CMD_BOOTEFI && (ARM || X86)
+	depends on CMD_BOOTEFI && !CPU_V7M && !SANDBOX
 	default y
 	help
 	  This compiles a standard EFI hello world application with U-Boot so
@@ -255,6 +253,14 @@ config CMD_BOOTMENU
 	select MENU
 	help
 	  Add an ANSI terminal boot menu command.
+
+config CMD_DTIMG
+	bool "dtimg"
+	help
+	  Android DTB/DTBO image manipulation commands. Read dtb/dtbo files from
+	  image into RAM, dump image structure information, etc. Those dtb/dtbo
+	  files should be merged in one dtb further, which needs to be passed to
+	  the kernel, as part of a boot process.
 
 config CMD_ELF
 	bool "bootelf, bootvx"
@@ -297,11 +303,6 @@ config CMD_XIMG
 	default y
 	help
 	  Extract a part of a multi-image.
-
-config CMD_POWEROFF
-	bool "poweroff"
-	help
-	  Poweroff/Shutdown the system
 
 config CMD_SPL
 	bool "spl export - Export boot information for Falcon boot"
@@ -431,8 +432,8 @@ config CMD_BINOP
 
 config CMD_CRC32
 	bool "crc32"
-	select HASH
 	default y
+	select HASH
 	help
 	  Compute CRC32.
 
@@ -444,6 +445,7 @@ config CRC32_VERIFY
 
 config CMD_EEPROM
 	bool "eeprom - EEPROM subsystem"
+	depends on !DM_I2C || DM_I2C_COMPAT
 	help
 	  (deprecated, needs conversion to driver model)
 	  Provides commands to read and write EEPROM (Electrically Erasable
@@ -601,6 +603,23 @@ config CMD_ARMFLASH
 	help
 	  ARM Ltd reference designs flash partition access
 
+config CMD_ADC
+	bool "adc - Access Analog to Digital Converters info and data"
+	select ADC
+	select DM_REGULATOR
+	help
+	  Shows ADC device info and permit printing one-shot analog converted
+	  data from a named Analog to Digital Converter.
+
+config CMD_BIND
+	bool "bind/unbind - Bind or unbind a device to/from a driver"
+	depends on DM
+	help
+	  Bind or unbind a device to/from a driver from the command line.
+	  This is useful in situations where a device may be handled by several
+	  drivers. For example, this can be used to bind a UDC to the usb ether
+	  gadget driver from the command line.
+
 config CMD_CLK
 	bool "clk - Show clock frequencies"
 	help
@@ -634,13 +653,24 @@ config CMD_DFU
 config CMD_DM
 	bool "dm - Access to driver model information"
 	depends on DM
-	default y
 	help
 	  Provides access to driver model data structures and information,
 	  such as a list of devices, list of uclasses and the state of each
 	  device (e.g. activated). This is not required for operation, but
 	  can be useful to see the state of driver model for debugging or
 	  interest.
+
+config CMD_FASTBOOT
+	bool "fastboot - Android fastboot support"
+	depends on FASTBOOT
+	help
+	  This enables the command "fastboot" which enables the Android
+	  fastboot mode for the platform. Fastboot is a protocol for
+	  downloading images, flashing and device control used on
+	  Android devices. Fastboot requires either the network stack
+	  enabled or support for acting as a USB device.
+
+	  See doc/README.android-fastboot for more information.
 
 config CMD_FDC
 	bool "fdcboot - Boot from floppy device"
@@ -689,6 +719,13 @@ config CMD_FPGA_LOADP
 	  Supports loading an FPGA device from a bitstream buffer containing
 	  a partial bitstream.
 
+config CMD_FPGA_LOAD_SECURE
+	bool "fpga loads - loads secure bitstreams (Xilinx only)"
+	depends on CMD_FPGA
+	help
+	  Enables the fpga loads command which is used to load secure
+	  (authenticated or encrypted or both) bitstreams on to FPGA.
+
 config CMD_FPGAD
 	bool "fpgad - dump FPGA registers"
 	help
@@ -712,9 +749,9 @@ config CMD_GPIO
 
 config CMD_GPT
 	bool "GPT (GUID Partition Table) command"
-	select PARTITION_UUIDS
 	select EFI_PARTITION
 	select HAVE_BLOCK_DEVICE
+	select PARTITION_UUIDS
 	imply RANDOM_UUID
 	help
 	  Enable the 'gpt' command to ready and write GPT style partition
@@ -791,6 +828,13 @@ config CMD_I2C
 	help
 	  I2C support.
 
+config CMD_W1
+	depends on W1
+	default y if W1
+	bool "w1 - Support for Dallas 1-Wire protocol"
+	help
+	  Dallas 1-wire protocol support
+
 config CMD_LOADB
 	bool "loadb"
 	default y
@@ -807,6 +851,27 @@ config CMD_MMC
 	bool "mmc"
 	help
 	  MMC memory mapped support.
+
+config CMD_MMC_RPMB
+	bool "Enable support for RPMB in the mmc command"
+	depends on CMD_MMC
+	help
+	  Enable the commands for reading, writing and programming the
+	  key for the Replay Protection Memory Block partition in eMMC.
+
+config CMD_MMC_SWRITE
+	bool "mmc swrite"
+	depends on CMD_MMC && MMC_WRITE
+	select IMAGE_SPARSE
+	help
+	  Enable support for the "mmc swrite" command to write Android sparse
+	  images to eMMC.
+
+config CMD_MTD
+	bool "mtd"
+	select MTD_PARTITIONS
+	help
+	  MTD commands support.
 
 config CMD_NAND
 	bool "nand"
@@ -857,10 +922,18 @@ config CMD_ONENAND
 	  and erasing blocks. It allso provides a way to show and change
 	  bad blocks, and test the device.
 
+config CMD_OSD
+	bool "osd"
+	help
+	  Enable the 'osd' command which allows to query information from and
+	  write text data to a on-screen display (OSD) device; a virtual device
+	  associated with a display capable of displaying a text overlay on the
+	  display it's associated with..
+
 config CMD_PART
 	bool "part"
-	select PARTITION_UUIDS
 	select HAVE_BLOCK_DEVICE
+	select PARTITION_UUIDS
 	help
 	  Read and display information about the partition table on
 	  various media.
@@ -880,6 +953,19 @@ config CMD_PCMCIA
 	  Card International Association) device. This is an old standard from
 	  about 1990. These devices are typically removable memory or network
 	  cards using a standard 68-pin connector.
+
+config CMD_PINMUX
+	bool "pinmux - show pins muxing"
+	default y if PINCTRL
+	help
+	  Parse all available pin-controllers and show pins muxing. This
+	  is useful for debug purpoer to check the pin muxing and to know if
+	  a pin is configured as a GPIO or as an alternate function.
+
+config CMD_POWEROFF
+	bool "poweroff"
+	help
+	  Poweroff/Shutdown the system
 
 config CMD_READ
 	bool "read - Read binary data from a partition"
@@ -972,11 +1058,12 @@ config CMD_USB_SDP
 	help
 	  Enables the command "sdp" which is used to have U-Boot emulating the
 	  Serial Download Protocol (SDP) via USB.
+
 config CMD_ROCKUSB
 	bool "rockusb"
 	depends on USB_FUNCTION_ROCKUSB
 	help
-          Rockusb protocol is widely used by Rockchip SoC based devices. It can
+	  Rockusb protocol is widely used by Rockchip SoC based devices. It can
 	  read/write info, image to/from devices. This enable rockusb command
 	  support to communication with rockusb device. for more detail about
 	  this command, please read doc/README.rockusb.
@@ -987,6 +1074,21 @@ config CMD_USB_MASS_STORAGE
 	help
 	  USB mass storage support
 
+config CMD_VIRTIO
+	bool "virtio"
+	depends on VIRTIO
+	default y if VIRTIO
+	help
+	  VirtIO block device support
+
+config CMD_AXI
+	bool "axi"
+	depends on AXI
+	help
+	  Enable the command "axi" for accessing AXI (Advanced eXtensible
+	  Interface) busses, a on-chip interconnect specification for managing
+	  functional blocks in SoC designs, which is also often used in designs
+	  involving FPGAs (e.g.  communication with IP cores in Xilinx FPGAs).
 endmenu
 
 
@@ -1026,6 +1128,7 @@ if NET
 menuconfig CMD_NET
 	bool "Network commands"
 	default y
+	imply NETDEVICES
 
 if CMD_NET
 
@@ -1081,9 +1184,23 @@ config BOOTP_HOSTNAME
 	help
 	  The name may or may not be qualified with the local domain name.
 
+config BOOTP_PREFER_SERVERIP
+	bool "serverip variable takes precedent over DHCP server IP."
+	depends on CMD_BOOTP
+	help
+	  By default a BOOTP/DHCP reply will overwrite the 'serverip' variable.
+
+	  With this option enabled, the 'serverip' variable in the environment
+	  takes precedence over DHCP server IP and will only be set by the DHCP
+	  server if not already set in the environment.
+
 config BOOTP_SUBNETMASK
 	bool "Request & store 'netmask' from BOOTP/DHCP server"
 	default y
+	depends on CMD_BOOTP
+
+config BOOTP_NTPSERVER
+	bool "Request & store 'ntpserverip' from BOOTP/DHCP server"
 	depends on CMD_BOOTP
 
 config BOOTP_PXE
@@ -1103,7 +1220,7 @@ config BOOTP_PXE_CLIENTARCH
 config BOOTP_VCI_STRING
 	string
 	depends on CMD_BOOTP
-	default "U-Boot.armv7" if CPU_V7 || CPU_V7M
+	default "U-Boot.armv7" if CPU_V7A || CPU_V7M || CPU_V7R
 	default "U-Boot.armv8" if ARM64
 	default "U-Boot.arm" if ARM
 	default "U-Boot"
@@ -1175,6 +1292,7 @@ config CMD_DNS
 
 config CMD_LINK_LOCAL
 	bool "linklocal"
+	select LIB_RAND
 	help
 	  Acquire a network IP address using the link-local protocol
 
@@ -1194,6 +1312,11 @@ config CMD_PXE
 	help
 	  Boot image via network using PXE protocol
 
+config CMD_WOL
+	bool "wol"
+	help
+	  Wait for wake-on-lan Magic Packet
+
 endif
 
 menu "Misc commands"
@@ -1209,6 +1332,13 @@ config CMD_BMP
 	  determine the formats used. This command can be used by first loading
 	  the image into RAM, then using this command to look at it or display
 	  it.
+
+config CMD_BOOTCOUNT
+	bool "bootcount"
+	depends on BOOTCOUNT_LIMIT
+	help
+	  Enable the bootcount command, which allows interrogation and
+	  reset of the bootcounter.
 
 config CMD_BSP
 	bool "Enable board-specific commands"
@@ -1245,6 +1375,20 @@ config CMD_CACHE
 	help
 	  Enable the "icache" and "dcache" commands
 
+config CMD_CONITRACE
+	bool "conitrace - trace console input codes"
+	help
+	  Enable the 'conitrace' command which displays the codes received
+	  from the console input as hexadecimal numbers.
+
+config CMD_CLS
+	bool "Enable clear screen command 'cls'"
+	depends on CFB_CONSOLE || DM_VIDEO || LCD || VIDEO
+	default y if LCD
+	help
+	  Enable the 'cls' command which clears the screen contents
+	  on video frame buffer.
+
 config CMD_DISPLAY
 	bool "Enable the 'display' command, for character displays"
 	help
@@ -1255,6 +1399,7 @@ config CMD_DISPLAY
 
 config CMD_LED
 	bool "led"
+	depends on LED
 	default y if LED
 	help
 	  Enable the 'led' command which allows for control of LEDs supported
@@ -1288,6 +1433,13 @@ config CMD_MISC
 	default y
 	help
 	  Delay execution for some time
+
+config MP
+	bool "support for multiprocessor"
+	help
+	  This provides an option to brinup
+	  different processors in multiprocessor
+	  cases.
 
 config CMD_TIMER
 	bool "timer"
@@ -1415,7 +1567,7 @@ config CMD_BLOB
 	  the original data.
 
 	  Sub-commands:
-            blob enc - encapsulating data as a cryptgraphic blob
+	    blob enc - encapsulating data as a cryptgraphic blob
 	    blob dec - decapsulating cryptgraphic blob to get the data
 
 	  Syntax:
@@ -1445,30 +1597,57 @@ config CMD_HASH
 	  saved to memory or to an environment variable. It is also possible
 	  to verify a hash against data in memory.
 
+config CMD_HVC
+	bool "Support the 'hvc' command"
+	depends on ARM_SMCCC
+	help
+	  Allows issuing Hypervisor Calls (HVCs). Mostly useful for
+	  development and testing.
+
+config CMD_SMC
+	bool "Support the 'smc' command"
+	depends on ARM_SMCCC
+	help
+	  Allows issuing Secure Monitor Calls (SMCs). Mostly useful for
+	  development and testing.
+
 config HASH_VERIFY
 	bool "hash -v"
 	depends on CMD_HASH
 	help
 	  Add -v option to verify data against a hash.
 
+config CMD_TPM_V1
+	bool
+
+config CMD_TPM_V2
+	bool
+	select CMD_LOG
+
 config CMD_TPM
 	bool "Enable the 'tpm' command"
-	depends on TPM
+	depends on TPM_V1 || TPM_V2
+	select CMD_TPM_V1 if TPM_V1
+	select CMD_TPM_V2 if TPM_V2
 	help
 	  This provides a means to talk to a TPM from the command line. A wide
 	  range of commands if provided - see 'tpm help' for details. The
 	  command requires a suitable TPM on your board and the correct driver
 	  must be enabled.
 
+if CMD_TPM
+
 config CMD_TPM_TEST
 	bool "Enable the 'tpm test' command"
-	depends on CMD_TPM
+	depends on TPM_V1
 	help
-	  This provides a a series of tests to confirm that the TPM is working
-	  correctly. The tests cover initialisation, non-volatile RAM, extend,
-	  global lock and checking that timing is within expectations. The
-	  tests pass correctly on Infineon TPMs but may need to be adjusted
+	  This provides a a series of tests to confirm that the TPMv1.x is
+	  working correctly. The tests cover initialisation, non-volatile RAM,
+	  extend, global lock and checking that timing is within expectations.
+	  The tests pass correctly on Infineon TPMs but may need to be adjusted
 	  for other devices.
+
+endif
 
 endmenu
 
@@ -1564,19 +1743,24 @@ config CMD_JFFS2
 
 config CMD_MTDPARTS
 	bool "MTD partition support"
+	select MTD_DEVICE if (CMD_NAND || NAND)
 	help
-	  MTD partition support
+	  MTD partitioning tool support.
+	  It is strongly encouraged to avoid using this command
+	  anymore along with 'sf', 'nand', 'onenand'. One can still
+	  declare the partitions in the mtdparts environment variable
+	  but better use the MTD stack and the 'mtd' command instead.
 
 config MTDIDS_DEFAULT
 	string "Default MTD IDs"
-	depends on CMD_MTDPARTS || CMD_NAND || CMD_FLASH
+	depends on MTD_PARTITIONS || CMD_MTDPARTS || CMD_NAND || CMD_FLASH
 	help
 	  Defines a default MTD IDs list for use with MTD partitions in the
 	  Linux MTD command line partitions format.
 
 config MTDPARTS_DEFAULT
 	string "Default MTD partition scheme"
-	depends on CMD_MTDPARTS || CMD_NAND || CMD_FLASH
+	depends on MTD_PARTITIONS || CMD_MTDPARTS || CMD_NAND || CMD_FLASH
 	help
 	  Defines a default MTD partitioning scheme in the Linux MTD command
 	  line partitions format
@@ -1652,6 +1836,7 @@ config CMD_IRQ
 
 config CMD_KGDB
 	bool "kgdb - Allow debugging of U-Boot with gdb"
+	depends on PPC
 	help
 	  This enables a 'kgdb' command which allows gdb to connect to U-Boot
 	  over a serial link for debugging purposes. This allows
@@ -1676,14 +1861,28 @@ config CMD_TRACE
 	  for analsys (e.g. using bootchart). See doc/README.trace for full
 	  details.
 
+config CMD_AVB
+	bool "avb - Android Verified Boot 2.0 operations"
+	depends on AVB_VERIFY
+	default n
+	help
+	  Enables a "avb" command to perform verification of partitions using
+	  Android Verified Boot 2.0 functionality. It includes such subcommands:
+	    avb init - initialize avb2 subsystem
+	    avb read_rb - read rollback index
+	    avb write_rb - write rollback index
+	    avb is_unlocked - check device lock state
+	    avb get_uuid - read and print uuid of a partition
+	    avb read_part - read data from partition
+	    avb read_part_hex - read data from partition and output to stdout
+	    avb write_part - write data to partition
+	    avb verify - run full verification chain
 endmenu
 
 config CMD_UBI
 	tristate "Enable UBI - Unsorted block images commands"
 	select CRC32
 	select MTD_UBI
-	select CMD_MTDPARTS
-	default y if NAND_SUNXI
 	help
 	  UBI is a software layer above MTD layer which admits use of LVM-like
 	  logical volumes on top of MTD devices, hides some complexities of
@@ -1691,13 +1890,15 @@ config CMD_UBI
 	  capabilities. Please, consult the MTD web site for more details
 	  (www.linux-mtd.infradead.org). Activate this option if you want
 	  to use U-Boot UBI commands.
+	  It is also strongly encouraged to also enable CONFIG_MTD to get full
+	  partition support.
 
 config CMD_UBIFS
 	tristate "Enable UBIFS - Unsorted block images filesystem commands"
 	depends on CMD_UBI
+	default y if CMD_UBI
 	select CRC32
 	select LZO
-	default y if CMD_UBI
 	help
 	  UBIFS is a file system for flash devices which works on top of UBI.
 

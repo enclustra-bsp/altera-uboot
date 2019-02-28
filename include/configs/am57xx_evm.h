@@ -16,8 +16,6 @@
 
 #define CONFIG_IODELAY_RECALIBRATION
 
-#define CONFIG_NR_DRAM_BANKS		2
-
 /* MMC ENV related defines */
 #define CONFIG_SYS_MMC_ENV_DEV		1		/* eMMC */
 #define CONFIG_SYS_MMC_ENV_PART		0
@@ -37,36 +35,22 @@
 
 #define CONFIG_SYS_OMAP_ABE_SYSCK
 
-/* Define the default GPT table for eMMC */
-#define PARTS_DEFAULT \
-	/* Linux partitions */ \
-	"uuid_disk=${uuid_gpt_disk};" \
-	"name=bootloader,start=384K,size=1792K,uuid=${uuid_gpt_bootloader};" \
-	"name=rootfs,start=2688K,size=-,uuid=${uuid_gpt_rootfs}\0" \
-	/* Android partitions */ \
-	"partitions_android=" \
-	"uuid_disk=${uuid_gpt_disk};" \
-	"name=xloader,start=128K,size=256K,uuid=${uuid_gpt_xloader};" \
-	"name=bootloader,size=1792K,uuid=${uuid_gpt_bootloader};" \
-	"name=environment,size=128K,uuid=${uuid_gpt_environment};" \
-	"name=misc,size=128K,uuid=${uuid_gpt_misc};" \
-	"name=reserved,size=256K,uuid=${uuid_gpt_reserved};" \
-	"name=efs,size=16M,uuid=${uuid_gpt_efs};" \
-	"name=crypto,size=16K,uuid=${uuid_gpt_crypto};" \
-	"name=recovery,size=40M,uuid=${uuid_gpt_recovery};" \
-	"name=boot,size=10M,uuid=${uuid_gpt_boot};" \
-	"name=system,size=768M,uuid=${uuid_gpt_system};" \
-	"name=vendor,size=256M,uuid=${uuid_gpt_vendor};" \
-	"name=cache,size=256M,uuid=${uuid_gpt_cache};" \
-	"name=ipu1,size=1M,uuid=${uuid_gpt_ipu1};" \
-	"name=ipu2,size=1M,uuid=${uuid_gpt_ipu2};" \
-	"name=userdata,size=-,uuid=${uuid_gpt_userdata}"
-
+#ifdef CONFIG_SPL_DFU
+#ifndef CONFIG_SPL_BUILD
 #define DFUARGS \
 	"dfu_bufsiz=0x10000\0" \
 	DFU_ALT_INFO_MMC \
 	DFU_ALT_INFO_EMMC \
 	DFU_ALT_INFO_RAM \
+	DFU_ALT_INFO_QSPI
+#else
+#undef CONFIG_CMD_BOOTD
+#define CONFIG_SPL_LOAD_FIT_ADDRESS 0x80200000
+#define DFUARGS \
+	"dfu_bufsiz=0x10000\0" \
+	DFU_ALT_INFO_RAM
+#endif
+#endif
 
 #include <configs/ti_omap5_common.h>
 
@@ -77,7 +61,6 @@
 #define CONFIG_BOOTP_DNS2
 #define CONFIG_BOOTP_SEND_HOSTNAME
 #define CONFIG_NET_RETRY_COUNT		10
-#define CONFIG_MII			/* Required in net/eth.c */
 #define PHY_ANEG_TIMEOUT	8000	/* PHY needs longer aneg time at 1G */
 
 #define CONFIG_SUPPORT_EMMC_BOOT

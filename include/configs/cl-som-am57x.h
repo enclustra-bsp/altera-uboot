@@ -10,17 +10,16 @@
 #ifndef __CONFIG_CL_SOM_AM57X_H
 #define __CONFIG_CL_SOM_AM57X_H
 
-#define CONFIG_NR_DRAM_BANKS		2
-
 #define CONSOLEDEV			"ttyO2"
 #define CONFIG_SYS_NS16550_COM3		UART3_BASE	/* UART3 */
 
 #define CONFIG_SYS_OMAP_ABE_SYSCK
 
+#define PARTS_DEFAULT
+
 #include <configs/ti_omap5_common.h>
 
 /* misc */
-#define CONFIG_MISC_INIT_R
 #define CONFIG_REVISION_TAG
 
 /* PMIC I2C bus number */
@@ -77,7 +76,6 @@
 /* USB Networking options */
 
 /* CPSW Ethernet */
-#define CONFIG_MII
 #define CONFIG_BOOTP_DEFAULT
 #define CONFIG_BOOTP_SEND_HOSTNAME
 #define CONFIG_PHY_ATHEROS

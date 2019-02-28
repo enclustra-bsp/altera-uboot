@@ -15,6 +15,7 @@
 #include <charset.h>
 #include <efi_loader.h>
 #include <div64.h>
+#include <hexdump.h>
 #include <uuid.h>
 #include <stdarg.h>
 #include <linux/ctype.h>
@@ -273,28 +274,29 @@ static char *string(char *buf, char *end, char *s, int field_width,
 	return buf;
 }
 
+/* U-Boot uses UTF-16 strings in the EFI context only. */
+#if CONFIG_IS_ENABLED(EFI_LOADER) && !defined(API_BUILD)
 static char *string16(char *buf, char *end, u16 *s, int field_width,
 		int precision, int flags)
 {
-	u16 *str = s ? s : L"<NULL>";
-	int utf16_len = utf16_strnlen(str, precision);
-	u8 utf8[utf16_len * MAX_UTF8_PER_UTF16];
-	int utf8_len, i;
-
-	utf8_len = utf16_to_utf8(utf8, str, utf16_len) - utf8;
+	const u16 *str = s ? s : L"<NULL>";
+	ssize_t i, len = utf16_strnlen(str, precision);
 
 	if (!(flags & LEFT))
-		while (utf8_len < field_width--)
+		for (; len < field_width; --field_width)
 			ADDCH(buf, ' ');
-	for (i = 0; i < utf8_len; ++i)
-		ADDCH(buf, utf8[i]);
-	while (utf8_len < field_width--)
+	for (i = 0; i < len && buf + utf16_utf8_strnlen(str, 1) <= end; ++i) {
+		s32 s = utf16_get(&str);
+
+		if (s < 0)
+			s = '?';
+		utf8_put(s, &buf);
+	}
+	for (; len < field_width; --field_width)
 		ADDCH(buf, ' ');
 	return buf;
 }
 
-#if defined(CONFIG_EFI_LOADER) && \
-	!defined(CONFIG_SPL_BUILD) && !defined(API_BUILD)
 static char *device_path_string(char *buf, char *end, void *dp, int field_width,
 				int precision, int flags)
 {
@@ -315,17 +317,6 @@ static char *device_path_string(char *buf, char *end, void *dp, int field_width,
 #endif
 
 #ifdef CONFIG_CMD_NET
-static const char hex_asc[] = "0123456789abcdef";
-#define hex_asc_lo(x)	hex_asc[((x) & 0x0f)]
-#define hex_asc_hi(x)	hex_asc[((x) & 0xf0) >> 4]
-
-static inline char *pack_hex_byte(char *buf, u8 byte)
-{
-	*buf++ = hex_asc_hi(byte);
-	*buf++ = hex_asc_lo(byte);
-	return buf;
-}
-
 static char *mac_address_string(char *buf, char *end, u8 *addr, int field_width,
 				int precision, int flags)
 {
@@ -335,7 +326,7 @@ static char *mac_address_string(char *buf, char *end, u8 *addr, int field_width,
 	int i;
 
 	for (i = 0; i < 6; i++) {
-		p = pack_hex_byte(p, addr[i]);
+		p = hex_byte_pack(p, addr[i]);
 		if (!(flags & SPECIAL) && i != 5)
 			*p++ = ':';
 	}
@@ -354,8 +345,8 @@ static char *ip6_addr_string(char *buf, char *end, u8 *addr, int field_width,
 	int i;
 
 	for (i = 0; i < 8; i++) {
-		p = pack_hex_byte(p, addr[2 * i]);
-		p = pack_hex_byte(p, addr[2 * i + 1]);
+		p = hex_byte_pack(p, addr[2 * i]);
+		p = hex_byte_pack(p, addr[2 * i + 1]);
 		if (!(flags & SPECIAL) && i != 7)
 			*p++ = ':';
 	}
@@ -417,7 +408,10 @@ static char *uuid_string(char *buf, char *end, u8 *addr, int field_width,
 		break;
 	}
 
-	uuid_bin_to_str(addr, uuid, str_format);
+	if (addr)
+		uuid_bin_to_str(addr, uuid, str_format);
+	else
+		strcpy(uuid, "<NULL>");
 
 	return string(buf, end, uuid, field_width, precision, flags);
 }
@@ -457,8 +451,8 @@ static char *pointer(const char *fmt, char *buf, char *end, void *ptr,
 #endif
 
 	switch (*fmt) {
-#if defined(CONFIG_EFI_LOADER) && \
-	!defined(CONFIG_SPL_BUILD) && !defined(API_BUILD)
+/* Device paths only exist in the EFI context. */
+#if CONFIG_IS_ENABLED(EFI_LOADER) && !defined(API_BUILD)
 	case 'D':
 		return device_path_string(buf, end, ptr, field_width,
 					  precision, flags);
@@ -619,10 +613,14 @@ repeat:
 			continue;
 
 		case 's':
-			if (qualifier == 'l' && !IS_ENABLED(CONFIG_SPL_BUILD)) {
+/* U-Boot uses UTF-16 strings in the EFI context only. */
+#if CONFIG_IS_ENABLED(EFI_LOADER) && !defined(API_BUILD)
+			if (qualifier == 'l') {
 				str = string16(str, end, va_arg(args, u16 *),
 					       field_width, precision, flags);
-			} else {
+			} else
+#endif
+			{
 				str = string(str, end, va_arg(args, char *),
 					     field_width, precision, flags);
 			}

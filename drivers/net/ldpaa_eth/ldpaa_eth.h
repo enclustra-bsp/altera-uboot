@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright (C) 2014-2016 Freescale Semiconductor
+ * Copyright 2014-2016 Freescale Semiconductor, Inc.
  * Copyright 2017 NXP
  */
 
@@ -127,7 +127,6 @@ struct ldpaa_eth_priv {
 	uint16_t tx_flow_id;
 
 	enum ldpaa_eth_type type;	/* 1G or 10G ethernet */
-	struct phy_device *phydev;
 };
 
 struct dprc_endpoint dpmac_endpoint;

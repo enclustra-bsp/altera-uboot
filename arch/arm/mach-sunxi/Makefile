@@ -11,9 +11,6 @@ obj-y	+= clock.o
 obj-y	+= cpu_info.o
 obj-y	+= dram_helpers.o
 obj-y	+= pinmux.o
-ifndef CONFIG_MACH_SUN9I
-obj-y	+= usb_phy.o
-endif
 obj-$(CONFIG_SUN6I_P2WI)	+= p2wi.o
 obj-$(CONFIG_SUN6I_PRCM)	+= prcm.o
 obj-$(CONFIG_AXP_PMIC_BUS)	+= pmic_bus.o
@@ -29,6 +26,7 @@ else
 obj-$(CONFIG_MACH_SUN8I)	+= clock_sun6i.o
 endif
 obj-$(CONFIG_MACH_SUN9I)	+= clock_sun9i.o gtbus_sun9i.o
+obj-$(CONFIG_MACH_SUN50I_H6)	+= clock_sun50i_h6.o
 
 ifdef CONFIG_SPL_BUILD
 obj-$(CONFIG_DRAM_SUN4I)	+= dram_sun4i.o
@@ -40,4 +38,5 @@ obj-$(CONFIG_DRAM_SUN9I)	+= dram_sun9i.o
 obj-$(CONFIG_SPL_SPI_SUNXI)	+= spl_spi_sunxi.o
 obj-$(CONFIG_SUNXI_DRAM_DW)	+= dram_sunxi_dw.o
 obj-$(CONFIG_SUNXI_DRAM_DW)	+= dram_timings/
+obj-$(CONFIG_DRAM_SUN50I_H6)	+= dram_sun50i_h6.o
 endif

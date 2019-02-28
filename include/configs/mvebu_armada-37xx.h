@@ -13,8 +13,6 @@
 /* additions for new ARM relocation support */
 #define CONFIG_SYS_SDRAM_BASE	0x00000000
 
-#define CONFIG_NR_DRAM_BANKS	1
-
 /* auto boot */
 #define CONFIG_PREBOOT
 
@@ -66,6 +64,8 @@
 #define CONFIG_SF_DEFAULT_SPEED		1000000
 #define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
 #define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
+#define CONFIG_MTD_DEVICE		/* needed for mtdparts commands */
+#define CONFIG_MTD_PARTITIONS		/* required for UBI partition support */
 
 /* Environment in SPI NOR flash */
 #define CONFIG_ENV_OFFSET		0x180000 /* as Marvell U-Boot version */
@@ -78,7 +78,6 @@
 #define CONFIG_ENV_OVERWRITE	/* ethaddr can be reprogrammed */
 #define CONFIG_ARP_TIMEOUT	200
 #define CONFIG_NET_RETRY_COUNT	50
-#define CONFIG_PHY_MARVELL
 
 #define CONFIG_USB_MAX_CONTROLLER_COUNT (3 + 3)
 

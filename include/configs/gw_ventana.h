@@ -33,7 +33,6 @@
 #define CONFIG_SYS_MALLOC_LEN		(10 * SZ_1M)
 
 /* Init Functions */
-#define CONFIG_MISC_INIT_R
 
 /* Driver Model */
 #ifndef CONFIG_SPL_BUILD
@@ -53,7 +52,6 @@
 /* SPI */
 #ifdef CONFIG_CMD_SF
   #define CONFIG_SPI_FLASH_MTD
-  #define CONFIG_SPI_FLASH_BAR
   #define CONFIG_SF_DEFAULT_BUS              0
   #define CONFIG_SF_DEFAULT_CS               0
 					     /* GPIO 3-19 (21248) */
@@ -89,7 +87,6 @@
 
 /* eMMC Configs */
 #define CONFIG_SUPPORT_EMMC_BOOT
-#define CONFIG_SUPPORT_EMMC_RPMB
 
 /*
  * SATA Configs
@@ -125,7 +122,6 @@
 
 /* Ethernet support */
 #define CONFIG_FEC_MXC
-#define CONFIG_MII
 #define IMX_FEC_BASE             ENET_BASE_ADDR
 #define CONFIG_FEC_XCV_TYPE      RGMII
 #define CONFIG_FEC_MXC_PHYADDR   0
@@ -158,7 +154,6 @@
 #define CONFIG_SYS_MEMTEST_SCRATCH     0x10800000
 
 /* Physical Memory Map */
-#define CONFIG_NR_DRAM_BANKS           1
 #define PHYS_SDRAM                     MMDC0_ARB_BASE_ADDR
 #define CONFIG_SYS_SDRAM_BASE          PHYS_SDRAM
 #define CONFIG_SYS_INIT_RAM_ADDR       IRAM_BASE_ADDR
@@ -172,8 +167,6 @@
 /*
  * MTD Command for mtdparts
  */
-#define CONFIG_MTD_DEVICE
-#define CONFIG_MTD_PARTITIONS
 
 /* Persistent Environment Config */
 #if defined(CONFIG_ENV_IS_IN_MMC)

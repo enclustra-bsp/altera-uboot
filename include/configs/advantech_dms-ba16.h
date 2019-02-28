@@ -45,7 +45,6 @@
 /* MMC Configs */
 #define CONFIG_FSL_USDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR      0
-#define CONFIG_BOUNCE_BUFFER
 
 /* USB Configs */
 #define CONFIG_USB_MAX_CONTROLLER_COUNT 2
@@ -57,7 +56,6 @@
 
 /* Networking Configs */
 #define CONFIG_FEC_MXC
-#define CONFIG_MII
 #define IMX_FEC_BASE			ENET_BASE_ADDR
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #define CONFIG_ETHPRIME		"FEC"
@@ -204,7 +202,6 @@
 #define CONFIG_SYS_LOAD_ADDR           CONFIG_LOADADDR
 
 /* Physical Memory Map */
-#define CONFIG_NR_DRAM_BANKS           1
 #define PHYS_SDRAM                     MMDC0_ARB_BASE_ADDR
 
 #define CONFIG_SYS_SDRAM_BASE          PHYS_SDRAM
@@ -225,9 +222,6 @@
 #define CONFIG_ENV_SPI_CS               CONFIG_SF_DEFAULT_CS
 #define CONFIG_ENV_SPI_MODE             CONFIG_SF_DEFAULT_MODE
 #define CONFIG_ENV_SPI_MAX_HZ           CONFIG_SF_DEFAULT_SPEED
-
-#ifndef CONFIG_SYS_DCACHE_OFF
-#endif
 
 #define CONFIG_SYS_FSL_USDHC_NUM        3
 

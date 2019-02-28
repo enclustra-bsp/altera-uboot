@@ -15,11 +15,9 @@
 #define CONFIG_SYS_SDRAM_BASE		0x40000000
 
 /* select serial console configuration */
-#define CONFIG_SERIAL2			/* use SERIAL 2 */
 
 #define TZPC_BASE_OFFSET		0x10000
 
-#define CONFIG_NR_DRAM_BANKS	8
 #define SDRAM_BANK_SIZE		(256UL << 20UL)	/* 256 MB */
 /* Reserve the last 22 MiB for the secure firmware */
 #define CONFIG_SYS_MEM_TOP_HIDE		(22UL << 20UL)
@@ -32,7 +30,7 @@
 
 #define CONFIG_SYS_INIT_SP_ADDR        (CONFIG_SYS_LOAD_ADDR - 0x1000000)
 
-#define CONFIG_DEFAULT_CONSOLE		"ttySAC2,115200n8"
+#define CONFIG_DEFAULT_CONSOLE		"console=ttySAC2,115200n8\0"
 
 /* USB */
 #define CONFIG_USB_EHCI_EXYNOS
@@ -63,6 +61,7 @@
 	"exynos5422-odroidxu3.dtb fat 0 1;" \
 	"exynos5422-odroidxu3-lite.dtb fat 0 1;" \
 	"exynos5422-odroidxu4.dtb fat 0 1;" \
+	"exynos5422-odroidhc1.dtb fat 0 1;" \
 	"boot part 0 1;"                    \
 	"root part 0 2\0"
 
@@ -82,14 +81,12 @@
 
 /* Enable: board/samsung/common/misc.c to use set_dfu_alt_info() */
 #define CONFIG_MISC_COMMON
-#define CONFIG_MISC_INIT_R
 #define CONFIG_SET_DFU_ALT_INFO
 #define CONFIG_SET_DFU_ALT_BUF_LEN	(SZ_1K)
 
 /* Set soc_rev, soc_id, board_rev, boardname, fdtfile */
 #define CONFIG_ODROID_REV_AIN			9
 #define CONFIG_REVISION_TAG
-#define CONFIG_BOARD_TYPES
 
 #undef CONFIG_SYS_BOARD
 #define CONFIG_SYS_BOARD	"odroid"
@@ -101,9 +98,8 @@
 	EXYNOS_FDTFILE_SETTING \
 	MEM_LAYOUT_ENV_SETTINGS \
 	BOOTENV \
-	"bootdelay=0\0" \
 	"rootfstype=ext4\0" \
-	"console=" CONFIG_DEFAULT_CONSOLE "\0"\
+	"console=" CONFIG_DEFAULT_CONSOLE \
 	"fdtfile=exynos5422-odroidxu3.dtb\0" \
 	"boardname=odroidxu3\0" \
 	"mmcbootdev=0\0" \

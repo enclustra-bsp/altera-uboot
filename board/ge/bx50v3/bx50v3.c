@@ -33,14 +33,8 @@
 #include "../../../drivers/net/e1000.h"
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifndef CONFIG_SYS_I2C_EEPROM_ADDR
-# define CONFIG_SYS_I2C_EEPROM_ADDR     0x50
-# define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
-#endif
-
-#ifndef CONFIG_SYS_I2C_EEPROM_BUS
-#define CONFIG_SYS_I2C_EEPROM_BUS       4
-#endif
+static int confidx = 3;  /* Default to b850v3. */
+static struct vpd_cache vpd;
 
 #define NC_PAD_CTRL (PAD_CTL_PUS_100K_UP |	\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |	\
@@ -361,20 +355,21 @@ int board_cfb_skip(void)
 	return 0;
 }
 
-static int detect_baseboard(struct display_info_t const *dev)
+static int is_b850v3(void)
 {
-	if (IS_ENABLED(CONFIG_TARGET_GE_B450V3) ||
-	    IS_ENABLED(CONFIG_TARGET_GE_B650V3))
-		return 1;
+	return confidx == 3;
+}
 
-	return 0;
+static int detect_lcd(struct display_info_t const *dev)
+{
+	return !is_b850v3();
 }
 
 struct display_info_t const displays[] = {{
 	.bus	= -1,
 	.addr	= -1,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
-	.detect	= detect_baseboard,
+	.detect	= detect_lcd,
 	.enable	= NULL,
 	.mode	= {
 		.name           = "G121X1-L03",
@@ -420,14 +415,22 @@ static void enable_videopll(void)
 
 	setbits_le32(&ccm->analog_pll_video, BM_ANADIG_PLL_VIDEO_POWERDOWN);
 
-	/* set video pll to 910MHz (24MHz * (37+11/12))
-	* video pll post div to 910/4 = 227.5MHz
-	*/
+	/* PLL_VIDEO  455MHz (24MHz * (37+11/12) / 2)
+	 *   |
+	 * PLL5
+	 *   |
+	 * CS2CDR[LDB_DI0_CLK_SEL]
+	 *   |
+	 *   +----> LDB_DI0_SERIAL_CLK_ROOT
+	 *   |
+	 *   +--> CSCMR2[LDB_DI0_IPU_DIV] --> LDB_DI0_IPU  455 / 7 = 65 MHz
+	 */
+
 	clrsetbits_le32(&ccm->analog_pll_video,
 			BM_ANADIG_PLL_VIDEO_DIV_SELECT |
 			BM_ANADIG_PLL_VIDEO_POST_DIV_SELECT,
 			BF_ANADIG_PLL_VIDEO_DIV_SELECT(37) |
-			BF_ANADIG_PLL_VIDEO_POST_DIV_SELECT(0));
+			BF_ANADIG_PLL_VIDEO_POST_DIV_SELECT(1));
 
 	writel(BF_ANADIG_PLL_VIDEO_NUM_A(11), &ccm->analog_pll_video_num);
 	writel(BF_ANADIG_PLL_VIDEO_DENOM_B(12), &ccm->analog_pll_video_denom);
@@ -453,8 +456,8 @@ static void setup_display_b850v3(void)
 
 	enable_videopll();
 
-	/* IPU1 D0 clock is 227.5 / 3.5 = 65MHz */
-	clrbits_le32(&mxc_ccm->cscmr2, MXC_CCM_CSCMR2_LDB_DI0_IPU_DIV);
+	/* IPU1 DI0 clock is 455MHz / 7 = 65MHz */
+	setbits_le32(&mxc_ccm->cscmr2, MXC_CCM_CSCMR2_LDB_DI0_IPU_DIV);
 
 	imx_setup_hdmi();
 
@@ -492,6 +495,8 @@ static void setup_display_bx50v3(void)
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
 
+	enable_videopll();
+
 	/* When a reset/reboot is performed the display power needs to be turned
 	 * off for atleast 500ms. The boot time is ~300ms, we need to wait for
 	 * an additional 200ms here. Unfortunately we use external PMIC for
@@ -499,7 +504,7 @@ static void setup_display_bx50v3(void)
 	 */
 	mdelay(200);
 
-	/* IPU1 DI0 clock is 480/7 = 68.5 MHz */
+	/* IPU1 DI0 clock is 455MHz / 7 = 65MHz */
 	setbits_le32(&mxc_ccm->cscmr2, MXC_CCM_CSCMR2_LDB_DI0_IPU_DIV);
 
 	/* Set LDB_DI0 as clock source for IPU_DI0 */
@@ -553,6 +558,7 @@ int overwrite_console(void)
 #define VPD_MAC_ADDRESS_LENGTH 6
 
 struct vpd_cache {
+	bool is_read;
 	u8 product_id;
 	u8 has;
 	unsigned char mac1[VPD_MAC_ADDRESS_LENGTH];
@@ -562,11 +568,9 @@ struct vpd_cache {
 /*
  * Extracts MAC and product information from the VPD.
  */
-static int vpd_callback(void *userdata, u8 id, u8 version, u8 type,
+static int vpd_callback(struct vpd_cache *vpd, u8 id, u8 version, u8 type,
 			size_t size, u8 const *data)
 {
-	struct vpd_cache *vpd = (struct vpd_cache *)userdata;
-
 	if (id == VPD_BLOCK_HWID && version == 1 && type != VPD_TYPE_INVALID &&
 	    size >= 1) {
 		vpd->product_id = data[0];
@@ -590,26 +594,24 @@ static void process_vpd(struct vpd_cache *vpd)
 	int fec_index = -1;
 	int i210_index = -1;
 
-	switch (vpd->product_id) {
-	case VPD_PRODUCT_B450:
-		env_set("confidx", "1");
-		break;
-	case VPD_PRODUCT_B650:
-		env_set("confidx", "2");
-		break;
-	case VPD_PRODUCT_B850:
-		env_set("confidx", "3");
-		break;
+	if (!vpd->is_read) {
+		printf("VPD wasn't read");
+		return;
 	}
 
 	switch (vpd->product_id) {
 	case VPD_PRODUCT_B450:
-		/* fall thru */
+		env_set("confidx", "1");
+		i210_index = 0;
+		fec_index = 1;
+		break;
 	case VPD_PRODUCT_B650:
+		env_set("confidx", "2");
 		i210_index = 0;
 		fec_index = 1;
 		break;
 	case VPD_PRODUCT_B850:
+		env_set("confidx", "3");
 		i210_index = 1;
 		fec_index = 2;
 		break;
@@ -620,37 +622,6 @@ static void process_vpd(struct vpd_cache *vpd)
 
 	if (i210_index >= 0 && (vpd->has & VPD_HAS_MAC2))
 		eth_env_set_enetaddr_by_index("eth", i210_index, vpd->mac2);
-}
-
-static int read_vpd(uint eeprom_bus)
-{
-	struct vpd_cache vpd;
-	int res;
-	int size = 1024;
-	uint8_t *data;
-	unsigned int current_i2c_bus = i2c_get_bus_num();
-
-	res = i2c_set_bus_num(eeprom_bus);
-	if (res < 0)
-		return res;
-
-	data = (uint8_t *)malloc(size);
-	if (!data)
-		return -ENOMEM;
-
-	res = i2c_read(CONFIG_SYS_I2C_EEPROM_ADDR, 0,
-			CONFIG_SYS_I2C_EEPROM_ADDR_LEN, data, size);
-
-	if (res == 0) {
-		memset(&vpd, 0, sizeof(vpd));
-		vpd_reader(size, data, &vpd, vpd_callback);
-		process_vpd(&vpd);
-	}
-
-	free(data);
-
-	i2c_set_bus_num(current_i2c_bus);
-	return res;
 }
 
 int board_eth_init(bd_t *bis)
@@ -684,22 +655,42 @@ int board_early_init_f(void)
 	setup_iomux_uart();
 
 #if defined(CONFIG_VIDEO_IPUV3)
-	if (IS_ENABLED(CONFIG_TARGET_GE_B850V3))
-		/* Set LDB clock to Video PLL */
-		select_ldb_di_clock_source(MXC_PLL5_CLK);
-	else
-		/* Set LDB clock to USB PLL */
-		select_ldb_di_clock_source(MXC_PLL3_SW_CLK);
+	/* Set LDB clock to Video PLL */
+	select_ldb_di_clock_source(MXC_PLL5_CLK);
 #endif
 	return 0;
 }
 
+static void set_confidx(const struct vpd_cache* vpd)
+{
+	switch (vpd->product_id) {
+	case VPD_PRODUCT_B450:
+		confidx = 1;
+		break;
+	case VPD_PRODUCT_B650:
+		confidx = 2;
+		break;
+	case VPD_PRODUCT_B850:
+		confidx = 3;
+		break;
+	}
+}
+
 int board_init(void)
 {
+	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
+	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
+	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info3);
+
+	if (!read_vpd(&vpd, vpd_callback)) {
+		vpd.is_read = true;
+		set_confidx(&vpd);
+	}
+
 	gpio_direction_output(SUS_S3_OUT, 1);
 	gpio_direction_output(WIFI_EN, 1);
 #if defined(CONFIG_VIDEO_IPUV3)
-	if (IS_ENABLED(CONFIG_TARGET_GE_B850V3))
+	if (is_b850v3())
 		setup_display_b850v3();
 	else
 		setup_display_bx50v3();
@@ -710,10 +701,6 @@ int board_init(void)
 #ifdef CONFIG_MXC_SPI
 	setup_spi();
 #endif
-	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
-	setup_i2c(2, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info2);
-	setup_i2c(3, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info3);
-
 	return 0;
 }
 
@@ -779,11 +766,16 @@ void pmic_init(void)
 
 int board_late_init(void)
 {
-	read_vpd(CONFIG_SYS_I2C_EEPROM_BUS);
+	process_vpd(&vpd);
 
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
+
+	if (is_b850v3())
+		env_set("videoargs", "video=DP-1:1024x768@60 video=HDMI-A-1:1024x768@60");
+	else
+		env_set("videoargs", "video=LVDS-1:1024x768@65");
 
 	/* board specific pmic init */
 	pmic_init();

@@ -61,11 +61,7 @@ obj-y	+= reset.o
 endif
 
 obj-y	+= cache.o
-ifndef CONFIG_ARM64
-ifndef CONFIG_CPU_V7M
-obj-y	+= cache-cp15.o
-endif
-endif
+obj-$(CONFIG_SYS_ARM_CACHE_CP15)	+= cache-cp15.o
 
 obj-y	+= psci-dt.o
 
@@ -110,5 +106,9 @@ CFLAGS_$(EFI_RELOC) := $(CFLAGS_EFI)
 CFLAGS_REMOVE_$(EFI_RELOC) := $(CFLAGS_NON_EFI)
 
 extra-$(CONFIG_CMD_BOOTEFI_HELLO_COMPILE) += $(EFI_CRT0) $(EFI_RELOC)
-extra-$(CONFIG_CMD_BOOTEFI_SELFTEST) += $(EFI_CRT0) $(EFI_RELOC)
+# TODO: As of v2019.01 the relocation code for the EFI application cannot
+# be built on ARMv7-M.
+ifndef CONFIG_CPU_V7M
+#extra-$(CONFIG_CMD_BOOTEFI_SELFTEST) += $(EFI_CRT0) $(EFI_RELOC)
+endif
 extra-$(CONFIG_EFI) += $(EFI_CRT0) $(EFI_RELOC)

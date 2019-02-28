@@ -8,8 +8,6 @@
  * (C) Copyright 2017 Adaptrum, Inc.
  * Written by Alexandru Gagniuc <alex.g@adaptrum.com> for Adaptrum, Inc.
  */
-
-#include <config.h>
 #include <common.h>
 #include <dm.h>
 #include <errno.h>
@@ -125,8 +123,8 @@ static int ksz90x1_of_config_group(struct phy_device *phydev,
 		} else {
 			changed = 1;	/* Value was changed in OF */
 			/* Calculate the register value and fix corner cases */
-			if (val[i] > ps_to_regval * 0xf) {
-				max = (1 << ofcfg->grp[i].size) - 1;
+			max = (1 << ofcfg->grp[i].size) - 1;
+			if (val[i] > ps_to_regval * max) {
 				regval |= max << offset;
 			} else {
 				regval |= (val[i] / ps_to_regval) << offset;

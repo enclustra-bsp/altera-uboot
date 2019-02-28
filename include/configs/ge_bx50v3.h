@@ -14,19 +14,7 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/mach-imx/gpio.h>
 
-#define BX50V3_BOOTARGS_EXTRA
-#if defined(CONFIG_TARGET_GE_B450V3)
-#define CONFIG_BOARD_NAME	"General Electric B450v3"
-#elif defined(CONFIG_TARGET_GE_B650V3)
-#define CONFIG_BOARD_NAME	"General Electric B650v3"
-#elif defined(CONFIG_TARGET_GE_B850V3)
-#define CONFIG_BOARD_NAME	"General Electric B850v3"
-#undef BX50V3_BOOTARGS_EXTRA
-#define BX50V3_BOOTARGS_EXTRA	"video=DP-1:1024x768@60 " \
-				"video=HDMI-A-1:1024x768@60 "
-#else
-#define CONFIG_BOARD_NAME	"General Electric BA16 Generic"
-#endif
+#define CONFIG_BOARD_NAME	"General Electric Bx50v3"
 
 #define CONFIG_MXC_UART_BASE	UART3_BASE
 #define CONSOLE_DEV	"ttymxc2"
@@ -43,8 +31,6 @@
 #define CONFIG_REVISION_TAG
 #define CONFIG_SYS_MALLOC_LEN		(10 * SZ_1M)
 
-#define CONFIG_HW_WATCHDOG
-#define CONFIG_IMX_WATCHDOG
 #define CONFIG_WATCHDOG_TIMEOUT_MSECS 6000
 
 #define CONFIG_MXC_UART
@@ -62,7 +48,6 @@
 /* MMC Configs */
 #define CONFIG_FSL_USDHC
 #define CONFIG_SYS_FSL_ESDHC_ADDR      0
-#define CONFIG_BOUNCE_BUFFER
 
 /* USB Configs */
 #ifdef CONFIG_USB
@@ -78,7 +63,6 @@
 /* Networking Configs */
 #ifdef CONFIG_NET
 #define CONFIG_FEC_MXC
-#define CONFIG_MII
 #define IMX_FEC_BASE			ENET_BASE_ADDR
 #define CONFIG_FEC_XCV_TYPE		RGMII
 #define CONFIG_ETHPRIME		"FEC"
@@ -101,7 +85,6 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"bootcause=POR\0" \
-	"bootlimit=10\0" \
 	"image=/boot/fitImage\0" \
 	"fdt_high=0xffffffff\0" \
 	"dev=mmc\0" \
@@ -113,7 +96,7 @@
 		"ro rootwait cma=128M " \
 		"bootcause=${bootcause} " \
 		"${quiet} console=${console} ${rtc_status} " \
-		BX50V3_BOOTARGS_EXTRA "\0" \
+		"${videoargs}" "\0" \
 	"doquiet=" \
 		"if ext2load ${dev} ${devnum}:5 0x7000A000 /boot/console; " \
 			"then setenv quiet; fi\0" \
@@ -180,7 +163,6 @@
 #define CONFIG_SYS_LOAD_ADDR           CONFIG_LOADADDR
 
 /* Physical Memory Map */
-#define CONFIG_NR_DRAM_BANKS           1
 #define PHYS_SDRAM                     MMDC0_ARB_BASE_ADDR
 
 #define CONFIG_SYS_SDRAM_BASE          PHYS_SDRAM
@@ -200,9 +182,6 @@
 #define CONFIG_ENV_SPI_CS		CONFIG_SF_DEFAULT_CS
 #define CONFIG_ENV_SPI_MODE		CONFIG_SF_DEFAULT_MODE
 #define CONFIG_ENV_SPI_MAX_HZ		CONFIG_SF_DEFAULT_SPEED
-
-#ifndef CONFIG_SYS_DCACHE_OFF
-#endif
 
 #define CONFIG_SYS_FSL_USDHC_NUM	3
 

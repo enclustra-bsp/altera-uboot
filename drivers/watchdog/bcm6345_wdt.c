@@ -32,8 +32,8 @@ static int bcm6345_wdt_reset(struct udevice *dev)
 {
 	struct bcm6345_wdt_priv *priv = dev_get_priv(dev);
 
-	writel_be(WDT_CTL_START1_MASK, priv->regs + WDT_CTL_REG);
-	writel_be(WDT_CTL_START2_MASK, priv->regs + WDT_CTL_REG);
+	writel(WDT_CTL_START1_MASK, priv->regs + WDT_CTL_REG);
+	writel(WDT_CTL_START2_MASK, priv->regs + WDT_CTL_REG);
 
 	return 0;
 }
@@ -50,7 +50,7 @@ static int bcm6345_wdt_start(struct udevice *dev, u64 timeout, ulong flags)
 		timeout = WDT_VAL_MAX;
 	}
 
-	writel_be(timeout, priv->regs + WDT_VAL_REG);
+	writel(timeout, priv->regs + WDT_VAL_REG);
 
 	return bcm6345_wdt_reset(dev);
 }
@@ -64,8 +64,8 @@ static int bcm6345_wdt_stop(struct udevice *dev)
 {
 	struct bcm6345_wdt_priv *priv = dev_get_priv(dev);
 
-	writel_be(WDT_CTL_STOP1_MASK, priv->regs + WDT_CTL_REG);
-	writel_be(WDT_CTL_STOP2_MASK, priv->regs + WDT_CTL_REG);
+	writel(WDT_CTL_STOP1_MASK, priv->regs + WDT_CTL_REG);
+	writel(WDT_CTL_STOP2_MASK, priv->regs + WDT_CTL_REG);
 
 	return 0;
 }
@@ -85,14 +85,10 @@ static const struct udevice_id bcm6345_wdt_ids[] = {
 static int bcm6345_wdt_probe(struct udevice *dev)
 {
 	struct bcm6345_wdt_priv *priv = dev_get_priv(dev);
-	fdt_addr_t addr;
-	fdt_size_t size;
 
-	addr = devfdt_get_addr_size_index(dev, 0, &size);
-	if (addr == FDT_ADDR_T_NONE)
+	priv->regs = dev_remap_addr(dev);
+	if (!priv->regs)
 		return -EINVAL;
-
-	priv->regs = ioremap(addr, size);
 
 	bcm6345_wdt_stop(dev);
 

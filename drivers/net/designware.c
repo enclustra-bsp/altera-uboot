@@ -15,6 +15,7 @@
 #include <miiphy.h>
 #include <malloc.h>
 #include <pci.h>
+#include <reset.h>
 #include <linux/compiler.h>
 #include <linux/err.h>
 #include <linux/kernel.h>
@@ -280,6 +281,15 @@ int designware_eth_init(struct dw_eth_dev *priv, u8 *enetaddr)
 
 	writel(readl(&dma_p->busmode) | DMAMAC_SRST, &dma_p->busmode);
 
+	/*
+	 * When a MII PHY is used, we must set the PS bit for the DMA
+	 * reset to succeed.
+	 */
+	if (priv->phydev->interface == PHY_INTERFACE_MODE_MII)
+		writel(readl(&mac_p->conf) | MII_PORTSELECT, &mac_p->conf);
+	else
+		writel(readl(&mac_p->conf) & ~MII_PORTSELECT, &mac_p->conf);
+
 	start = get_timer(0);
 	while (readl(&dma_p->busmode) & DMAMAC_SRST) {
 		if (get_timer(start) >= CONFIG_MACRESET_TIMEOUT) {
@@ -370,24 +380,28 @@ static int _dw_eth_send(struct dw_eth_dev *priv, void *packet, int length)
 		return -EPERM;
 	}
 
-	length = max(length, ETH_ZLEN);
-
 	memcpy((void *)data_start, packet, length);
+	if (length < ETH_ZLEN) {
+		memset(&((char *)data_start)[length], 0, ETH_ZLEN - length);
+		length = ETH_ZLEN;
+	}
 
 	/* Flush data to be sent */
 	flush_dcache_range(data_start, data_end);
 
 #if defined(CONFIG_DW_ALTDESCRIPTOR)
 	desc_p->txrx_status |= DESC_TXSTS_TXFIRST | DESC_TXSTS_TXLAST;
-	desc_p->dmamac_cntl |= (length << DESC_TXCTRL_SIZE1SHFT) &
-			       DESC_TXCTRL_SIZE1MASK;
+	desc_p->dmamac_cntl = (desc_p->dmamac_cntl & ~DESC_TXCTRL_SIZE1MASK) |
+			      ((length << DESC_TXCTRL_SIZE1SHFT) &
+			      DESC_TXCTRL_SIZE1MASK);
 
 	desc_p->txrx_status &= ~(DESC_TXSTS_MSK);
 	desc_p->txrx_status |= DESC_TXSTS_OWNBYDMA;
 #else
-	desc_p->dmamac_cntl |= ((length << DESC_TXCTRL_SIZE1SHFT) &
-			       DESC_TXCTRL_SIZE1MASK) | DESC_TXCTRL_TXLAST |
-			       DESC_TXCTRL_TXFIRST;
+	desc_p->dmamac_cntl = (desc_p->dmamac_cntl & ~DESC_TXCTRL_SIZE1MASK) |
+			      ((length << DESC_TXCTRL_SIZE1SHFT) &
+			      DESC_TXCTRL_SIZE1MASK) | DESC_TXCTRL_TXLAST |
+			      DESC_TXCTRL_TXFIRST;
 
 	desc_p->txrx_status = DESC_TXSTS_OWNBYDMA;
 #endif
@@ -664,6 +678,7 @@ int designware_eth_probe(struct udevice *dev)
 	u32 iobase = pdata->iobase;
 	ulong ioaddr;
 	int ret;
+	struct reset_ctl_bulk reset_bulk;
 #ifdef CONFIG_CLK
 	int i, err, clock_nb;
 
@@ -709,6 +724,12 @@ int designware_eth_probe(struct udevice *dev)
 		}
 	}
 #endif
+
+	ret = reset_get_bulk(dev, &reset_bulk);
+	if (ret)
+		dev_warn(dev, "Can't get reset: %d\n", ret);
+	else
+		reset_deassert_bulk(&reset_bulk);
 
 #ifdef CONFIG_DM_PCI
 	/*
@@ -821,6 +842,8 @@ static const struct udevice_id designware_eth_ids[] = {
 	{ .compatible = "altr,socfpga-stmmac" },
 	{ .compatible = "amlogic,meson6-dwmac" },
 	{ .compatible = "amlogic,meson-gx-dwmac" },
+	{ .compatible = "amlogic,meson-gxbb-dwmac" },
+	{ .compatible = "amlogic,meson-axg-dwmac" },
 	{ .compatible = "st,stm32-dwmac" },
 	{ }
 };

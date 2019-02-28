@@ -252,7 +252,7 @@ static int meson_mmc_probe(struct udevice *dev)
 	mmc->priv = pdata;
 	upriv->mmc = mmc;
 
-	mmc_set_clock(mmc, cfg->f_min, false);
+	mmc_set_clock(mmc, cfg->f_min, MMC_CLK_ENABLE);
 
 	/* reset all status bits */
 	meson_write(mmc, STATUS_MASK, MESON_SD_EMMC_STATUS);
@@ -278,6 +278,7 @@ int meson_mmc_bind(struct udevice *dev)
 
 static const struct udevice_id meson_mmc_match[] = {
 	{ .compatible = "amlogic,meson-gx-mmc" },
+	{ .compatible = "amlogic,meson-axg-mmc" },
 	{ /* sentinel */ }
 };
 

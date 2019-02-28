@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0+ OR BSD-3-Clause
 /*
  * (C) Copyright 2016-2017 Rockchip Inc.
  *
@@ -1098,7 +1098,7 @@ static int rk3399_dmc_ofdata_to_platdata(struct udevice *dev)
 		       __func__, ret);
 		return ret;
 	}
-	ret = regmap_init_mem(dev, &plat->map);
+	ret = regmap_init_mem(dev_ofnode(dev), &plat->map);
 	if (ret)
 		printf("%s: regmap failed %d\n", __func__, ret);
 

@@ -11,10 +11,7 @@
 
 #include "at91-sama5_common.h"
 
-#define CONFIG_MISC_INIT_R
-
 /* SDRAM */
-#define CONFIG_NR_DRAM_BANKS		1
 #define CONFIG_SYS_SDRAM_BASE           0x20000000
 #define CONFIG_SYS_SDRAM_SIZE		0x20000000
 
@@ -39,8 +36,17 @@
 /* bootstrap + u-boot + env in sd card */
 #undef CONFIG_BOOTCOMMAND
 
-#define CONFIG_BOOTCOMMAND	"fatload mmc 1:1 0x21000000 at91-sama5d2_xplained.dtb; " \
-				"fatload mmc 1:1 0x22000000 zImage; " \
+#define CONFIG_BOOTCOMMAND	"fatload mmc " CONFIG_ENV_FAT_DEVICE_AND_PART " 0x21000000 at91-sama5d2_xplained.dtb; " \
+				"fatload mmc " CONFIG_ENV_FAT_DEVICE_AND_PART " 0x22000000 zImage; " \
+				"bootz 0x22000000 - 0x21000000"
+
+#elif CONFIG_SPI_BOOT
+
+/* bootstrap + u-boot + env in sd card, but kernel + dtb in eMMC */
+#undef CONFIG_BOOTCOMMAND
+
+#define CONFIG_BOOTCOMMAND	"ext4load mmc 0:1 0x21000000 /boot/at91-sama5d2_xplained.dtb; " \
+				"ext4load mmc 0:1 0x22000000 /boot/zImage; " \
 				"bootz 0x22000000 - 0x21000000"
 
 #endif

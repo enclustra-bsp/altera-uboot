@@ -169,8 +169,6 @@ extern unsigned long get_clock_freq(void);
 
 #define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_TEXT_BASE	/* start of monitor */
 
-#define CONFIG_FLASH_CFI_DRIVER
-#define CONFIG_SYS_FLASH_CFI
 #define CONFIG_SYS_FLASH_EMPTY_INFO
 
 #define CONFIG_HWCONFIG			/* enable hwconfig */
@@ -396,7 +394,6 @@ extern unsigned long get_clock_freq(void);
 
 #if defined(CONFIG_TSEC_ENET)
 
-#define CONFIG_MII		1	/* MII PHY management */
 #define CONFIG_TSEC1	1
 #define CONFIG_TSEC1_NAME	"eTSEC0"
 #define CONFIG_TSEC2	1
@@ -406,8 +403,6 @@ extern unsigned long get_clock_freq(void);
 #define CONFIG_TSEC4
 #define CONFIG_TSEC4_NAME	"eTSEC3"
 #undef CONFIG_MPC85XX_FEC
-
-#define CONFIG_PHY_MARVELL
 
 #define TSEC1_PHY_ADDR		0
 #define TSEC2_PHY_ADDR		1

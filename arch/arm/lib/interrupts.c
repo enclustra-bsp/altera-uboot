@@ -22,7 +22,6 @@
 #include <efi_loader.h>
 #include <asm/proc-armv/ptrace.h>
 #include <asm/u-boot-arm.h>
-#include <efi_loader.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -54,6 +53,30 @@ void bad_mode (void)
 static void show_efi_loaded_images(struct pt_regs *regs)
 {
 	efi_print_image_infos((void *)instruction_pointer(regs));
+}
+
+static void dump_instr(struct pt_regs *regs)
+{
+	unsigned long addr = instruction_pointer(regs);
+	const int thumb = thumb_mode(regs);
+	const int width = thumb ? 4 : 8;
+	int i;
+
+	if (thumb)
+		addr &= ~1L;
+	else
+		addr &= ~3L;
+	printf("Code: ");
+	for (i = -4; i < 1 + !!thumb; i++) {
+		unsigned int val;
+
+		if (thumb)
+			val = ((u16 *)addr)[i];
+		else
+			val = ((u32 *)addr)[i];
+		printf(i == 0 ? "(%0*x) " : "%0*x ", width, val);
+	}
+	printf("\n");
 }
 
 void show_regs (struct pt_regs *regs)
@@ -96,6 +119,7 @@ void show_regs (struct pt_regs *regs)
 		fast_interrupts_enabled (regs) ? "on" : "off",
 		processor_modes[processor_mode (regs)],
 		thumb_mode (regs) ? " (T)" : "");
+	dump_instr(regs);
 }
 
 /* fixup PC to point to the instruction leading to the exception */

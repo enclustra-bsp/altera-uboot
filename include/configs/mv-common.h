@@ -19,7 +19,6 @@
 /*
  * High Level Configuration Options (easy to change)
  */
-#define CONFIG_MARVELL		1
 
 /*
  * Custom CONFIG_SYS_TEXT_BASE can be done in <board>.h
@@ -27,10 +26,6 @@
 
 /* additions for new ARM relocation support */
 #define CONFIG_SYS_SDRAM_BASE	0x00000000
-
-/*
- * CLKs configurations
- */
 
 /*
  * NS16550 Configuration
@@ -42,14 +37,6 @@
 #define CONFIG_SYS_NS16550_COM1		MV_UART_CONSOLE_BASE
 #endif
 
-/*
- * Serial Port configuration
- * The following definitions let you select what serial you want to use
- * for your console driver.
- */
-
-#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, \
-					  115200,230400, 460800, 921600 }
 /* auto boot */
 #define CONFIG_PREBOOT
 
@@ -82,37 +69,12 @@
 /* ====> Include platform Common Definitions */
 #include <asm/arch/config.h>
 
-/*
- * DRAM Banks configuration, Custom config can be done in <board>.h
- */
-#ifndef CONFIG_NR_DRAM_BANKS
-#define CONFIG_NR_DRAM_BANKS	CONFIG_NR_DRAM_BANKS_MAX
-#else
-#if (CONFIG_NR_DRAM_BANKS > CONFIG_NR_DRAM_BANKS_MAX)
-#error CONFIG_NR_DRAM_BANKS Configurated more than available
-#endif
-#endif /* CONFIG_NR_DRAM_BANKS */
-
 /* ====> Include driver Common Definitions */
 /*
  * Common NAND configuration
  */
 #ifdef CONFIG_CMD_NAND
 #define CONFIG_SYS_MAX_NAND_DEVICE     1
-#endif
-
-/*
- * Common SPI Flash configuration
- */
-#ifdef CONFIG_CMD_SF
-#endif
-
-/*
- * File system
- */
-#ifdef CONFIG_SYS_MVFS
-#define CONFIG_MTD_DEVICE               /* needed for mtdparts commands */
-#define CONFIG_MTD_PARTITIONS
 #endif
 
 #endif /* _MV_COMMON_H */

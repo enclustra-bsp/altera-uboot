@@ -31,11 +31,8 @@
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000	/* 1 MB */
 
 /*  Physical Memory Map  */
-#define CONFIG_NR_DRAM_BANKS		2 /* CS1 may or may not be populated */
 
 #include <configs/ti_omap3_common.h>
-
-#define CONFIG_MISC_INIT_R
 
 #define CONFIG_REVISION_TAG		1
 
@@ -57,12 +54,8 @@
 #undef	CONFIG_DM9000_DEBUG
 
 /* TWL4030 */
-#define CONFIG_TWL4030_LED		1
 
 /* Board NAND Info */
-
-#define CONFIG_SYS_NAND_ADDR		NAND_BASE	/* physical address */
-							/* to access nand */
 #define CONFIG_JFFS2_NAND
 /* nand device jffs2 lives on */
 #define CONFIG_JFFS2_DEV		"nand0"
@@ -76,7 +69,6 @@
 #define CONFIG_BOOTP_BOOTFILESIZE
 #define CONFIG_BOOTP_DNS2
 #define CONFIG_BOOTP_SEND_HOSTNAME
-#define CONFIG_BOOTP_NTPSERVER
 #define CONFIG_BOOTP_TIMEOFFSET
 #undef CONFIG_BOOTP_VENDOREX
 
