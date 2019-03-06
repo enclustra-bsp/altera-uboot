@@ -25,9 +25,9 @@
 		 * to be added to the gmac1 device tree blob.
 		 */
 		ethernet0 = &gmac1;
-		spi0 = "/spi@ff705000";		/* QSPI */
-		spi1 = "/spi@fff00000";
-		spi2 = "/spi@fff01000";
+		spi0 = &qspi;
+		spi1 = &spi0;
+		spi2 = &spi1;
 	};
 
 	regulator_3_3v: 3-3-v-regulator {
@@ -40,6 +40,32 @@
 	soc {
 		u-boot,dm-pre-reloc;
 	};
+};
+
+&watchdog0 {
+	status = "disabled";
+};
+
+&uart0 {
+	clock-frequency = <100000000>;
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
+
+&uart1 {
+	clock-frequency = <100000000>;
+};
+
+&porta {
+	bank-name = "porta";
+};
+
+&portb {
+	bank-name = "portb";
+};
+
+&portc {
+	bank-name = "portc";
 };
 
 &gmac1 {
