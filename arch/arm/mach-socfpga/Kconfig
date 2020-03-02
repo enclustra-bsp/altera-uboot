@@ -104,6 +104,11 @@ config TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1_REV3
 	select TARGET_SOCFPGA_CYCLONE5
 	select BOARD_LATE_INIT
 
+config TARGET_SOCFPGA_CYCLONE5_MERCURY_SA2_REV2
+	bool "Enclustra Mercury SA2 REV2"
+	select TARGET_SOCFPGA_CYCLONE5
+	select BOARD_LATE_INIT
+
 config TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 	bool "Enclustra Mars MA3"
 	select TARGET_SOCFPGA_CYCLONE5
@@ -123,6 +128,7 @@ config SYS_BOARD
 	default "sockit" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1_REV3
+	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA2_REV2
 	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 	default "socrates" if TARGET_SOCFPGA_EBV_SOCRATES
 	default "sr1500" if TARGET_SOCFPGA_SR1500
@@ -143,6 +149,7 @@ config SYS_VENDOR
 	default "terasic" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "enclustra" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 	default "enclustra" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1_REV3
+	default "enclustra" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA2_REV2
 	default "enclustra" if TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 
 config SYS_SOC
@@ -160,6 +167,7 @@ config SYS_CONFIG_NAME
 	default "socfpga_sockit" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "socfpga_cyclone5_mercury_sa1" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 	default "socfpga_cyclone5_mercury_sa1_rev3" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1_REV3
+	default "socfpga_cyclone5_mercury_sa2_rev2" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA2_REV2
 	default "socfpga_cyclone5_mars_ma3" if TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 	default "socfpga_socrates" if TARGET_SOCFPGA_EBV_SOCRATES
 	default "socfpga_sr1500" if TARGET_SOCFPGA_SR1500
