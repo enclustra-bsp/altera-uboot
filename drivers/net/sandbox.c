@@ -8,6 +8,7 @@
 
 #include <common.h>
 #include <dm.h>
+#include <log.h>
 #include <malloc.h>
 #include <net.h>
 #include <asm/eth.h>
@@ -350,7 +351,7 @@ static int sb_eth_recv(struct udevice *dev, int flags, uchar **packetp)
 	struct eth_sandbox_priv *priv = dev_get_priv(dev);
 
 	if (skip_timeout) {
-		sandbox_timer_add_offset(11000UL);
+		timer_test_add_offset(11000UL);
 		skip_timeout = false;
 	}
 

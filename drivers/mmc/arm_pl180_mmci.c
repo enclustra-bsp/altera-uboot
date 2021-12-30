@@ -14,13 +14,16 @@
 #include "common.h"
 #include <clk.h>
 #include <errno.h>
+#include <log.h>
 #include <malloc.h>
 #include <mmc.h>
+#include <dm/device_compat.h>
 
 #include <asm/io.h>
 #include <asm-generic/gpio.h>
 
 #include "arm_pl180_mmci.h"
+#include <linux/delay.h>
 
 #ifdef CONFIG_DM_MMC
 #include <dm.h>
@@ -422,6 +425,7 @@ static int arm_pl180_mmc_probe(struct udevice *dev)
 	struct mmc_config *cfg = &pdata->cfg;
 	struct clk clk;
 	u32 bus_width;
+	u32 periphid;
 	int ret;
 
 	ret = clk_get_by_index(dev, 0, &clk);
@@ -439,7 +443,15 @@ static int arm_pl180_mmc_probe(struct udevice *dev)
 	host->clkdiv_init = SDI_CLKCR_CLKDIV_INIT_V1 | SDI_CLKCR_CLKEN |
 			    SDI_CLKCR_HWFC_EN;
 	host->clock_in = clk_get_rate(&clk);
-	host->version2 = dev_get_driver_data(dev);
+
+	periphid = dev_read_u32_default(dev, "arm,primecell-periphid", 0);
+	switch (periphid) {
+	case STM32_MMCI_ID: /* stm32 variant */
+		host->version2 = false;
+		break;
+	default:
+		host->version2 = true;
+	}
 
 	cfg->name = dev->name;
 	cfg->voltages = VOLTAGE_WINDOW_SD;
@@ -526,7 +538,8 @@ static int arm_pl180_mmc_ofdata_to_platdata(struct udevice *dev)
 }
 
 static const struct udevice_id arm_pl180_mmc_match[] = {
-	{ .compatible = "st,stm32f4xx-sdio", .data = VERSION1 },
+	{ .compatible = "arm,pl180" },
+	{ .compatible = "arm,primecell" },
 	{ /* sentinel */ }
 };
 

@@ -56,7 +56,7 @@ static int altera_pio_get_value(struct udevice *dev, unsigned pin)
 	struct altera_pio_platdata *plat = dev_get_platdata(dev);
 	struct altera_pio_regs *const regs = plat->regs;
 
-	return readl(&regs->data) & (1 << pin);
+	return !!(readl(&regs->data) & (1 << pin));
 }
 
 
@@ -88,7 +88,7 @@ static int altera_pio_ofdata_to_platdata(struct udevice *dev)
 {
 	struct altera_pio_platdata *plat = dev_get_platdata(dev);
 
-	plat->regs = map_physmem(devfdt_get_addr(dev),
+	plat->regs = map_physmem(dev_read_addr(dev),
 				 sizeof(struct altera_pio_regs),
 				 MAP_NOCACHE);
 	plat->gpio_count = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),

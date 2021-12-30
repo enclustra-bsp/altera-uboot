@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2014 Gateworks Corporation
+ * Copyright 2019 NXP
  * Author: Tim Harvey <tharvey@gateworks.com>
  */
 #include <common.h>
+#include <log.h>
 #include <nand.h>
 #include <malloc.h>
-#include "mxs_nand.h"
+#include <mxs_nand.h>
+#include <asm/cache.h>
+#include <linux/bitops.h>
+#include <linux/delay.h>
+#include <linux/err.h>
 
 static struct mtd_info *mtd;
 static struct nand_chip nand_chip;
@@ -37,6 +43,12 @@ static void mxs_nand_command(struct mtd_info *mtd, unsigned int command,
 	if (command == NAND_CMD_READ0) {
 		chip->cmd_ctrl(mtd, NAND_CMD_READSTART, NAND_CLE);
 		chip->cmd_ctrl(mtd, NAND_CMD_NONE, 0);
+	} else if (command == NAND_CMD_RNDOUT) {
+		/* No ready / busy check necessary */
+		chip->cmd_ctrl(mtd, NAND_CMD_RNDOUTSTART,
+			       NAND_NCE | NAND_CLE);
+		chip->cmd_ctrl(mtd, NAND_CMD_NONE,
+			       NAND_NCE);
 	}
 
 	/* wait for nand ready */
@@ -174,11 +186,11 @@ static int is_badblock(struct mtd_info *mtd, loff_t offs, int allowbbt)
 }
 
 /* setup mtd and nand structs and init mxs_nand driver */
-static int mxs_nand_init(void)
+void nand_init(void)
 {
 	/* return if already initalized */
 	if (nand_chip.numchips)
-		return 0;
+		return;
 
 	/* init mxs nand driver */
 	mxs_nand_init_spl(&nand_chip);
@@ -191,7 +203,8 @@ static int mxs_nand_init(void)
 	/* identify flash device */
 	if (mxs_flash_ident(mtd)) {
 		printf("Failed to identify\n");
-		return -1;
+		nand_chip.numchips = 0; /* If fail, don't use nand */
+		return;
 	}
 
 	/* allocate and initialize buffers */
@@ -202,8 +215,6 @@ static int mxs_nand_init(void)
 	mtd->size = nand_chip.chipsize;
 	nand_chip.scan_bbt(mtd);
 	mxs_nand_setup_ecc(mtd);
-
-	return 0;
 }
 
 int nand_spl_load_image(uint32_t offs, unsigned int size, void *buf)
@@ -212,23 +223,39 @@ int nand_spl_load_image(uint32_t offs, unsigned int size, void *buf)
 	unsigned int page;
 	unsigned int nand_page_per_block;
 	unsigned int sz = 0;
+	u8 *page_buf = NULL;
+	u32 page_off;
 
-	if (mxs_nand_init())
-		return -ENODEV;
 	chip = mtd_to_nand(mtd);
+	if (!chip->numchips)
+		return -ENODEV;
+
+	page_buf = malloc(mtd->writesize);
+	if (!page_buf)
+		return -ENOMEM;
+
 	page = offs >> chip->page_shift;
+	page_off = offs & (mtd->writesize - 1);
 	nand_page_per_block = mtd->erasesize / mtd->writesize;
 
-	debug("%s offset:0x%08x len:%d page:%d\n", __func__, offs, size, page);
+	debug("%s offset:0x%08x len:%d page:%x\n", __func__, offs, size, page);
 
-	size = roundup(size, mtd->writesize);
-	while (sz < size) {
-		if (mxs_read_page_ecc(mtd, buf, page) < 0)
+	while (size) {
+		if (mxs_read_page_ecc(mtd, page_buf, page) < 0)
 			return -1;
-		sz += mtd->writesize;
+
+		if (size > (mtd->writesize - page_off))
+			sz = (mtd->writesize - page_off);
+		else
+			sz = size;
+
+		memcpy(buf, page_buf + page_off, sz);
+
 		offs += mtd->writesize;
 		page++;
-		buf += mtd->writesize;
+		buf += (mtd->writesize - page_off);
+		page_off = 0;
+		size -= sz;
 
 		/*
 		 * Check if we have crossed a block boundary, and if so
@@ -242,11 +269,15 @@ int nand_spl_load_image(uint32_t offs, unsigned int size, void *buf)
 			while (is_badblock(mtd, offs, 1)) {
 				page = page + nand_page_per_block;
 				/* Check i we've reached the end of flash. */
-				if (page >= mtd->size >> chip->page_shift)
+				if (page >= mtd->size >> chip->page_shift) {
+					free(page_buf);
 					return -ENOMEM;
+				}
 			}
 		}
 	}
+
+	free(page_buf);
 
 	return 0;
 }
@@ -254,10 +285,6 @@ int nand_spl_load_image(uint32_t offs, unsigned int size, void *buf)
 int nand_default_bbt(struct mtd_info *mtd)
 {
 	return 0;
-}
-
-void nand_init(void)
-{
 }
 
 void nand_deselect(void)

@@ -9,8 +9,11 @@
 #include <common.h>
 #include <dm.h>
 #include <backlight.h>
+#include <log.h>
+#include <malloc.h>
 #include <pwm.h>
 #include <asm/gpio.h>
+#include <linux/delay.h>
 #include <power/regulator.h>
 
 /**
@@ -30,7 +33,7 @@
  * @cur_level: Current level for the backlight (index or value)
  * @default_level: Default level for the backlight (index or value)
  * @min_level: Minimum level of the backlight (full off)
- * @min_level: Maximum level of the backlight (full on)
+ * @max_level: Maximum level of the backlight (full on)
  * @enabled: true if backlight is enabled
  */
 struct pwm_backlight_priv {
@@ -39,6 +42,12 @@ struct pwm_backlight_priv {
 	struct udevice *pwm;
 	uint channel;
 	uint period_ns;
+	/*
+	 * the polarity of one PWM
+	 * 0: normal polarity
+	 * 1: inverted polarity
+	 */
+	bool polarity;
 	u32 *levels;
 	int num_levels;
 	uint default_level;
@@ -54,9 +63,15 @@ static int set_pwm(struct pwm_backlight_priv *priv)
 	int ret;
 
 	duty_cycle = priv->period_ns * (priv->cur_level - priv->min_level) /
-		(priv->max_level - priv->min_level + 1);
+		(priv->max_level - priv->min_level);
 	ret = pwm_set_config(priv->pwm, priv->channel, priv->period_ns,
 			     duty_cycle);
+	if (ret)
+		return log_ret(ret);
+
+	ret = pwm_set_invert(priv->pwm, priv->channel, priv->polarity);
+	if (ret == -ENOSYS && !priv->polarity)
+		ret = 0;
 
 	return log_ret(ret);
 }
@@ -202,6 +217,8 @@ static int pwm_backlight_ofdata_to_platdata(struct udevice *dev)
 		return log_msg_ret("Not enough arguments to pwm\n", -EINVAL);
 	priv->channel = args.args[0];
 	priv->period_ns = args.args[1];
+	if (args.args_count > 2)
+		priv->polarity = args.args[2];
 
 	index = dev_read_u32_default(dev, "default-brightness-level", 255);
 	cell = dev_read_prop(dev, "brightness-levels", &len);

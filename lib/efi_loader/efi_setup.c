@@ -7,34 +7,191 @@
 
 #include <common.h>
 #include <efi_loader.h>
+#include <efi_variable.h>
 
 #define OBJ_LIST_NOT_INITIALIZED 1
 
-static efi_status_t efi_obj_list_initialized = OBJ_LIST_NOT_INITIALIZED;
+efi_status_t efi_obj_list_initialized = OBJ_LIST_NOT_INITIALIZED;
 
-/* Initialize and populate EFI object list */
-efi_status_t efi_init_obj_list(void)
+/*
+ * Allow unaligned memory access.
+ *
+ * This routine is overridden by architectures providing this feature.
+ */
+void __weak allow_unaligned(void)
 {
-	efi_status_t ret = EFI_SUCCESS;
+}
+
+/**
+ * efi_init_platform_lang() - define supported languages
+ *
+ * Set the PlatformLangCodes and PlatformLang variables.
+ *
+ * Return:	status code
+ */
+static efi_status_t efi_init_platform_lang(void)
+{
+	efi_status_t ret;
+	efi_uintn_t data_size = 0;
+	char *lang = CONFIG_EFI_PLATFORM_LANG_CODES;
+	char *pos;
 
 	/*
-	 * On the ARM architecture gd is mapped to a fixed register (r9 or x18).
-	 * As this register may be overwritten by an EFI payload we save it here
-	 * and restore it on every callback entered.
+	 * Variable PlatformLangCodes defines the language codes that the
+	 * machine can support.
 	 */
-	efi_save_gd();
+	ret = efi_set_variable_int(L"PlatformLangCodes",
+				   &efi_global_variable_guid,
+				   EFI_VARIABLE_BOOTSERVICE_ACCESS |
+				   EFI_VARIABLE_RUNTIME_ACCESS |
+				   EFI_VARIABLE_READ_ONLY,
+				   sizeof(CONFIG_EFI_PLATFORM_LANG_CODES),
+				   CONFIG_EFI_PLATFORM_LANG_CODES, false);
+	if (ret != EFI_SUCCESS)
+		goto out;
+
+	/*
+	 * Variable PlatformLang defines the language that the machine has been
+	 * configured for.
+	 */
+	ret = efi_get_variable_int(L"PlatformLang",
+				   &efi_global_variable_guid,
+				   NULL, &data_size, &pos, NULL);
+	if (ret == EFI_BUFFER_TOO_SMALL) {
+		/* The variable is already set. Do not change it. */
+		ret = EFI_SUCCESS;
+		goto out;
+	}
+
+	/*
+	 * The list of supported languages is semicolon separated. Use the first
+	 * language to initialize PlatformLang.
+	 */
+	pos = strchr(lang, ';');
+	if (pos)
+		*pos = 0;
+
+	ret = efi_set_variable_int(L"PlatformLang",
+				   &efi_global_variable_guid,
+				   EFI_VARIABLE_NON_VOLATILE |
+				   EFI_VARIABLE_BOOTSERVICE_ACCESS |
+				   EFI_VARIABLE_RUNTIME_ACCESS,
+				   1 + strlen(lang), lang, false);
+out:
+	if (ret != EFI_SUCCESS)
+		printf("EFI: cannot initialize platform language settings\n");
+	return ret;
+}
+
+#ifdef CONFIG_EFI_SECURE_BOOT
+/**
+ * efi_init_secure_boot - initialize secure boot state
+ *
+ * Return:	status code
+ */
+static efi_status_t efi_init_secure_boot(void)
+{
+	efi_guid_t signature_types[] = {
+		EFI_CERT_SHA256_GUID,
+		EFI_CERT_X509_GUID,
+	};
+	efi_status_t ret;
+
+	ret = efi_set_variable_int(L"SignatureSupport",
+				   &efi_global_variable_guid,
+				   EFI_VARIABLE_BOOTSERVICE_ACCESS |
+				   EFI_VARIABLE_RUNTIME_ACCESS |
+				   EFI_VARIABLE_READ_ONLY,
+				   sizeof(signature_types),
+				   &signature_types, false);
+	if (ret != EFI_SUCCESS)
+		printf("EFI: cannot initialize SignatureSupport variable\n");
+
+	return ret;
+}
+#else
+static efi_status_t efi_init_secure_boot(void)
+{
+	return EFI_SUCCESS;
+}
+#endif /* CONFIG_EFI_SECURE_BOOT */
+
+/**
+ * efi_init_obj_list() - Initialize and populate EFI object list
+ *
+ * Return:	status code
+ */
+efi_status_t efi_init_obj_list(void)
+{
+	u64 os_indications_supported = 0; /* None */
+	efi_status_t ret = EFI_SUCCESS;
 
 	/* Initialize once only */
 	if (efi_obj_list_initialized != OBJ_LIST_NOT_INITIALIZED)
 		return efi_obj_list_initialized;
+
+	/* Allow unaligned memory access */
+	allow_unaligned();
+
+	/* Initialize root node */
+	ret = efi_root_node_register();
+	if (ret != EFI_SUCCESS)
+		goto out;
+
+	ret = efi_console_register();
+	if (ret != EFI_SUCCESS)
+		goto out;
+
+#ifdef CONFIG_PARTITIONS
+	ret = efi_disk_register();
+	if (ret != EFI_SUCCESS)
+		goto out;
+#endif
+	if (IS_ENABLED(CONFIG_EFI_RNG_PROTOCOL)) {
+		ret = efi_rng_register();
+		if (ret != EFI_SUCCESS)
+			goto out;
+	}
+
+	if (IS_ENABLED(CONFIG_EFI_TCG2_PROTOCOL)) {
+		ret = efi_tcg2_register();
+		if (ret != EFI_SUCCESS)
+			goto out;
+	}
+
+	/* Initialize variable services */
+	ret = efi_init_variables();
+	if (ret != EFI_SUCCESS)
+		goto out;
+
+	/* Define supported languages */
+	ret = efi_init_platform_lang();
+	if (ret != EFI_SUCCESS)
+		goto out;
+
+	/* Indicate supported features */
+	ret = efi_set_variable_int(L"OsIndicationsSupported",
+				   &efi_global_variable_guid,
+				   EFI_VARIABLE_BOOTSERVICE_ACCESS |
+				   EFI_VARIABLE_RUNTIME_ACCESS |
+				   EFI_VARIABLE_READ_ONLY,
+				   sizeof(os_indications_supported),
+				   &os_indications_supported, false);
+	if (ret != EFI_SUCCESS)
+		goto out;
 
 	/* Initialize system table */
 	ret = efi_initialize_system_table();
 	if (ret != EFI_SUCCESS)
 		goto out;
 
-	/* Initialize root node */
-	ret = efi_root_node_register();
+	/* Secure boot */
+	ret = efi_init_secure_boot();
+	if (ret != EFI_SUCCESS)
+		goto out;
+
+	/* Indicate supported runtime services */
+	ret = efi_init_runtime_supported();
 	if (ret != EFI_SUCCESS)
 		goto out;
 
@@ -43,16 +200,13 @@ efi_status_t efi_init_obj_list(void)
 	if (ret != EFI_SUCCESS)
 		goto out;
 
-	ret = efi_console_register();
-	if (ret != EFI_SUCCESS)
-		goto out;
-#ifdef CONFIG_PARTITIONS
-	ret = efi_disk_register();
+#if defined(CONFIG_LCD) || defined(CONFIG_DM_VIDEO)
+	ret = efi_gop_register();
 	if (ret != EFI_SUCCESS)
 		goto out;
 #endif
-#if defined(CONFIG_LCD) || defined(CONFIG_DM_VIDEO)
-	ret = efi_gop_register();
+#ifdef CONFIG_EFI_LOAD_FILE2_INITRD
+	ret = efi_initrd_register();
 	if (ret != EFI_SUCCESS)
 		goto out;
 #endif

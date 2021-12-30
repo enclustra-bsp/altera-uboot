@@ -4,24 +4,23 @@
  */
 
 #include <common.h>
+#include <log.h>
 #include <asm/arch/clock_manager.h>
+#include <asm/arch/smc_api.h>
 #include <asm/arch/system_manager.h>
 #include <clk.h>
 #include <dm.h>
 #include <dwmmc.h>
 #include <errno.h>
 #include <fdtdec.h>
+#include <dm/device_compat.h>
+#include <linux/intel-smc.h>
 #include <linux/libfdt.h>
 #include <linux/err.h>
 #include <malloc.h>
 #include <reset.h>
 
 DECLARE_GLOBAL_DATA_PTR;
-
-static const struct socfpga_clock_manager *clock_manager_base =
-		(void *)SOCFPGA_CLKMGR_ADDRESS;
-static const struct socfpga_system_manager *system_manager_base =
-		(void *)SOCFPGA_SYSMGR_ADDRESS;
 
 struct socfpga_dwmci_plat {
 	struct mmc_config cfg;
@@ -52,24 +51,39 @@ static void socfpga_dwmci_reset(struct udevice *dev)
 
 static void socfpga_dwmci_clksel(struct dwmci_host *host)
 {
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_ATF)
+	u64 args[2];
+#endif
+
 	struct dwmci_socfpga_priv_data *priv = host->priv;
 	u32 sdmmc_mask = ((priv->smplsel & 0x7) << SYSMGR_SDMMC_SMPLSEL_SHIFT) |
 			 ((priv->drvsel & 0x7) << SYSMGR_SDMMC_DRVSEL_SHIFT);
 
 	/* Disable SDMMC clock. */
-	clrbits_le32(&clock_manager_base->per_pll.en,
-		CLKMGR_PERPLLGRP_EN_SDMMCCLK_MASK);
+	clrbits_le32(socfpga_get_clkmgr_addr() + CLKMGR_PERPLL_EN,
+		     CLKMGR_PERPLLGRP_EN_SDMMCCLK_MASK);
 
 	debug("%s: drvsel %d smplsel %d\n", __func__,
 	      priv->drvsel, priv->smplsel);
-	writel(sdmmc_mask, &system_manager_base->sdmmcgrp_ctrl);
+
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_ATF)
+	args[0] = socfpga_get_sysmgr_addr() + SYSMGR_SDMMC;
+	args[1] = sdmmc_mask;
+	if (invoke_smc(INTEL_SIP_SMC_REG_WRITE, args, 2, NULL, 0))
+	{
+		printf("DWMMC: Failed to set clksel via SMC call");
+		return;
+	}
+#else
+	writel(sdmmc_mask, socfpga_get_sysmgr_addr() + SYSMGR_SDMMC);
+#endif
 
 	debug("%s: SYSMGR_SDMMCGRP_CTRL_REG = 0x%x\n", __func__,
-		readl(&system_manager_base->sdmmcgrp_ctrl));
+		readl(socfpga_get_sysmgr_addr() + SYSMGR_SDMMC));
 
 	/* Enable SDMMC clock */
-	setbits_le32(&clock_manager_base->per_pll.en,
-		CLKMGR_PERPLLGRP_EN_SDMMCCLK_MASK);
+	setbits_le32(socfpga_get_clkmgr_addr() + CLKMGR_PERPLL_EN,
+		     CLKMGR_PERPLLGRP_EN_SDMMCCLK_MASK);
 }
 
 static int socfpga_dwmmc_get_clk_rate(struct udevice *dev)
@@ -113,7 +127,7 @@ static int socfpga_dwmmc_ofdata_to_platdata(struct udevice *dev)
 	}
 
 	host->name = dev->name;
-	host->ioaddr = (void *)devfdt_get_addr(dev);
+	host->ioaddr = dev_read_addr_ptr(dev);
 	host->buswidth = fdtdec_get_int(gd->fdt_blob, dev_of_offset(dev),
 					"bus-width", 4);
 	host->clksel = socfpga_dwmci_clksel;

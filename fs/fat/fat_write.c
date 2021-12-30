@@ -9,8 +9,11 @@
 #include <command.h>
 #include <config.h>
 #include <fat.h>
+#include <log.h>
+#include <malloc.h>
 #include <asm/byteorder.h>
 #include <part.h>
+#include <asm/cache.h>
 #include <linux/ctype.h>
 #include <div64.h>
 #include <linux/math64.h>
@@ -47,8 +50,11 @@ static int disk_write(__u32 block, __u32 nr_blocks, void *buf)
 	return ret;
 }
 
-/*
- * Set short name in directory entry
+/**
+ * set_name() - set short name in directory entry
+ *
+ * @dirent:	directory entry
+ * @filename:	long file name
  */
 static void set_name(dir_entry *dirent, const char *filename)
 {
@@ -63,7 +69,8 @@ static void set_name(dir_entry *dirent, const char *filename)
 	if (len == 0)
 		return;
 
-	strcpy(s_name, filename);
+	strncpy(s_name, filename, VFAT_MAXLEN_BYTES - 1);
+	s_name[VFAT_MAXLEN_BYTES - 1] = '\0';
 	uppercase(s_name, len);
 
 	period = strchr(s_name, '.');
@@ -84,6 +91,11 @@ static void set_name(dir_entry *dirent, const char *filename)
 		memcpy(dirent->name, s_name, period_location);
 	} else {
 		memcpy(dirent->name, s_name, 6);
+		/*
+		 * TODO: Translating two long names with the same first six
+		 *       characters to the same short name is utterly wrong.
+		 *       Short names must be unique.
+		 */
 		dirent->name[6] = '~';
 		dirent->name[7] = '1';
 	}
@@ -209,7 +221,8 @@ name11_12:
 	return 1;
 }
 
-static int flush_dir_table(fat_itr *itr);
+static int new_dir_table(fat_itr *itr);
+static int flush_dir(fat_itr *itr);
 
 /*
  * Fill dir_slot entries with appropriate name, id, and attr
@@ -242,18 +255,16 @@ fill_dir_slot(fat_itr *itr, const char *l_name)
 		memcpy(itr->dent, slotptr, sizeof(dir_slot));
 		slotptr--;
 		counter--;
-		if (!fat_itr_next(itr))
-			if (!itr->dent && !itr->is_root && flush_dir_table(itr))
+
+		if (itr->remaining == 0)
+			flush_dir(itr);
+
+		/* allocate a cluster for more entries */
+		if (!fat_itr_next(itr) && !itr->dent)
+			if ((itr->is_root && itr->fsdata->fatsize != 32) ||
+			    new_dir_table(itr))
 				return -1;
 	}
-
-	if (!itr->dent && !itr->is_root)
-		/*
-		 * don't care return value here because we have already
-		 * finished completing an entry with name, only ending up
-		 * no more entry left
-		 */
-		flush_dir_table(itr);
 
 	return 0;
 }
@@ -388,29 +399,23 @@ static __u32 determine_fatent(fsdata *mydata, __u32 entry)
 }
 
 /**
- * set_cluster() - write data to cluster
+ * set_sectors() - write data to sectors
  *
- * Write 'size' bytes from 'buffer' into the specified cluster.
+ * Write 'size' bytes from 'buffer' into the specified sector.
  *
  * @mydata:	data to be written
- * @clustnum:	cluster to be written to
+ * @startsect:	sector to be written to
  * @buffer:	data to be written
  * @size:	bytes to be written (but not more than the size of a cluster)
  * Return:	0 on success, -1 otherwise
  */
 static int
-set_cluster(fsdata *mydata, u32 clustnum, u8 *buffer, u32 size)
+set_sectors(fsdata *mydata, u32 startsect, u8 *buffer, u32 size)
 {
-	u32 idx = 0;
-	u32 startsect;
+	u32 nsects = 0;
 	int ret;
 
-	if (clustnum > 0)
-		startsect = clust_to_sect(mydata, clustnum);
-	else
-		startsect = mydata->rootdir_sect;
-
-	debug("clustnum: %d, startsect: %d\n", clustnum, startsect);
+	debug("startsect: %d\n", startsect);
 
 	if ((unsigned long)buffer & (ARCH_DMA_MINALIGN - 1)) {
 		ALLOC_CACHE_ALIGN_BUFFER(__u8, tmpbuf, mydata->sect_size);
@@ -429,17 +434,16 @@ set_cluster(fsdata *mydata, u32 clustnum, u8 *buffer, u32 size)
 			size -= mydata->sect_size;
 		}
 	} else if (size >= mydata->sect_size) {
-		idx = size / mydata->sect_size;
-		ret = disk_write(startsect, idx, buffer);
-		if (ret != idx) {
+		nsects = size / mydata->sect_size;
+		ret = disk_write(startsect, nsects, buffer);
+		if (ret != nsects) {
 			debug("Error writing data (got %d)\n", ret);
 			return -1;
 		}
 
-		startsect += idx;
-		idx *= mydata->sect_size;
-		buffer += idx;
-		size -= idx;
+		startsect += nsects;
+		buffer += nsects * mydata->sect_size;
+		size -= nsects * mydata->sect_size;
 	}
 
 	if (size) {
@@ -457,7 +461,43 @@ set_cluster(fsdata *mydata, u32 clustnum, u8 *buffer, u32 size)
 	return 0;
 }
 
-static __u8 tmpbuf_cluster[MAX_CLUSTSIZE] __aligned(ARCH_DMA_MINALIGN);
+/**
+ * set_cluster() - write data to cluster
+ *
+ * Write 'size' bytes from 'buffer' into the specified cluster.
+ *
+ * @mydata:	data to be written
+ * @clustnum:	cluster to be written to
+ * @buffer:	data to be written
+ * @size:	bytes to be written (but not more than the size of a cluster)
+ * Return:	0 on success, -1 otherwise
+ */
+static int
+set_cluster(fsdata *mydata, u32 clustnum, u8 *buffer, u32 size)
+{
+	return set_sectors(mydata, clust_to_sect(mydata, clustnum),
+			   buffer, size);
+}
+
+static int
+flush_dir(fat_itr *itr)
+{
+	fsdata *mydata = itr->fsdata;
+	u32 startsect, sect_offset, nsects;
+
+	if (!itr->is_root || mydata->fatsize == 32)
+		return set_cluster(mydata, itr->clust, itr->block,
+				   mydata->clust_size * mydata->sect_size);
+
+	sect_offset = itr->clust * mydata->clust_size;
+	startsect = mydata->rootdir_sect + sect_offset;
+	/* do not write past the end of rootdir */
+	nsects = min_t(u32, mydata->clust_size,
+		       mydata->rootdir_size - sect_offset);
+
+	return set_sectors(mydata, startsect, itr->block,
+			   nsects * mydata->sect_size);
+}
 
 /*
  * Read and modify data on existing and consecutive cluster blocks
@@ -466,6 +506,7 @@ static int
 get_set_cluster(fsdata *mydata, __u32 clustnum, loff_t pos, __u8 *buffer,
 		loff_t size, loff_t *gotsize)
 {
+	static u8 *tmpbuf_cluster;
 	unsigned int bytesperclust = mydata->clust_size * mydata->sect_size;
 	__u32 startsect;
 	loff_t wsize;
@@ -474,6 +515,12 @@ get_set_cluster(fsdata *mydata, __u32 clustnum, loff_t pos, __u8 *buffer,
 	*gotsize = 0;
 	if (!size)
 		return 0;
+
+	if (!tmpbuf_cluster) {
+		tmpbuf_cluster = memalign(ARCH_DMA_MINALIGN, MAX_CLUSTSIZE);
+		if (!tmpbuf_cluster)
+			return -1;
+	}
 
 	assert(pos < bytesperclust);
 	startsect = clust_to_sect(mydata, clustnum);
@@ -590,18 +637,14 @@ static int find_empty_cluster(fsdata *mydata)
 }
 
 /*
- * Write directory entries in itr's buffer to block device
+ * Allocate a cluster for additional directory entries
  */
-static int flush_dir_table(fat_itr *itr)
+static int new_dir_table(fat_itr *itr)
 {
 	fsdata *mydata = itr->fsdata;
 	int dir_newclust = 0;
 	unsigned int bytesperclust = mydata->clust_size * mydata->sect_size;
 
-	if (set_cluster(mydata, itr->clust, itr->block, bytesperclust) != 0) {
-		printf("error: writing directory entry\n");
-		return -1;
-	}
 	dir_newclust = find_empty_cluster(mydata);
 	set_fatent_value(mydata, itr->clust, dir_newclust);
 	if (mydata->fatsize == 32)
@@ -696,11 +739,11 @@ static int
 set_contents(fsdata *mydata, dir_entry *dentptr, loff_t pos, __u8 *buffer,
 	     loff_t maxsize, loff_t *gotsize)
 {
-	loff_t filesize;
 	unsigned int bytesperclust = mydata->clust_size * mydata->sect_size;
 	__u32 curclust = START(dentptr);
 	__u32 endclust = 0, newclust = 0;
-	loff_t cur_pos, offset, actsize, wsize;
+	u64 cur_pos, filesize;
+	loff_t offset, actsize, wsize;
 
 	*gotsize = 0;
 	filesize = pos + maxsize;
@@ -767,6 +810,8 @@ set_contents(fsdata *mydata, dir_entry *dentptr, loff_t pos, __u8 *buffer,
 
 			newclust = get_fatent(mydata, endclust);
 
+			if (newclust != endclust + 1)
+				break;
 			if (IS_LAST_CLUST(newclust, mydata->fatsize))
 				break;
 			if (CHECK_CLUST(newclust, mydata->fatsize)) {
@@ -784,7 +829,9 @@ set_contents(fsdata *mydata, dir_entry *dentptr, loff_t pos, __u8 *buffer,
 			offset = 0;
 		else
 			offset = pos - cur_pos;
-		wsize = min(cur_pos + actsize, filesize) - pos;
+		wsize = min_t(unsigned long long, actsize, filesize - cur_pos);
+		wsize -= offset;
+
 		if (get_set_cluster(mydata, curclust, offset,
 				    buffer, wsize, &actsize)) {
 			printf("Error get-and-setting cluster\n");
@@ -796,8 +843,6 @@ set_contents(fsdata *mydata, dir_entry *dentptr, loff_t pos, __u8 *buffer,
 
 		if (filesize <= cur_pos)
 			break;
-
-		/* CHECK: newclust = get_fatent(mydata, endclust); */
 
 		if (IS_LAST_CLUST(newclust, mydata->fatsize))
 			/* no more clusters */
@@ -828,7 +873,7 @@ set_contents(fsdata *mydata, dir_entry *dentptr, loff_t pos, __u8 *buffer,
 
 	curclust = endclust;
 	filesize -= cur_pos;
-	assert(!(cur_pos % bytesperclust));
+	assert(!do_div(cur_pos, bytesperclust));
 
 set_clusters:
 	/* allocate and write */
@@ -956,7 +1001,10 @@ static dir_entry *find_directory_entry(fat_itr *itr, char *filename)
 			return itr->dent;
 	}
 
-	if (!itr->dent && !itr->is_root && flush_dir_table(itr))
+	/* allocate a cluster for more entries */
+	if (!itr->dent &&
+	    (!itr->is_root || itr->fsdata->fatsize == 32) &&
+	    new_dir_table(itr))
 		/* indicate that allocating dent failed */
 		itr->dent = NULL;
 
@@ -1009,40 +1057,32 @@ again:
 	return 0;
 }
 
+/**
+ * normalize_longname() - check long file name and convert to lower case
+ *
+ * We assume here that the FAT file system is using an 8bit code page.
+ * Linux typically uses CP437, EDK2 assumes CP1250.
+ *
+ * @l_filename:	preallocated buffer receiving the normalized name
+ * @filename:	filename to normalize
+ * Return:	0 on success, -1 on failure
+ */
 static int normalize_longname(char *l_filename, const char *filename)
 {
-	const char *p, legal[] = "!#$%&\'()-.@^`_{}~";
-	unsigned char c;
-	int name_len;
+	const char *p, illegal[] = "<>:\"/\\|?*";
 
-	/* Check that the filename is valid */
-	for (p = filename; p < filename + strlen(filename); p++) {
-		c = *p;
-
-		if (('0' <= c) && (c <= '9'))
-			continue;
-		if (('A' <= c) && (c <= 'Z'))
-			continue;
-		if (('a' <= c) && (c <= 'z'))
-			continue;
-		if (strchr(legal, c))
-			continue;
-		/* extended code */
-		if ((0x80 <= c) && (c <= 0xff))
-			continue;
-
+	if (strlen(filename) >= VFAT_MAXLEN_BYTES)
 		return -1;
+
+	for (p = filename; *p; ++p) {
+		if ((unsigned char)*p < 0x20)
+			return -1;
+		if (strchr(illegal, *p))
+			return -1;
 	}
 
-	/* Normalize it */
-	name_len = strlen(filename);
-	if (name_len >= VFAT_MAXLEN_BYTES)
-		/* should return an error? */
-		name_len = VFAT_MAXLEN_BYTES - 1;
-
-	memcpy(l_filename, filename, name_len);
-	l_filename[name_len] = 0; /* terminate the string */
-	downcase(l_filename, INT_MAX);
+	strcpy(l_filename, filename);
+	downcase(l_filename, VFAT_MAXLEN_BYTES);
 
 	return 0;
 }
@@ -1141,15 +1181,18 @@ int file_fat_write_at(const char *filename, loff_t pos, void *buffer,
 
 		memset(itr->dent, 0, sizeof(*itr->dent));
 
-		/* Set short name to set alias checksum field in dir_slot */
+		/* Calculate checksum for short name */
 		set_name(itr->dent, filename);
+
+		/* Set long name entries */
 		if (fill_dir_slot(itr, filename)) {
 			ret = -EIO;
 			goto exit;
 		}
 
-		/* Set attribute as archive for regular file */
-		fill_dentry(itr->fsdata, itr->dent, filename, 0, size, 0x20);
+		/* Set short name entry */
+		fill_dentry(itr->fsdata, itr->dent, filename, 0, size,
+			    ATTR_ARCH);
 
 		retdent = itr->dent;
 	}
@@ -1171,8 +1214,7 @@ int file_fat_write_at(const char *filename, loff_t pos, void *buffer,
 	}
 
 	/* Write directory table to device */
-	ret = set_cluster(mydata, itr->clust, itr->block,
-			  mydata->clust_size * mydata->sect_size);
+	ret = flush_dir(itr);
 	if (ret) {
 		printf("Error: writing directory entry\n");
 		ret = -EIO;
@@ -1249,8 +1291,7 @@ static int delete_dentry(fat_itr *itr)
 	memset(dentptr, 0, sizeof(*dentptr));
 	dentptr->name[0] = 0xe5;
 
-	if (set_cluster(mydata, itr->clust, itr->block,
-			mydata->clust_size * mydata->sect_size) != 0) {
+	if (flush_dir(itr)) {
 		printf("error: writing directory entry\n");
 		return -EIO;
 	}
@@ -1452,8 +1493,7 @@ int fat_mkdir(const char *new_dirname)
 	}
 
 	/* Write directory table to device */
-	ret = set_cluster(mydata, itr->clust, itr->block,
-			  mydata->clust_size * mydata->sect_size);
+	ret = flush_dir(itr);
 	if (ret)
 		printf("Error: writing directory entry\n");
 

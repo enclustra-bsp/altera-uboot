@@ -6,13 +6,13 @@
 
 #include <common.h>
 #include <asm/io.h>
-#include <asm/arch/timer.h>
 
 /*
  * Timer initialization
  */
 int timer_init(void)
 {
+#ifdef CONFIG_SPL_BUILD
 	int enable = 0x3;	/* timer enable + output signal masked */
 	int loadval = ~0;
 
@@ -21,6 +21,7 @@ int timer_init(void)
 	/* enable processor pysical counter */
 	asm volatile("msr cntp_ctl_el0, %0" : : "r" (enable));
 	asm volatile("msr cntp_tval_el0, %0" : : "r" (loadval));
-
+#endif
 	return 0;
 }
+

@@ -7,6 +7,9 @@
 #include <common.h>
 #include <errno.h>
 #include <dm.h>
+#include <log.h>
+#include <linux/delay.h>
+#include <linux/err.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
 #include <regmap.h>
@@ -238,7 +241,7 @@ static int pbias_regulator_set_value(struct udevice *dev, int uV)
 	if (rc)
 		return rc;
 
-	if (uV == 3000000)
+	if (uV == 3300000)
 		reg |= p->vmode;
 	else if (uV == 1800000)
 		reg &= ~p->vmode;

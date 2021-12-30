@@ -1,18 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0
  /*
- * Copyright (C) 2018 Intel Corporation <www.intel.com>
+ * Copyright (C) 2018-2019 Intel Corporation <www.intel.com>
  *
  */
 #include <common.h>
 #include <dm.h>
+#include <env.h>
 #include <errno.h>
 #include <blk.h>
 #include <fs.h>
 #include <fs_loader.h>
+#include <log.h>
 #include <linux/string.h>
 #include <mapmem.h>
 #include <malloc.h>
+#include <nand.h>
 #include <spl.h>
+#include <spi_flash.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -58,6 +62,11 @@ static int mount_ubifs(char *mtdpart, char *ubivol)
 	return -ENOSYS;
 }
 #endif
+
+__weak struct blk_desc *blk_get_by_device(struct udevice *dev)
+{
+	return NULL;
+}
 
 static int select_fs_dev(struct device_platdata *plat)
 {
@@ -113,16 +122,26 @@ static int _request_firmware_prepare(struct udevice *dev,
 				    const char *name, void *dbuf,
 				    size_t size, u32 offset)
 {
-	if (!name || name[0] == '\0')
-		return -EINVAL;
-
 	struct firmware *firmwarep = dev_get_priv(dev);
+	struct device_platdata *plat = dev->platdata;
+	char *endptr;
+	u32 fw_offset;
 
 	if (!firmwarep)
 		return -ENOMEM;
 
 	firmwarep->name = name;
-	firmwarep->offset = offset;
+
+	if (plat->data_type == DATA_RAW) {
+		fw_offset = simple_strtoul(firmwarep->name, &endptr, 16);
+		if (firmwarep->name == endptr || *endptr != '\0')
+			return -EINVAL;
+
+		firmwarep->offset = fw_offset + offset;
+	} else {
+		firmwarep->offset = offset;
+	}
+
 	firmwarep->data = dbuf;
 	firmwarep->size = size;
 
@@ -139,7 +158,8 @@ static int fw_get_filesystem_firmware(struct udevice *dev)
 {
 	loff_t actread;
 	char *storage_interface, *dev_part, *ubi_mtdpart, *ubi_volume;
-	int ret;
+	int ret = 0;
+	struct device_platdata *plat = dev->platdata;
 
 	storage_interface = env_get("storage_interface");
 	dev_part = env_get("fw_dev_part");
@@ -159,7 +179,8 @@ static int fw_get_filesystem_firmware(struct udevice *dev)
 		else
 			ret = -ENODEV;
 	} else {
-		ret = select_fs_dev(dev->platdata);
+		if (plat->data_type == DATA_FS)
+			ret = select_fs_dev(dev->platdata);
 	}
 
 	if (ret)
@@ -170,8 +191,30 @@ static int fw_get_filesystem_firmware(struct udevice *dev)
 	if (!firmwarep)
 		return -ENOMEM;
 
-	ret = fs_read(firmwarep->name, (ulong)map_to_sysmem(firmwarep->data),
-			firmwarep->offset, firmwarep->size, &actread);
+	if (plat->data_type == DATA_FS)
+		ret = fs_read(firmwarep->name,
+			     (ulong)map_to_sysmem(firmwarep->data),
+			     firmwarep->offset, firmwarep->size, &actread);
+	else if (plat->data_type == DATA_RAW) {
+#if defined(CONFIG_SPL_NAND_SUPPORT) || defined(CONFIG_NAND)
+		if (plat->storage_type == NAND_DEV) {
+			ret = nand_spl_load_image(firmwarep->offset,
+					firmwarep->size,
+					(void *)map_to_sysmem(firmwarep->data));
+			actread = firmwarep->size;
+		}
+
+#endif
+
+#ifdef CONFIG_SPI_FLASH
+		if (plat->storage_type == SPI_DEV) {
+			ret = spi_flash_read_dm(plat->flash, firmwarep->offset,
+					firmwarep->size,
+					(void *)map_to_sysmem(firmwarep->data));
+			actread = firmwarep->size;
+		}
+#endif
+	}
 
 	if (ret) {
 		debug("Error: %d Failed to read %s from flash %lld != %zu.\n",
@@ -219,32 +262,44 @@ int request_firmware_into_buf(struct udevice *dev,
 
 static int fs_loader_ofdata_to_platdata(struct udevice *dev)
 {
-	const char *fs_loader_path;
 	u32 phandlepart[2];
+	u32 sfconfig[4];
 
-	fs_loader_path = ofnode_get_chosen_prop("firmware-loader");
+	ofnode fs_loader_node = dev_ofnode(dev);
 
-	if (fs_loader_path) {
-		ofnode fs_loader_node;
+	if (ofnode_valid(fs_loader_node)) {
+		struct device_platdata *plat;
 
-		fs_loader_node = ofnode_path(fs_loader_path);
-		if (ofnode_valid(fs_loader_node)) {
-			struct device_platdata *plat;
-			plat = dev->platdata;
-
-			if (!ofnode_read_u32_array(fs_loader_node,
-						  "phandlepart",
-						  phandlepart, 2)) {
-				plat->phandlepart.phandle = phandlepart[0];
-				plat->phandlepart.partition = phandlepart[1];
-			}
-
-			plat->mtdpart = (char *)ofnode_read_string(
-					 fs_loader_node, "mtdpart");
-
-			plat->ubivol = (char *)ofnode_read_string(
-					 fs_loader_node, "ubivol");
+		plat = dev->platdata;
+		if (!ofnode_read_u32_array(fs_loader_node,
+					  "phandlepart",
+					  phandlepart, 2)) {
+			plat->phandlepart.phandle = phandlepart[0];
+			plat->phandlepart.partition = phandlepart[1];
+			plat->data_type = DATA_FS;
+			plat->storage_type = BLOCK_DEV;
+		} else if (!ofnode_read_u32_array(fs_loader_node, "sfconfig",
+						  sfconfig, 4)) {
+			plat->data_type = DATA_RAW;
+			plat->sfconfig.bus = sfconfig[0];
+			plat->sfconfig.cs = sfconfig[1];
+			plat->sfconfig.speed = sfconfig[2];
+			plat->sfconfig.mode = sfconfig[3];
+			plat->data_type = DATA_RAW;
+			plat->storage_type = SPI_DEV;
+		} else {
+			plat->data_type = DATA_RAW;
+			plat->storage_type = NAND_DEV;
 		}
+
+		plat->mtdpart = (char *)ofnode_read_string(
+				 fs_loader_node, "mtdpart");
+
+		plat->ubivol = (char *)ofnode_read_string(
+				 fs_loader_node, "ubivol");
+
+		if (plat->mtdpart && plat->ubivol)
+			plat->data_type = DATA_FS;
 	}
 
 	return 0;
@@ -252,7 +307,58 @@ static int fs_loader_ofdata_to_platdata(struct udevice *dev)
 
 static int fs_loader_probe(struct udevice *dev)
 {
-	return 0;
+	int ret = 0;
+	struct device_platdata *plat = dev->platdata;
+
+	if (!plat->flash && plat->storage_type == NAND_DEV) {
+#if defined(CONFIG_SPL_NAND_SUPPORT) || defined(CONFIG_NAND)
+		nand_init();
+#endif
+	}
+
+	if (!plat->flash && plat->storage_type == SPI_DEV) {
+		debug("bus = %d\ncs = %d\nspeed= %d\nmode = %d\n",
+			 plat->sfconfig.bus, plat->sfconfig.cs,
+			 plat->sfconfig.speed, plat->sfconfig.mode);
+#ifdef CONFIG_SPI_FLASH
+		ret = spi_flash_probe_bus_cs(plat->sfconfig.bus,
+					    plat->sfconfig.cs,
+					    plat->sfconfig.speed,
+					    plat->sfconfig.mode,
+					    &plat->flash);
+#endif
+		if (ret) {
+			debug("fs_loader: Failed to initialize SPI flash at ");
+			debug("%u:%u (error %d)\n", plat->sfconfig.bus,
+				plat->sfconfig.cs, ret);
+			return -ENODEV;
+		}
+
+		if (!plat->flash)
+			return -EINVAL;
+	}
+
+#if CONFIG_IS_ENABLED(DM) && CONFIG_IS_ENABLED(BLK)
+	if (plat->phandlepart.phandle) {
+		ofnode node = ofnode_get_by_phandle(plat->phandlepart.phandle);
+		struct udevice *parent_dev = NULL;
+
+		ret = device_get_global_by_ofnode(node, &parent_dev);
+		if (!ret) {
+			struct udevice *dev;
+
+			ret = blk_get_from_parent(parent_dev, &dev);
+			if (ret) {
+				debug("fs_loader: No block device: %d\n",
+					ret);
+
+				return ret;
+			}
+		}
+	}
+#endif
+
+	return ret;
 };
 
 static const struct udevice_id fs_loader_ids[] = {

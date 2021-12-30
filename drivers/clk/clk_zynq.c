@@ -10,6 +10,8 @@
 #include <common.h>
 #include <clk-uclass.h>
 #include <dm.h>
+#include <log.h>
+#include <dm/device_compat.h>
 #include <dm/lists.h>
 #include <errno.h>
 #include <asm/io.h>
@@ -434,6 +436,8 @@ static ulong zynq_clk_get_rate(struct clk *clk)
 	case lqspi_clk ... pcap_clk:
 	case sdio0_clk ... spi1_clk:
 		return zynq_clk_get_peripheral_rate(priv, id, 0);
+	case i2c0_aper_clk ... i2c1_aper_clk:
+		return zynq_clk_get_cpu_rate(priv, cpu_1x_clk);
 	default:
 		return -ENXIO;
 	}

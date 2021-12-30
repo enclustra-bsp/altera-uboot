@@ -3,8 +3,8 @@
  * Copyright (C) 2016-2017 Intel Corporation
  */
 
-#ifndef _MISC_H_
-#define _MISC_H_
+#ifndef _SOCFPGA_MISC_H_
+#define _SOCFPGA_MISC_H_
 
 #include <asm/sections.h>
 
@@ -20,11 +20,12 @@ extern struct bsel bsel_str[];
 #ifdef CONFIG_FPGA
 void socfpga_fpga_add(void *fpga_desc);
 #else
-inline void socfpga_fpga_add(void *fpga_desc) {}
+static inline void socfpga_fpga_add(void *fpga_desc) {}
 #endif
 
 #ifdef CONFIG_TARGET_SOCFPGA_GEN5
 void socfpga_sdram_remap_zero(void);
+void socfpga_sdram_apply_static_cfg(void);
 static inline bool socfpga_is_booting_from_fpga(void)
 {
 	if ((__image_copy_start >= (char *)SOCFPGA_FPGA_SLAVES_ADDRESS) &&
@@ -37,8 +38,21 @@ static inline bool socfpga_is_booting_from_fpga(void)
 #ifdef CONFIG_TARGET_SOCFPGA_ARRIA10
 void socfpga_init_security_policies(void);
 void socfpga_sdram_remap_zero(void);
+void set_regular_boot(unsigned int status);
+bool is_regular_boot_valid(void);
+int qspi_flash_software_reset(void);
 #endif
 
-void do_bridge_reset(int enable);
+#ifdef CONFIG_TARGET_SOCFPGA_SOC64
+int is_fpga_config_ready(void);
+#endif
 
-#endif /* _MISC_H_ */
+#if IS_ENABLED(CONFIG_TARGET_SOCFPGA_N5X)
+bool is_ddr_init_skipped(void);
+#endif
+
+void do_bridge_reset(int enable, unsigned int mask);
+void socfpga_pl310_clear(void);
+void socfpga_get_managers_addr(void);
+
+#endif /* _SOCFPGA_MISC_H_ */

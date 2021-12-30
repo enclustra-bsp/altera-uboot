@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright 2016 Freescale Semiconductor
+ * Copyright 2019-2020 NXP
  */
 
 #ifndef __LS1046A_COMMON_H
@@ -15,6 +16,7 @@
 #define SPL_NO_QSPI
 #define SPL_NO_USB
 #define SPL_NO_SATA
+#undef CONFIG_DM_I2C
 #endif
 #if defined(CONFIG_SPL_BUILD) && \
 	(defined(CONFIG_NAND_BOOT) || defined(CONFIG_QSPI_BOOT))
@@ -46,7 +48,7 @@
 #define CONFIG_SYS_SDRAM_BASE		CONFIG_SYS_DDR_SDRAM_BASE
 #define CONFIG_SYS_DDR_BLOCK2_BASE      0x880000000ULL
 
-#define CPU_RELEASE_ADDR               secondary_boot_func
+#define CPU_RELEASE_ADDR               secondary_boot_addr
 
 /* Generic Timer Definitions */
 #define COUNTER_FREQUENCY		25000000	/* 25MHz */
@@ -63,7 +65,6 @@
 
 /* SD boot SPL */
 #ifdef CONFIG_SD_BOOT
-#define CONFIG_SPL_TEXT_BASE		0x10000000
 #define CONFIG_SPL_MAX_SIZE		0x1f000		/* 124 KiB */
 #define CONFIG_SPL_STACK		0x10020000
 #define CONFIG_SPL_PAD_TO		0x21000		/* 132 KiB */
@@ -73,7 +74,7 @@
 					CONFIG_SPL_BSS_MAX_SIZE)
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000
 
-#ifdef CONFIG_SECURE_BOOT
+#ifdef CONFIG_NXP_ESBC
 #define CONFIG_U_BOOT_HDR_SIZE				(16 << 10)
 /*
  * HDR would be appended at end of image and copied to DDR along
@@ -84,12 +85,11 @@
 #define CONFIG_SYS_MONITOR_LEN		(0x100000 + CONFIG_U_BOOT_HDR_SIZE)
 #else
 #define CONFIG_SYS_MONITOR_LEN		0x100000
-#endif /* ifdef CONFIG_SECURE_BOOT */
+#endif /* ifdef CONFIG_NXP_ESBC */
 #endif
 
 #if defined(CONFIG_QSPI_BOOT) && defined(CONFIG_SPL)
 #define CONFIG_SPL_TARGET		"spl/u-boot-spl.pbl"
-#define CONFIG_SPL_TEXT_BASE		0x10000000
 #define CONFIG_SPL_MAX_SIZE		0x1f000
 #define CONFIG_SPL_STACK		0x10020000
 #define CONFIG_SPL_PAD_TO		0x20000
@@ -99,7 +99,6 @@
 					CONFIG_SPL_BSS_MAX_SIZE)
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x100000
 #define CONFIG_SYS_MONITOR_LEN		0x100000
-#define CONFIG_SYS_UBOOT_START		CONFIG_SYS_TEXT_BASE
 #endif
 
 /* NAND SPL */
@@ -114,7 +113,6 @@
 
 #define CONFIG_SPL_NAND_SUPPORT
 #define CONFIG_SPL_DRIVERS_MISC_SUPPORT
-#define CONFIG_SPL_TEXT_BASE		0x10000000
 #define CONFIG_SPL_MAX_SIZE		0x17000		/* 90 KiB */
 #define CONFIG_SPL_STACK		0x1001f000
 #define CONFIG_SYS_NAND_U_BOOT_DST	CONFIG_SYS_TEXT_BASE
@@ -129,7 +127,16 @@
 #endif
 
 /* I2C */
+#ifndef CONFIG_DM_I2C
 #define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_MXC_I2C1		/* enable I2C bus 1 */
+#define CONFIG_SYS_I2C_MXC_I2C2		/* enable I2C bus 2 */
+#define CONFIG_SYS_I2C_MXC_I2C3		/* enable I2C bus 3 */
+#define CONFIG_SYS_I2C_MXC_I2C4		/* enable I2C bus 4 */
+#else
+#define CONFIG_I2C_SET_DEFAULT_BUS_NUM
+#define CONFIG_I2C_DEFAULT_BUS_NUMBER 0
+#endif
 
 /* PCIe */
 #define CONFIG_PCIE1		/* PCIE controller 1 */
@@ -152,8 +159,6 @@
 						CONFIG_SYS_SCSI_MAX_LUN)
 #endif
 
-/* Command line configuration */
-
 /* MMC */
 #ifndef SPL_NO_MMC
 #ifdef CONFIG_MMC
@@ -170,10 +175,6 @@
 
 #ifdef CONFIG_TFABOOT
 #define CONFIG_SYS_FMAN_FW_ADDR		0x900000
-#define CONFIG_ENV_SPI_BUS		0
-#define CONFIG_ENV_SPI_CS		0
-#define CONFIG_ENV_SPI_MAX_HZ		1000000
-#define CONFIG_ENV_SPI_MODE		0x03
 #else
 #ifdef CONFIG_SD_BOOT
 /*
@@ -181,20 +182,12 @@
  * about 1MB (2048 blocks), Env is stored after the image, and the env size is
  * 0x2000 (16 blocks), 8 + 2048 + 16 = 2072, enlarge it to 18432(0x4800).
  */
-#define CONFIG_SYS_QE_FMAN_FW_IN_MMC
 #define CONFIG_SYS_FMAN_FW_ADDR		(512 * 0x4800)
 #elif defined(CONFIG_QSPI_BOOT)
-#define CONFIG_SYS_QE_FW_IN_SPIFLASH
 #define CONFIG_SYS_FMAN_FW_ADDR		0x40900000
-#define CONFIG_ENV_SPI_BUS		0
-#define CONFIG_ENV_SPI_CS		0
-#define CONFIG_ENV_SPI_MAX_HZ		1000000
-#define CONFIG_ENV_SPI_MODE		0x03
 #elif defined(CONFIG_NAND_BOOT)
-#define CONFIG_SYS_QE_FMAN_FW_IN_NAND
 #define CONFIG_SYS_FMAN_FW_ADDR		(36 * CONFIG_SYS_NAND_BLOCK_SIZE)
 #else
-#define CONFIG_SYS_QE_FMAN_FW_IN_NOR
 #define CONFIG_SYS_FMAN_FW_ADDR		0x60900000
 #endif
 #endif
@@ -212,20 +205,33 @@
 #define BOOT_TARGET_DEVICES(func) \
 	func(SCSI, scsi, 0) \
 	func(MMC, mmc, 0) \
-	func(USB, usb, 0)
+	func(USB, usb, 0) \
+	func(DHCP, dhcp, na)
 #include <config_distro_bootcmd.h>
 #endif
 
+#if defined(CONFIG_TARGET_LS1046AFRWY)
+#define LS1046A_BOOT_SRC_AND_HDR\
+	"boot_scripts=ls1046afrwy_boot.scr\0"	\
+	"boot_script_hdr=hdr_ls1046afrwy_bs.out\0"
+#elif defined(CONFIG_TARGET_LS1046AQDS)
+#define LS1046A_BOOT_SRC_AND_HDR\
+	"boot_scripts=ls1046aqds_boot.scr\0"	\
+	"boot_script_hdr=hdr_ls1046aqds_bs.out\0"
+#else
+#define LS1046A_BOOT_SRC_AND_HDR\
+	"boot_scripts=ls1046ardb_boot.scr\0"	\
+	"boot_script_hdr=hdr_ls1046ardb_bs.out\0"
+#endif
 #ifndef SPL_NO_MISC
 /* Initial environment variables */
 #define CONFIG_EXTRA_ENV_SETTINGS		\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
 	"ramdisk_addr=0x800000\0"		\
 	"ramdisk_size=0x2000000\0"		\
-	"fdt_high=0xffffffffffffffff\0"		\
-	"initrd_high=0xffffffffffffffff\0"	\
+	"bootm_size=0x10000000\0"		\
 	"fdt_addr=0x64f00000\0"                 \
-	"kernel_addr=0x65000000\0"              \
+	"kernel_addr=0x61000000\0"              \
 	"scriptaddr=0x80000000\0"               \
 	"scripthdraddr=0x80080000\0"		\
 	"fdtheader_addr_r=0x80100000\0"         \
@@ -235,19 +241,18 @@
 	"fdt_addr_r=0x90000000\0"               \
 	"ramdisk_addr_r=0xa0000000\0"           \
 	"kernel_start=0x1000000\0"		\
-	"kernelheader_start=0x800000\0"		\
+	"kernelheader_start=0x600000\0"		\
 	"kernel_load=0xa0000000\0"		\
 	"kernel_size=0x2800000\0"		\
 	"kernelheader_size=0x40000\0"		\
 	"kernel_addr_sd=0x8000\0"		\
 	"kernel_size_sd=0x14000\0"		\
-	"kernelhdr_addr_sd=0x4000\0"		\
+	"kernelhdr_addr_sd=0x3000\0"		\
 	"kernelhdr_size_sd=0x10\0"		\
 	"console=ttyS0,115200\0"                \
 	 CONFIG_MTDPARTS_DEFAULT "\0"		\
 	BOOTENV					\
-	"boot_scripts=ls1046ardb_boot.scr\0"    \
-	"boot_script_hdr=hdr_ls1046ardb_bs.out\0"	\
+	LS1046A_BOOT_SRC_AND_HDR		\
 	"scan_dev_for_boot_part="               \
 		"part list ${devtype} ${devnum} devplist; "   \
 		"env exists devplist || setenv devplist 1; "  \
@@ -258,20 +263,14 @@
 			"run scan_dev_for_boot; "            \
 		  "fi; "                                   \
 		"done\0"                                   \
-	"scan_dev_for_boot="				  \
-		"echo Scanning ${devtype} "		  \
-				"${devnum}:${distro_bootpart}...; "  \
-		"for prefix in ${boot_prefixes}; do "	  \
-			"run scan_dev_for_scripts; "	  \
-		"done;"					  \
-		"\0"					  \
 	"boot_a_script="				  \
 		"load ${devtype} ${devnum}:${distro_bootpart} "  \
 			"${scriptaddr} ${prefix}${script}; "    \
 		"env exists secureboot && load ${devtype} "     \
 			"${devnum}:${distro_bootpart} "		\
-			"${scripthdraddr} ${prefix}${boot_script_hdr} " \
-			"&& esbc_validate ${scripthdraddr};"    \
+			"${scripthdraddr} ${prefix}${boot_script_hdr}; " \
+			"env exists secureboot "	\
+			"&& esbc_validate ${scripthdraddr};"	\
 		"source ${scriptaddr}\0"	  \
 	"qspi_bootcmd=echo Trying load from qspi..;"      \
 		"sf probe && sf read $load_addr "         \
@@ -279,6 +278,18 @@
 		"&& sf read $kernelheader_addr_r $kernelheader_start "	\
 		"$kernelheader_size && esbc_validate ${kernelheader_addr_r}; " \
 		"bootm $load_addr#$board\0"		\
+	"nand_bootcmd=echo Trying load from nand..;"      \
+		"nand info; nand read $load_addr "         \
+		"$kernel_start $kernel_size; env exists secureboot "	\
+		"&& nand read $kernelheader_addr_r $kernelheader_start " \
+		"$kernelheader_size && esbc_validate ${kernelheader_addr_r}; " \
+		"bootm $load_addr#$board\0"		\
+	"nor_bootcmd=echo Trying load from nor..;"	\
+		"cp.b $kernel_addr $load_addr "		\
+		"$kernel_size; env exists secureboot "	\
+		"&& cp.b $kernelheader_addr $kernelheader_addr_r "	\
+		"$kernelheader_size && esbc_validate ${kernelheader_addr_r}; " \
+		"bootm $load_addr#$board\0"	\
 	"sd_bootcmd=echo Trying load from SD ..;"	\
 		"mmcinfo; mmc read $load_addr "		\
 		"$kernel_addr_sd $kernel_size_sd && "	\

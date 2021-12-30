@@ -10,10 +10,15 @@
 
 #include <common.h>
 #include <clk.h>
+#include <cpu_func.h>
 #include <dm.h>
 #include <errno.h>
+#include <log.h>
 #include <miiphy.h>
 #include <malloc.h>
+#include <asm/cache.h>
+#include <linux/bitops.h>
+#include <linux/delay.h>
 #include <linux/mii.h>
 #include <wait_bit.h>
 #include <asm/io.h>
@@ -45,6 +50,8 @@
 
 #define CSR_OPS			0x0000000F
 #define CSR_OPS_CONFIG		BIT(1)
+
+#define APSR_TDM		BIT(14)
 
 #define TCCR_TSRQ0		BIT(0)
 
@@ -389,9 +396,14 @@ static int ravb_dmac_init(struct udevice *dev)
 	/* FIFO size set */
 	writel(0x00222210, eth->iobase + RAVB_REG_TGC);
 
-	/* Delay CLK: 2ns */
-	if (pdata->max_speed == 1000)
-		writel(BIT(14), eth->iobase + RAVB_REG_APSR);
+	/* Delay CLK: 2ns (not applicable on R-Car E3/D3) */
+	if ((rmobile_get_cpu_type() == RMOBILE_CPU_TYPE_R8A77990) ||
+	    (rmobile_get_cpu_type() == RMOBILE_CPU_TYPE_R8A77995))
+		return 0;
+
+	if ((pdata->phy_interface == PHY_INTERFACE_MODE_RGMII_ID) ||
+	    (pdata->phy_interface == PHY_INTERFACE_MODE_RGMII_TXID))
+		writel(APSR_TDM, eth->iobase + RAVB_REG_APSR);
 
 	return 0;
 }
@@ -425,8 +437,6 @@ static int ravb_config(struct udevice *dev)
 		mask |= ECMR_DM;
 
 	writel(mask, eth->iobase + RAVB_REG_ECMR);
-
-	phy->drv->writeext(phy, -1, 0x02, 0x08, (0x0f << 5) | 0x19);
 
 	return 0;
 }
@@ -639,7 +649,7 @@ int ravb_ofdata_to_platdata(struct udevice *dev)
 	const fdt32_t *cell;
 	int ret = 0;
 
-	pdata->iobase = devfdt_get_addr(dev);
+	pdata->iobase = dev_read_addr(dev);
 	pdata->phy_interface = -1;
 	phy_mode = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "phy-mode",
 			       NULL);

@@ -6,6 +6,11 @@
  *     Texas Instruments Incorporated, <www.ti.com>
  */
 #include <common.h>
+#include <eeprom.h>
+#include <env.h>
+#include <hang.h>
+#include <image.h>
+#include <init.h>
 #include <asm/arch/clock.h>
 #include <asm/ti-common/keystone_net.h>
 #include <asm/arch/psc_defs.h>
@@ -13,6 +18,8 @@
 #include <fdtdec.h>
 #include <i2c.h>
 #include <remoteproc.h>
+#include <linux/bitops.h>
+#include <linux/delay.h>
 #include "mux-k2g.h"
 #include "../common/board_detect.h"
 
@@ -216,7 +223,7 @@ s16 divn_val[16] = {
 };
 
 #if defined(CONFIG_MMC)
-int board_mmc_init(bd_t *bis)
+int board_mmc_init(struct bd_info *bis)
 {
 	if (psc_enable_module(KS2_LPSC_MMC)) {
 		printf("%s module enabled failed\n", __func__);
@@ -315,6 +322,21 @@ int embedded_dtb_select(void)
 			     BIT(9));
 		setbits_le32(K2G_GPIO1_BANK2_BASE + K2G_GPIO_SETDATA_OFFSET,
 			     BIT(9));
+	} else if (board_is_k2g_ice()) {
+		/* GBE Phy workaround. For Phy to latch the input
+		 * configuration, a GPIO reset is asserted at the
+		 * Phy reset pin to latch configuration correctly after SoC
+		 * reset. GPIO0 Pin 10 (Ball AA20) is used for this on ICE
+		 * board. Just do a low to high transition.
+		 */
+		clrbits_le32(K2G_GPIO0_BANK0_BASE + K2G_GPIO_DIR_OFFSET,
+			     BIT(10));
+		setbits_le32(K2G_GPIO0_BANK0_BASE + K2G_GPIO_CLRDATA_OFFSET,
+			     BIT(10));
+		/* Delay just to get a transition to high */
+		udelay(100);
+		setbits_le32(K2G_GPIO0_BANK0_BASE + K2G_GPIO_SETDATA_OFFSET,
+			     BIT(10));
 	}
 
 	return 0;

@@ -8,9 +8,12 @@
  */
 
 #include <common.h>
+#include <env.h>
+#include <log.h>
 #include <pci.h>
 #include <usb.h>
 #include <asm/io.h>
+#include <linux/delay.h>
 #include <usb/ehci-ci.h>
 #include <hwconfig.h>
 #include <fsl_usb.h>
@@ -75,8 +78,12 @@ static int ehci_fsl_init_after_reset(struct ehci_ctrl *ctrl)
 	struct usb_ehci *ehci = NULL;
 	struct ehci_fsl_priv *priv = container_of(ctrl, struct ehci_fsl_priv,
 						   ehci);
-
+#ifdef CONFIG_PPC
+	ehci = (struct usb_ehci *)lower_32_bits(priv->hcd_base);
+#else
 	ehci = (struct usb_ehci *)priv->hcd_base;
+#endif
+
 	if (ehci_fsl_init(priv, ehci, priv->ehci.hccr, priv->ehci.hcor) < 0)
 		return -ENXIO;
 
@@ -98,12 +105,16 @@ static int ehci_fsl_probe(struct udevice *dev)
 	/*
 	 * Get the base address for EHCI controller from the device node
 	 */
-	priv->hcd_base = devfdt_get_addr(dev);
+	priv->hcd_base = dev_read_addr(dev);
 	if (priv->hcd_base == FDT_ADDR_T_NONE) {
 		debug("Can't get the EHCI register base address\n");
 		return -ENXIO;
 	}
+#ifdef CONFIG_PPC
+	ehci = (struct usb_ehci *)lower_32_bits(priv->hcd_base);
+#else
 	ehci = (struct usb_ehci *)priv->hcd_base;
+#endif
 	hccr = (struct ehci_hccr *)(&ehci->caplength);
 	hcor = (struct ehci_hcor *)
 		((void *)hccr + HC_LENGTH(ehci_readl(&hccr->cr_capbase)));

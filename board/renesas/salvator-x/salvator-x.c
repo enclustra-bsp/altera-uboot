@@ -8,6 +8,9 @@
  */
 
 #include <common.h>
+#include <cpu_func.h>
+#include <image.h>
+#include <init.h>
 #include <malloc.h>
 #include <netdev.h>
 #include <dm.h>
@@ -15,6 +18,7 @@
 #include <asm/processor.h>
 #include <asm/mach-types.h>
 #include <asm/io.h>
+#include <linux/bitops.h>
 #include <linux/errno.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
@@ -26,10 +30,6 @@
 #include <mmc.h>
 
 DECLARE_GLOBAL_DATA_PTR;
-
-void s_init(void)
-{
-}
 
 #define DVFS_MSTP926		BIT(26)
 #define HSUSB_MSTP704		BIT(4)	/* HSUSB */
@@ -69,21 +69,6 @@ int board_init(void)
 	return 0;
 }
 
-int dram_init(void)
-{
-	if (fdtdec_setup_mem_size_base() != 0)
-		return -EINVAL;
-
-	return 0;
-}
-
-int dram_init_banksize(void)
-{
-	fdtdec_setup_memory_banksize();
-
-	return 0;
-}
-
 #define RST_BASE	0xE6160000
 #define RST_CA57RESCNT	(RST_BASE + 0x40)
 #define RST_CA53RESCNT	(RST_BASE + 0x44)
@@ -107,11 +92,11 @@ int board_fit_config_name_match(const char *name)
 	u32 cpu_type = rmobile_get_cpu_type();
 
 	if ((cpu_type == RMOBILE_CPU_TYPE_R8A7795) &&
-	    !strcmp(name, "r8a7795-salvator-x-u-boot"))
+	    !strcmp(name, "r8a77950-salvator-x-u-boot"))
 		return 0;
 
 	if ((cpu_type == RMOBILE_CPU_TYPE_R8A7796) &&
-	    !strcmp(name, "r8a7796-salvator-x-u-boot"))
+	    !strcmp(name, "r8a77960-salvator-x-u-boot"))
 		return 0;
 
 	if ((cpu_type == RMOBILE_CPU_TYPE_R8A77965) &&

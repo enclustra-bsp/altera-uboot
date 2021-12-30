@@ -54,6 +54,8 @@
 		bkl-pwm = <&pwmbacklight>;
 		bkl-tps = <&tps_bl>;
 
+		u-boot,dm-pre-reloc;
+
 		panel-info {
 			ac-bias		= <255>;
 			ac-bias-intrpt	= <0>;
@@ -169,7 +171,7 @@
 	spi_flash: spiflash@0 {
 		u-boot,dm-spl;
 		u-boot,dm-pre-reloc;
-		compatible = "spidev", "spi-flash";
+		compatible = "spidev", "jedec,spi-nor";
 		spi-max-frequency = <24000000>;
 		reg = <0>;
 	};

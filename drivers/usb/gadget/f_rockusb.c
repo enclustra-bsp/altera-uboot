@@ -4,18 +4,22 @@
  *
  * Eddie Cai <eddie.cai.linux@gmail.com>
  */
+#include <command.h>
 #include <config.h>
 #include <common.h>
+#include <env.h>
 #include <errno.h>
+#include <log.h>
 #include <malloc.h>
 #include <memalign.h>
+#include <part.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 #include <linux/usb/composite.h>
 #include <linux/compiler.h>
 #include <version.h>
 #include <g_dnl.h>
-#include <asm/arch/f_rockusb.h>
+#include <asm/arch-rockchip/f_rockusb.h>
 
 static inline struct f_rockusb *func_to_rockusb(struct usb_function *f)
 {
