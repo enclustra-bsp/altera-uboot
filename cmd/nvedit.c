@@ -35,6 +35,7 @@
 #include <errno.h>
 #include <malloc.h>
 #include <mapmem.h>
+#include <asm/global_data.h>
 #include <linux/bitops.h>
 #include <u-boot/crc.h>
 #include <watchdog.h>
@@ -266,7 +267,9 @@ static int _do_env_set(int flag, int argc, char *const argv[], int env_flag)
 	/* Delete only ? */
 	if (argc < 3 || argv[2] == NULL) {
 		int rc = hdelete_r(name, &env_htab, env_flag);
-		return !rc;
+
+		/* If the variable didn't exist, don't report an error */
+		return rc && rc != -ENOENT ? 1 : 0;
 	}
 
 	/*
@@ -355,7 +358,7 @@ ulong env_get_hex(const char *varname, ulong default_val)
 
 	s = env_get(varname);
 	if (s)
-		value = simple_strtoul(s, &endp, 16);
+		value = hextoul(s, &endp);
 	if (!s || endp == s)
 		return default_val;
 
@@ -420,7 +423,7 @@ int do_env_ask(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	 * the size.  Otherwise we echo it as part of the
 	 * message.
 	 */
-	i = simple_strtoul(argv[argc - 1], &endptr, 10);
+	i = dectoul(argv[argc - 1], &endptr);
 	if (*endptr != '\0') {			/* no size */
 		size = CONFIG_SYS_CBSIZE - 1;
 	} else {				/* size given */
@@ -895,7 +898,7 @@ static int do_env_delete(struct cmd_tbl *cmdtp, int flag,
 	while (--argc > 0) {
 		char *name = *++argv;
 
-		if (!hdelete_r(name, &env_htab, env_flag))
+		if (hdelete_r(name, &env_htab, env_flag))
 			ret = 1;
 	}
 
@@ -981,7 +984,7 @@ static int do_env_export(struct cmd_tbl *cmdtp, int flag,
 			case 's':		/* size given */
 				if (--argc <= 0)
 					return cmd_usage(cmdtp);
-				size = simple_strtoul(*++argv, NULL, 16);
+				size = hextoul(*++argv, NULL);
 				goto NXTARG;
 			case 't':		/* text format */
 				if (fmt++)
@@ -998,7 +1001,7 @@ NXTARG:		;
 	if (argc < 1)
 		return CMD_RET_USAGE;
 
-	addr = simple_strtoul(argv[0], NULL, 16);
+	addr = hextoul(argv[0], NULL);
 	ptr = map_sysmem(addr, size);
 
 	if (size)
@@ -1137,11 +1140,11 @@ static int do_env_import(struct cmd_tbl *cmdtp, int flag,
 	if (sep != '\n' && crlf_is_lf )
 		crlf_is_lf = 0;
 
-	addr = simple_strtoul(argv[0], NULL, 16);
+	addr = hextoul(argv[0], NULL);
 	ptr = map_sysmem(addr, 0);
 
 	if (argc >= 2 && strcmp(argv[1], "-")) {
-		size = simple_strtoul(argv[1], NULL, 16);
+		size = hextoul(argv[1], NULL);
 	} else if (chk) {
 		puts("## Error: external checksum format must pass size\n");
 		return CMD_RET_FAILURE;

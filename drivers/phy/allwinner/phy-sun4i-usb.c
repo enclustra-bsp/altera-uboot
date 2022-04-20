@@ -313,9 +313,21 @@ static int sun4i_usb_phy_init(struct phy *phy)
 				    data->cfg->disc_thresh, PHY_DISCON_TH_LEN);
 	}
 
+#ifdef CONFIG_USB_MUSB_SUNXI
+	/* Needed for HCI and conflicts with MUSB, keep PHY0 on MUSB */
+	if (usb_phy->id != 0)
+		sun4i_usb_phy_passby(phy, true);
+
+	/* Route PHY0 to MUSB to allow USB gadget */
+	if (data->cfg->phy0_dual_route)
+		sun4i_usb_phy0_reroute(data, true);
+#else
 	sun4i_usb_phy_passby(phy, true);
 
-	sun4i_usb_phy0_reroute(data, true);
+	/* Route PHY0 to HCI to allow USB host */
+	if (data->cfg->phy0_dual_route)
+		sun4i_usb_phy0_reroute(data, false);
+#endif
 
 	return 0;
 }
@@ -428,7 +440,7 @@ static struct phy_ops sun4i_usb_phy_ops = {
 
 static int sun4i_usb_phy_probe(struct udevice *dev)
 {
-	struct sun4i_usb_phy_plat *plat = dev_get_platdata(dev);
+	struct sun4i_usb_phy_plat *plat = dev_get_plat(dev);
 	struct sun4i_usb_phy_data *data = dev_get_priv(dev);
 	int i, ret;
 
@@ -646,6 +658,6 @@ U_BOOT_DRIVER(sun4i_usb_phy) = {
 	.of_match = sun4i_usb_phy_ids,
 	.ops = &sun4i_usb_phy_ops,
 	.probe = sun4i_usb_phy_probe,
-	.platdata_auto_alloc_size = sizeof(struct sun4i_usb_phy_plat[MAX_PHYS]),
-	.priv_auto_alloc_size = sizeof(struct sun4i_usb_phy_data),
+	.plat_auto	= sizeof(struct sun4i_usb_phy_plat[MAX_PHYS]),
+	.priv_auto	= sizeof(struct sun4i_usb_phy_data),
 };

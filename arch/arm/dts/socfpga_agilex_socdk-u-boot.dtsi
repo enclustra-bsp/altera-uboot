@@ -8,6 +8,11 @@
 #include "socfpga_agilex-u-boot.dtsi"
 
 /{
+	chosen {
+		stdout-path = "serial0:115200n8";
+		u-boot,spl-boot-order = &mmc,&flash0,&nand;
+	};
+
 	aliases {
 		spi0 = &qspi;
 		i2c0 = &i2c1;
@@ -41,6 +46,8 @@
 };
 
 &nand {
+	status = "okay";
+	nand-bus-width = <16>;
 	u-boot,dm-pre-reloc;
 };
 
@@ -57,3 +64,42 @@
 &watchdog0 {
 	u-boot,dm-pre-reloc;
 };
+
+#if !defined(CONFIG_SOCFPGA_SECURE_VAB_AUTH)
+&fdt_0_blob {
+	filename = "arch/arm/dts/socfpga_agilex_socdk.dtb";
+};
+
+&images {
+	fdt-1 {
+		description = "socfpga_socdk_nand";
+		type = "flat_dt";
+		compression = "none";
+		fdt_1_blob: blob-ext {
+			filename = "arch/arm/dts/socfpga_agilex_socdk_nand.dtb";
+		};
+		hash {
+			algo = "crc32";
+		};
+	};
+};
+
+&board_config {
+	board-1 {
+		description = "board_1";
+		firmware = "atf";
+		loadables = "uboot";
+		fdt = "fdt-1";
+		signature {
+			algo = "crc32";
+			key-name-hint = "dev";
+			sign-images = "atf", "uboot", "fdt-1";
+		};
+	};
+};
+
+&binman {
+	/delete-node/ kernel;
+};
+#endif
+

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 Intel Corporation <www.intel.com>
+ * Copyright (C) 2019-2021 Intel Corporation <www.intel.com>
  *
  */
 
 #include <init.h>
 #include <log.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/u-boot.h>
 #include <asm/utils.h>
@@ -25,12 +26,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-u32 spl_boot_device_ram(void);
-
 void board_init_f(ulong dummy)
 {
-	/* Ensure 'spl_boot_device_ram' symbol used by debugger is exported */
-	int ret = spl_boot_device_ram();
+	int ret;
 	struct udevice *dev;
 
 	ret = spl_early_init();
@@ -68,7 +66,11 @@ void board_init_f(ulong dummy)
 	print_reset_info();
 	cm_print_clock_quick_summary();
 
-	firewall_setup();
+	ret = uclass_get_device_by_name(UCLASS_NOP, "socfpga-secreg", &dev);
+	if (ret) {
+		printf("Firewall & secure settings init failed: %d\n", ret);
+		hang();
+	}
 
 	ret = uclass_get_device(UCLASS_CACHE, 0, &dev);
 	if (ret) {

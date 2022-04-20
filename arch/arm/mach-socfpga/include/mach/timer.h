@@ -6,6 +6,7 @@
 #ifndef _SOCFPGA_TIMER_H_
 #define _SOCFPGA_TIMER_H_
 
+#include <asm/barriers.h>
 #include <div64.h>
 
 struct socfpga_timer {

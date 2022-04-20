@@ -21,35 +21,36 @@
 #include <asm/arch/system_manager.h>
 #include <asm/arch/reset_manager.h>
 #include <asm/cache.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <dm/device_compat.h>
 #include <linux/sizes.h>
 
 #define PGTABLE_OFF	0x4000
 
-u32 hmc_readl(struct altera_sdram_platdata *plat, u32 reg)
+u32 hmc_readl(struct altera_sdram_plat *plat, u32 reg)
 {
 	return readl(plat->iomhc + reg);
 }
 
-u32 hmc_ecc_readl(struct altera_sdram_platdata *plat, u32 reg)
+u32 hmc_ecc_readl(struct altera_sdram_plat *plat, u32 reg)
 {
 	return readl(plat->hmc + reg);
 }
 
-u32 hmc_ecc_writel(struct altera_sdram_platdata *plat,
+u32 hmc_ecc_writel(struct altera_sdram_plat *plat,
 		   u32 data, u32 reg)
 {
 	return writel(data, plat->hmc + reg);
 }
 
-u32 ddr_sch_writel(struct altera_sdram_platdata *plat, u32 data,
+u32 ddr_sch_writel(struct altera_sdram_plat *plat, u32 data,
 		   u32 reg)
 {
 	return writel(data, plat->ddr_sch + reg);
 }
 
-int emif_clear(struct altera_sdram_platdata *plat)
+int emif_clear(struct altera_sdram_plat *plat)
 {
 	hmc_ecc_writel(plat, 0, RSTHANDSHAKECTRL);
 
@@ -59,7 +60,7 @@ int emif_clear(struct altera_sdram_platdata *plat)
 				 false, 1000, false);
 }
 
-int emif_reset(struct altera_sdram_platdata *plat)
+int emif_reset(struct altera_sdram_plat *plat)
 {
 	u32 c2s, s2c, ret;
 
@@ -183,7 +184,7 @@ void sdram_size_check(struct bd_info *bd)
 	phys_size_t total_ram_check = 0;
 	phys_size_t ram_check = 0;
 	phys_addr_t start = 0;
-	phys_size_t size, total_size;
+	phys_size_t size, remaining_size;
 	int bank;
 
 	/* Sanity check ensure correct SDRAM size specified */
@@ -191,19 +192,23 @@ void sdram_size_check(struct bd_info *bd)
 
 	for (bank = 0; bank < CONFIG_NR_DRAM_BANKS; bank++) {
 		start = bd->bi_dram[bank].start;
-		total_size = bd->bi_dram[bank].size;
+		remaining_size = bd->bi_dram[bank].size;
 		while (ram_check < bd->bi_dram[bank].size) {
-			size = min((phys_addr_t)SZ_1G, (phys_addr_t)total_size);
+			size = min((phys_addr_t)SZ_1G,
+				   (phys_addr_t)remaining_size);
 
 			/*
-			 * Ensure the size is power of two, this is requirement to run
-			 * get_ram_size() / memory test
+			 * Ensure the size is power of two, this is requirement
+			 * to run get_ram_size() / memory test
 			 */
 			if (size != 0 && ((size & (size - 1)) == 0)) {
-				ram_check += get_ram_size((void *)(start + ram_check), size);
-				total_size = bd->bi_dram[bank].size - ram_check;
+				ram_check += get_ram_size((void *)
+						(start + ram_check), size);
+				remaining_size = bd->bi_dram[bank].size -
+							ram_check;
 			} else {
-				puts("DDR: Memory test requires SDRAM size in power of two!\n");
+				puts("DDR: Memory test requires SDRAM size ");
+				puts("in power of two!\n");
 				hang();
 			}
 		}
@@ -230,7 +235,7 @@ void sdram_size_check(struct bd_info *bd)
  * Calculate SDRAM device size based on SDRAM controller parameters.
  * Size is specified in bytes.
  */
-phys_size_t sdram_calculate_size(struct altera_sdram_platdata *plat)
+phys_size_t sdram_calculate_size(struct altera_sdram_plat *plat)
 {
 	u32 dramaddrw = hmc_readl(plat, DRAMADDRW);
 
@@ -309,9 +314,9 @@ void sdram_set_firewall(struct bd_info *bd)
 	}
 }
 
-static int altera_sdram_ofdata_to_platdata(struct udevice *dev)
+static int altera_sdram_of_to_plat(struct udevice *dev)
 {
-	struct altera_sdram_platdata *plat = dev->platdata;
+	struct altera_sdram_plat *plat = dev_get_plat(dev);
 	fdt_addr_t addr;
 
 	/* These regs info are part of DDR handoff in bitstream */
@@ -379,7 +384,7 @@ static struct ram_ops altera_sdram_ops = {
 static const struct udevice_id altera_sdram_ids[] = {
 	{ .compatible = "altr,sdr-ctl-s10" },
 	{ .compatible = "intel,sdr-ctl-agilex" },
-	{ .compatible = "intel,sdr-ctl-dm" },
+	{ .compatible = "intel,sdr-ctl-n5x" },
 	{ /* sentinel */ }
 };
 
@@ -388,8 +393,8 @@ U_BOOT_DRIVER(altera_sdram) = {
 	.id = UCLASS_RAM,
 	.of_match = altera_sdram_ids,
 	.ops = &altera_sdram_ops,
-	.ofdata_to_platdata = altera_sdram_ofdata_to_platdata,
-	.platdata_auto_alloc_size = sizeof(struct altera_sdram_platdata),
+	.of_to_plat = altera_sdram_of_to_plat,
+	.plat_auto	= sizeof(struct altera_sdram_plat),
 	.probe = altera_sdram_probe,
-	.priv_auto_alloc_size = sizeof(struct altera_sdram_priv),
+	.priv_auto	= sizeof(struct altera_sdram_priv),
 };

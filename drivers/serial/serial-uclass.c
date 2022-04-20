@@ -3,6 +3,8 @@
  * Copyright (c) 2014 The Chromium OS Authors.
  */
 
+#define LOG_CATEGORY UCLASS_SERIAL
+
 #include <common.h>
 #include <dm.h>
 #include <env_internal.h>
@@ -12,6 +14,7 @@
 #include <serial.h>
 #include <stdio_dev.h>
 #include <watchdog.h>
+#include <asm/global_data.h>
 #include <dm/lists.h>
 #include <dm/device-internal.h>
 #include <dm/of_access.h>
@@ -123,7 +126,7 @@ static void serial_find_console_or_panic(void)
 #ifdef CONFIG_SERIAL_SEARCH_ALL
 		if (!uclass_get_device_by_seq(UCLASS_SERIAL, INDEX, &dev) ||
 		    !uclass_get_device(UCLASS_SERIAL, INDEX, &dev)) {
-			if (dev->flags & DM_FLAG_ACTIVATED) {
+			if (dev_get_flags(dev) & DM_FLAG_ACTIVATED) {
 				gd->cur_serial_dev = dev;
 				return;
 			}
@@ -172,6 +175,15 @@ int serial_init(void)
 /* Called after relocation */
 int serial_initialize(void)
 {
+	/* Scanning uclass to probe devices */
+	if (IS_ENABLED(CONFIG_SERIAL_PROBE_ALL)) {
+		int ret;
+
+		ret  = uclass_probe_all(UCLASS_SERIAL);
+		if (ret)
+			return ret;
+	}
+
 	return serial_init();
 }
 
@@ -383,7 +395,7 @@ static int on_baudrate(const char *name, const char *value, enum env_op op,
 		/*
 		 * Switch to new baudrate if new baudrate is supported
 		 */
-		baudrate = simple_strtoul(value, NULL, 10);
+		baudrate = dectoul(value, NULL);
 
 		/* Not actually changing */
 		if (gd->baudrate == baudrate)
@@ -507,6 +519,6 @@ UCLASS_DRIVER(serial) = {
 	.flags		= DM_UC_FLAG_SEQ_ALIAS,
 	.post_probe	= serial_post_probe,
 	.pre_remove	= serial_pre_remove,
-	.per_device_auto_alloc_size = sizeof(struct serial_dev_priv),
+	.per_device_auto	= sizeof(struct serial_dev_priv),
 };
 #endif

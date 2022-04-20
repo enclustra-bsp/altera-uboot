@@ -38,17 +38,16 @@ static inline bool socfpga_is_booting_from_fpga(void)
 #ifdef CONFIG_TARGET_SOCFPGA_ARRIA10
 void socfpga_init_security_policies(void);
 void socfpga_sdram_remap_zero(void);
+void force_periph_program(unsigned int status);
 void set_regular_boot(unsigned int status);
 bool is_regular_boot_valid(void);
+bool is_periph_program_force(void);
 int qspi_flash_software_reset(void);
 #endif
 
-#ifdef CONFIG_TARGET_SOCFPGA_SOC64
+#if defined(CONFIG_TARGET_SOCFPGA_STRATIX10) || \
+	defined(CONFIG_TARGET_SOCFPGA_AGILEX)
 int is_fpga_config_ready(void);
-#endif
-
-#if IS_ENABLED(CONFIG_TARGET_SOCFPGA_N5X)
-bool is_ddr_init_skipped(void);
 #endif
 
 void do_bridge_reset(int enable, unsigned int mask);

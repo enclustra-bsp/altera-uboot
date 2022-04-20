@@ -9,6 +9,7 @@
 #include <hang.h>
 #include <asm/cache.h>
 #include <init.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <errno.h>
 #include <fdtdec.h>
@@ -194,7 +195,7 @@ static int do_bridge(struct cmd_tbl *cmdtp, int flag, int argc,
 	argv++;
 
 	if (argc == 3)
-		mask = simple_strtoul(argv[1], NULL, 16);
+		mask = hextoul(argv[1], NULL);
 
 	switch (*argv[0]) {
 	case 'e':	/* Enable */

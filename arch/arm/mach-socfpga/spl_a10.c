@@ -7,6 +7,7 @@
 #include <cpu_func.h>
 #include <hang.h>
 #include <init.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/pl310.h>
 #include <asm/u-boot.h>
@@ -45,7 +46,7 @@ DECLARE_GLOBAL_DATA_PTR;
 					 SOCFPGA_PHYS_OCRAM_SIZE - \
 					 BOOTROM_SHARED_MEM_SIZE)
 #define RST_STATUS_SHARED_ADDR		(BOOTROM_SHARED_MEM_ADDR + 0x438)
-static u32 rst_mgr_status __section(.data);
+static u32 rst_mgr_status __section(".data");
 
 /*
  * Bootrom will clear the status register in reset manager and stores the
@@ -134,6 +135,19 @@ void spl_board_init(void)
 	} else if (!is_fpgamgr_early_user_mode()) {
 		/* Program IOSSM(early IO release) or full FPGA */
 		fpgamgr_program(buf, FPGA_BUFSIZ, 0);
+
+		/* Skipping double program for combined RBF */
+		if (!is_fpgamgr_user_mode()) {
+			/*
+			* Expect FPGA entered early user mode, so
+			* the flag is set to re-program IOSSM
+			*/
+			force_periph_program(true);
+
+			/* Re-program IOSSM to stabilize IO system */
+			fpgamgr_program(buf, FPGA_BUFSIZ, 0);
+			force_periph_program(false);
+		}
 	}
 
 	/* If the IOSSM/full FPGA is already loaded, start DDR */
@@ -193,7 +207,7 @@ void spl_board_init(void)
 
 			WATCHDOG_RESET();
 
-			reset_cpu(0);
+			reset_cpu();
 		}
 
 		/*

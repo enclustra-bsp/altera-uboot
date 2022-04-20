@@ -12,6 +12,7 @@
 #include <env.h>
 #include <init.h>
 #include <net.h>
+#include <asm/global_data.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
 
@@ -1080,18 +1081,28 @@ void board_init_f(ulong dummy)
 	board_init_r(NULL, 0);
 }
 
-void reset_cpu(ulong addr)
+#ifdef CONFIG_SPL_LOAD_FIT
+int board_fit_config_name_match(const char *name)
+{
+	if (!strcmp(name, "imx6-colibri"))
+		return 0;
+
+	return -1;
+}
+#endif
+
+void reset_cpu(void)
 {
 }
 
 #endif /* CONFIG_SPL_BUILD */
 
-static struct mxc_serial_platdata mxc_serial_plat = {
+static struct mxc_serial_plat mxc_serial_plat = {
 	.reg = (struct mxc_uart *)UART1_BASE,
 	.use_dte = true,
 };
 
-U_BOOT_DEVICE(mxc_serial) = {
+U_BOOT_DRVINFO(mxc_serial) = {
 	.name = "serial_mxc",
-	.platdata = &mxc_serial_plat,
+	.plat = &mxc_serial_plat,
 };

@@ -14,11 +14,11 @@
  * service layer driver in normal world (EL1) to communicate with secure
  * monitor software in Secure Monitor Exception Level 3 (EL3).
  *
- * This file is shared with secure firmware (FW) which is out of kernel tree.
+ * This file is shared with secure firmware (FW) which is out of u-boot tree.
  *
  * An ARM SMC instruction takes a function identifier and up to 6 64-bit
  * register values as arguments, and can return up to 4 64-bit register
- * value. The operation of the secure monitor is determined by the parameter
+ * values. The operation of the secure monitor is determined by the parameter
  * values passed in through registers.
 
  * EL1 and EL3 communicates pointer as physical address rather than the
@@ -53,7 +53,7 @@
  * Secure monitor software doesn't recognize the request.
  *
  * INTEL_SIP_SMC_STATUS_OK:
- * FPGA configuration completed successfully,
+ * SMC call completed successfully,
  * In case of FPGA configuration write operation, it means secure monitor
  * software can accept the next chunk of FPGA configuration data.
  *
@@ -65,7 +65,7 @@
  * completed block(s).
  *
  * INTEL_SIP_SMC_STATUS_ERROR:
- * There is error during the FPGA configuration process.
+ * There is error during the SMC call process.
  *
  * INTEL_SIP_SMC_REG_ERROR:
  * There is error during a read or write operation of the protected
@@ -523,5 +523,23 @@ INTEL_SIP_SMC_FAST_CALL_VAL(INTEL_SIP_SMC_FUNCID_FPGA_CONFIG_COMPLETED_WRITE)
 #define INTEL_SIP_SMC_FUNCID_MBOX_SEND_CMD	60
 #define INTEL_SIP_SMC_MBOX_SEND_CMD \
 	INTEL_SIP_SMC_FAST_CALL_VAL(INTEL_SIP_SMC_FUNCID_MBOX_SEND_CMD)
+
+/*
+ * Request INTEL_SIP_SMC_GET_USERCODE
+ *
+ * Send mailbox command to get usercode from SDM
+ *
+ * Call register usage:
+ * a0 INTEL_SIP_SMC_GET_USERCODE
+ * a1-7 not used.
+ *
+ * Return status
+ * a0 INTEL_SIP_SMC_STATUS_OK or INTEL_SIP_SMC_STATUS_ERROR
+ * a1 User code
+ * a2-3 not used.
+ */
+#define INTEL_SIP_SMC_FUNCID_GET_USERCODE	61
+#define INTEL_SIP_SMC_GET_USERCODE \
+	INTEL_SIP_SMC_FAST_CALL_VAL(INTEL_SIP_SMC_FUNCID_GET_USERCODE)
 
 #endif

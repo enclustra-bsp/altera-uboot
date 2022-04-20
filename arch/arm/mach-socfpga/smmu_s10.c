@@ -5,6 +5,7 @@
  */
 
 #include <common.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/firewall.h>
 #include <asm/arch/smmu_s10.h>

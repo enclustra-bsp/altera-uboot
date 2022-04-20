@@ -4,6 +4,7 @@
  */
 #include <image.h>
 #include <log.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/fpga_manager.h>
 #include <asm/arch/reset_manager.h>
@@ -603,7 +604,8 @@ static int first_loading_rbf_to_buffer(struct udevice *dev,
 
 			if (strstr(uname, "fpga-periph") &&
 				(!is_fpgamgr_early_user_mode() ||
-				is_fpgamgr_user_mode())) {
+				is_fpgamgr_user_mode() ||
+				is_periph_program_force())) {
 				fpga_node_name = uname;
 				printf("FPGA: Start to program ");
 				printf("peripheral/full bitstream ...\n");

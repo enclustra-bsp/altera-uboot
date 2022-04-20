@@ -17,12 +17,14 @@
 #include <u-boot/crc.h>
 #else
 #include <linux/compiler.h>
+#include <linux/sizes.h>
 #include <common.h>
 #include <errno.h>
 #include <log.h>
 #include <mapmem.h>
 #include <asm/io.h>
 #include <malloc.h>
+#include <asm/global_data.h>
 DECLARE_GLOBAL_DATA_PTR;
 #endif /* !USE_HOSTCC*/
 
@@ -51,7 +53,7 @@ static int fit_parse_spec(const char *spec, char sepc, ulong addr_curr,
 	sep = strchr(spec, sepc);
 	if (sep) {
 		if (sep - spec > 0)
-			*addr = simple_strtoul(spec, NULL, 16);
+			*addr = hextoul(spec, NULL);
 
 		*name = sep + 1;
 		return 1;
@@ -114,6 +116,21 @@ int fit_parse_subimage(const char *spec, ulong addr_curr,
 }
 #endif /* !USE_HOSTCC */
 
+#ifdef USE_HOSTCC
+/* Host tools use these implementations for Cipher and Signature support */
+static void *host_blob;
+
+void image_set_host_blob(void *blob)
+{
+	host_blob = blob;
+}
+
+void *image_get_host_blob(void)
+{
+	return host_blob;
+}
+#endif /* USE_HOSTCC */
+
 static void fit_get_debug(const void *fit, int noffset,
 		char *prop_name, int err)
 {
@@ -149,7 +166,7 @@ int fit_get_subimage_count(const void *fit, int images_noffset)
 	return count;
 }
 
-#if !defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_FIT_PRINT)
+#if CONFIG_IS_ENABLED(FIT_PRINT) || CONFIG_IS_ENABLED(SPL_FIT_PRINT)
 /**
  * fit_image_print_data() - prints out the hash node details
  * @fit: pointer to the FIT format image header
@@ -557,7 +574,7 @@ void fit_image_print(const void *fit, int image_noffset, const char *p)
 #else
 void fit_print_contents(const void *fit) { }
 void fit_image_print(const void *fit, int image_noffset, const char *p) { }
-#endif /* !defined(CONFIG_SPL_BUILD) || defined(CONFIG_SPL_FIT_PRINT) */
+#endif /* CONFIG_IS_ENABLED(FIR_PRINT) || CONFIG_IS_ENABLED(SPL_FIT_PRINT) */
 
 /**
  * fit_get_desc - get node description property
@@ -1194,37 +1211,21 @@ int fit_set_timestamp(void *fit, int noffset, time_t timestamp)
  *     0, on success
  *    -1, when algo is unsupported
  */
-int calculate_hash(const void *data, int data_len, const char *algo,
+int calculate_hash(const void *data, int data_len, const char *name,
 			uint8_t *value, int *value_len)
 {
-	if (IMAGE_ENABLE_CRC32 && strcmp(algo, "crc32") == 0) {
-		*((uint32_t *)value) = crc32_wd(0, data, data_len,
-							CHUNKSZ_CRC32);
-		*((uint32_t *)value) = cpu_to_uimage(*((uint32_t *)value));
-		*value_len = 4;
-	} else if (IMAGE_ENABLE_SHA1 && strcmp(algo, "sha1") == 0) {
-		sha1_csum_wd((unsigned char *)data, data_len,
-			     (unsigned char *)value, CHUNKSZ_SHA1);
-		*value_len = 20;
-	} else if (IMAGE_ENABLE_SHA256 && strcmp(algo, "sha256") == 0) {
-		sha256_csum_wd((unsigned char *)data, data_len,
-			       (unsigned char *)value, CHUNKSZ_SHA256);
-		*value_len = SHA256_SUM_LEN;
-	} else if (IMAGE_ENABLE_SHA384 && strcmp(algo, "sha384") == 0) {
-		sha384_csum_wd((unsigned char *)data, data_len,
-			       (unsigned char *)value, CHUNKSZ_SHA384);
-		*value_len = SHA384_SUM_LEN;
-	} else if (IMAGE_ENABLE_SHA512 && strcmp(algo, "sha512") == 0) {
-		sha512_csum_wd((unsigned char *)data, data_len,
-			       (unsigned char *)value, CHUNKSZ_SHA512);
-		*value_len = SHA512_SUM_LEN;
-	} else if (IMAGE_ENABLE_MD5 && strcmp(algo, "md5") == 0) {
-		md5_wd((unsigned char *)data, data_len, value, CHUNKSZ_MD5);
-		*value_len = 16;
-	} else {
+	struct hash_algo *algo;
+	int ret;
+
+	ret = hash_lookup_algo(name, &algo);
+	if (ret < 0) {
 		debug("Unsupported hash alogrithm\n");
 		return -1;
 	}
+
+	algo->hash_func_ws(data, data_len, value, algo->chunk_size);
+	*value_len = algo->digest_size;
+
 	return 0;
 }
 
@@ -1360,7 +1361,7 @@ int fit_image_verify(const void *fit, int image_noffset)
 	size_t		size;
 	char		*err_msg = "";
 
-	if (strchr(name, '@')) {
+	if (IS_ENABLED(CONFIG_FIT_SIGNATURE) && strchr(name, '@')) {
 		/*
 		 * We don't support this since libfdt considers names with the
 		 * name root but different @ suffix to be equal
@@ -1495,6 +1496,10 @@ int fit_image_check_arch(const void *fit, int noffset, uint8_t arch)
 {
 	uint8_t image_arch;
 	int aarch32_support = 0;
+
+	/* Let's assume that sandbox can load any architecture */
+	if (IS_ENABLED(CONFIG_SANDBOX))
+		return true;
 
 	if (IS_ENABLED(CONFIG_ARM64_SUPPORT_AARCH32))
 		aarch32_support = 1;
@@ -1635,7 +1640,7 @@ int fit_check_format(const void *fit, ulong size)
 		/* mandatory / node 'timestamp' property */
 		if (!fdt_getprop(fit, 0, FIT_TIMESTAMP_PROP, NULL)) {
 			log_debug("Wrong FIT format: no timestamp\n");
-			return -ENODATA;
+			return -EBADMSG;
 		}
 	}
 
@@ -1756,7 +1761,8 @@ int fit_conf_find_compat(const void *fit, const void *fdt)
 			}
 
 			/* search in this config's kernel FDT */
-			if (fit_image_get_data(fit, kfdt_noffset, &fdt, &sz)) {
+			if (fit_image_get_data_and_size(fit, kfdt_noffset,
+							&fdt, &sz)) {
 				debug("Failed to get fdt \"%s\".\n", kfdt_name);
 				continue;
 			}
@@ -1939,6 +1945,8 @@ static const char *fit_get_image_type_property(int type)
 		return FIT_FDT_PROP;
 	case IH_TYPE_KERNEL:
 		return FIT_KERNEL_PROP;
+	case IH_TYPE_FIRMWARE:
+		return FIT_FIRMWARE_PROP;
 	case IH_TYPE_RAMDISK:
 		return FIT_RAMDISK_PROP;
 	case IH_TYPE_X86_SETUP:
@@ -2004,7 +2012,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 		 * fit_conf_get_node() will try to find default config node
 		 */
 		bootstage_mark(bootstage_id + BOOTSTAGE_SUB_NO_UNIT_NAME);
-		if (IMAGE_ENABLE_BEST_MATCH && !fit_uname_config) {
+		if (IS_ENABLED(CONFIG_FIT_BEST_MATCH) && !fit_uname_config) {
 			cfg_noffset = fit_conf_find_compat(fit, gd_fdt_blob());
 		} else {
 			cfg_noffset = fit_conf_get_node(fit,
@@ -2071,6 +2079,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 	bootstage_mark(bootstage_id + BOOTSTAGE_SUB_CHECK_ALL);
 	type_ok = fit_image_check_type(fit, noffset, image_type) ||
 		  fit_image_check_type(fit, noffset, IH_TYPE_FIRMWARE) ||
+		  fit_image_check_type(fit, noffset, IH_TYPE_TEE) ||
 		  (image_type == IH_TYPE_KERNEL &&
 		   fit_image_check_type(fit, noffset, IH_TYPE_KERNEL_NOLOAD));
 
@@ -2078,6 +2087,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 		image_type == IH_TYPE_FPGA ||
 		fit_image_check_os(fit, noffset, IH_OS_LINUX) ||
 		fit_image_check_os(fit, noffset, IH_OS_U_BOOT) ||
+		fit_image_check_os(fit, noffset, IH_OS_TEE) ||
 		fit_image_check_os(fit, noffset, IH_OS_OPENRTOS) ||
 		fit_image_check_os(fit, noffset, IH_OS_EFI) ||
 		fit_image_check_os(fit, noffset, IH_OS_VXWORKS);
@@ -2119,7 +2129,7 @@ int fit_image_load(bootm_headers_t *images, ulong addr,
 
 	/* perform any post-processing on the image data */
 	if (!host_build() && IS_ENABLED(CONFIG_FIT_IMAGE_POST_PROCESS))
-		board_fit_image_post_process(&buf, &size);
+		board_fit_image_post_process(fit, noffset, &buf, &size);
 
 	len = (ulong)size;
 
@@ -2243,10 +2253,10 @@ int boot_get_fdt_fit(bootm_headers_t *images, ulong addr,
 	ulong load, len;
 #ifdef CONFIG_OF_LIBFDT_OVERLAY
 	ulong image_start, image_end;
-	ulong ovload, ovlen;
+	ulong ovload, ovlen, ovcopylen;
 	const char *uconfig;
 	const char *uname;
-	void *base, *ov;
+	void *base, *ov, *ovcopy = NULL;
 	int i, err, noffset, ov_noffset;
 #endif
 
@@ -2336,7 +2346,7 @@ int boot_get_fdt_fit(bootm_headers_t *images, ulong addr,
 			addr, &uname, &uconfig,
 			arch, IH_TYPE_FLATDT,
 			BOOTSTAGE_ID_FIT_FDT_START,
-			FIT_LOAD_REQUIRED, &ovload, &ovlen);
+			FIT_LOAD_IGNORED, &ovload, &ovlen);
 		if (ov_noffset < 0) {
 			printf("load of %s failed\n", uname);
 			continue;
@@ -2345,6 +2355,21 @@ int boot_get_fdt_fit(bootm_headers_t *images, ulong addr,
 				uname, ovload, ovlen);
 		ov = map_sysmem(ovload, ovlen);
 
+		ovcopylen = ALIGN(fdt_totalsize(ov), SZ_4K);
+		ovcopy = malloc(ovcopylen);
+		if (!ovcopy) {
+			printf("failed to duplicate DTO before application\n");
+			fdt_noffset = -ENOMEM;
+			goto out;
+		}
+
+		err = fdt_open_into(ov, ovcopy, ovcopylen);
+		if (err < 0) {
+			printf("failed on fdt_open_into for DTO\n");
+			fdt_noffset = err;
+			goto out;
+		}
+
 		base = map_sysmem(load, len + ovlen);
 		err = fdt_open_into(base, base, len + ovlen);
 		if (err < 0) {
@@ -2352,14 +2377,18 @@ int boot_get_fdt_fit(bootm_headers_t *images, ulong addr,
 			fdt_noffset = err;
 			goto out;
 		}
+
 		/* the verbose method prints out messages on error */
-		err = fdt_overlay_apply_verbose(base, ov);
+		err = fdt_overlay_apply_verbose(base, ovcopy);
 		if (err < 0) {
 			fdt_noffset = err;
 			goto out;
 		}
 		fdt_pack(base);
 		len = fdt_totalsize(base);
+
+		free(ovcopy);
+		ovcopy = NULL;
 	}
 #else
 	printf("config with overlays but CONFIG_OF_LIBFDT_OVERLAY not set\n");
@@ -2376,6 +2405,10 @@ out:
 	if (fit_uname_configp)
 		*fit_uname_configp = fit_uname_config;
 
+#ifdef CONFIG_OF_LIBFDT_OVERLAY
+	if (ovcopy)
+		free(ovcopy);
+#endif
 	if (fit_uname_config_copy)
 		free(fit_uname_config_copy);
 	return fdt_noffset;

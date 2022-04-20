@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <asm/unaligned.h>
 #include <mapmem.h>
+#include <linux/libfdt.h>
 
 #define ANDROID_IMAGE_DEFAULT_KERNEL_ADDR	0x10008000
 
@@ -163,7 +164,7 @@ ulong android_image_get_kcomp(const struct andr_img_hdr *hdr)
 	else if (get_unaligned_le32(p) == LZ4F_MAGIC)
 		return IH_COMP_LZ4;
 	else
-		return IH_COMP_NONE;
+		return image_decomp_type(p, sizeof(u32));
 }
 
 int android_image_get_ramdisk(const struct andr_img_hdr *hdr,

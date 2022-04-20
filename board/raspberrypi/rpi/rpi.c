@@ -157,6 +157,16 @@ static const struct rpi_model rpi_models_new_scheme[] = {
 		DTB_DIR "bcm2711-rpi-4-b.dtb",
 		true,
 	},
+	[0x13] = {
+		"400",
+		DTB_DIR "bcm2711-rpi-400.dtb",
+		true,
+	},
+	[0x14] = {
+		"Compute Module 4",
+		DTB_DIR "bcm2711-rpi-cm4.dtb",
+		true,
+	},
 };
 
 static const struct rpi_model rpi_models_old_scheme[] = {
@@ -267,6 +277,13 @@ int dram_init(void)
 	}
 
 	gd->ram_size = msg->get_arm_mem.body.resp.mem_size;
+
+	/*
+	 * In some configurations the memory size returned by VideoCore
+	 * is not aligned to the section size, what is mandatory for
+	 * the u-boot's memory setup.
+	 */
+	gd->ram_size &= ~MMU_SECTION_SIZE;
 
 	return 0;
 }
@@ -480,12 +497,11 @@ void *board_fdt_blob_setup(void)
 
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
-	/*
-	 * For now, we simply always add the simplefb DT node. Later, we
-	 * should be more intelligent, and e.g. only do this if no enabled DT
-	 * node exists for the "real" graphics driver.
-	 */
-	lcd_dt_simplefb_add_node(blob);
+	int node;
+
+	node = fdt_node_offset_by_compatible(blob, -1, "simple-framebuffer");
+	if (node < 0)
+		lcd_dt_simplefb_add_node(blob);
 
 #ifdef CONFIG_EFI_LOADER
 	/* Reserve the spin table */

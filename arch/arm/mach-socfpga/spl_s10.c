@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2016-2018 Intel Corporation <www.intel.com>
+ * Copyright (C) 2016-2021 Intel Corporation <www.intel.com>
  *
  */
 
 #include <hang.h>
 #include <init.h>
 #include <log.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/u-boot.h>
 #include <asm/utils.h>
@@ -28,13 +29,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-u32 spl_boot_device_ram(void);
-
 void board_init_f(ulong dummy)
 {
-	/* Ensure 'spl_boot_device_ram' symbol used by debugger is exported */
-	int ret = spl_boot_device_ram();
 	const struct cm_config *cm_default_cfg = cm_get_default_config();
+	int ret;
+	struct udevice *dev;
 
 	ret = spl_early_init();
 	if (ret)
@@ -73,7 +72,11 @@ void board_init_f(ulong dummy)
 	print_reset_info();
 	cm_print_clock_quick_summary();
 
-	firewall_setup();
+	ret = uclass_get_device_by_name(UCLASS_NOP, "socfpga-secreg", &dev);
+	if (ret) {
+		printf("Firewall & secure settings init failed: %d\n", ret);
+		hang();
+	}
 
 	/* disable ocram security at CCU for non secure access */
 	clrbits_le32(CCU_REG_ADDR(CCU_CPU0_MPRT_ADMASK_MEM_RAM0),
@@ -82,8 +85,6 @@ void board_init_f(ulong dummy)
 		     CCU_ADMASK_P_MASK | CCU_ADMASK_NS_MASK);
 
 #if CONFIG_IS_ENABLED(ALTERA_SDRAM)
-		struct udevice *dev;
-
 		ret = uclass_get_device(UCLASS_RAM, 0, &dev);
 		if (ret) {
 			debug("DRAM init failed: %d\n", ret);

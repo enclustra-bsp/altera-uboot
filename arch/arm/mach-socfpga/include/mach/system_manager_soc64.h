@@ -50,8 +50,8 @@ void populate_sysmgr_pinmux(void);
 #define SYSMGR_SOC64_GPI			0xe8
 #define SYSMGR_SOC64_MPU			0xf0
 /*
- * Bits[31:28] reserved for DM DDR retention, bits[27:0] reserved for SOC 64-bit
- * storing qspi ref clock(kHz)
+ * Bits[31:28] reserved for N5X DDR retention, bits[27:0] reserved for SOC 64-bit
+ * storing qspi ref clock (kHz)
  */
 #define SYSMGR_SOC64_BOOT_SCRATCH_COLD0		0x200
 /* store osc1 clock freq */
@@ -72,7 +72,6 @@ void populate_sysmgr_pinmux(void);
 #define SYSMGR_SOC64_BOOT_SCRATCH_COLD8		0x220
 /* store ECC DBE address */
 #define SYSMGR_SOC64_BOOT_SCRATCH_COLD9		0x224
-
 #define SYSMGR_SOC64_PINSEL0			0x1000
 #define SYSMGR_SOC64_IOCTRL0			0x1130
 #define SYSMGR_SOC64_EMAC0_USEFPGA		0x1300
@@ -101,13 +100,25 @@ void populate_sysmgr_pinmux(void);
 /*
  * Bits for SYSMGR_SOC64_BOOT_SCRATCH_COLD0
  * Bits[31:28] reserved for DM DDR retention, bits[27:0] reserved for SOC 64-bit
- * storing qspi ref clock(kHz)
+ * storing qspi ref clock (kHz)
  */
 #define SYSMGR_SCRATCH_REG_0_QSPI_REFCLK_MASK		GENMASK(27, 0)
 #define ALT_SYSMGR_SCRATCH_REG_0_DDR_RETENTION_MASK	BIT(31)
-#define ALT_SYSMGR_SCRATCH_REG_0_DDR_SHA_MASK		BIT(30)
-#define ALT_SYSMGR_SCRATCH_REG_0_DDR_RESET_TYPE_MASK	(BIT(29) | BIT(28))
+#define ALT_SYSMGR_SCRATCH_REG_0_DDR_RESET_TYPE_MASK GENMASK(30, 28)
 #define ALT_SYSMGR_SCRATCH_REG_0_DDR_RESET_TYPE_SHIFT	28
+
+/*
+ * Bits for SYSMGR_SOC64_BOOT_SCRATCH_COLD8
+ * Bit[31] reserved for FSBL to check DBE is triggered (set by SDM to "1") ?
+ *
+ * Bit[30] reserved for FSBL to update the DDR init progress
+ * 1 - means in progress, 0 - haven't started / DDR is up running.
+ *
+ * Bit[17:1] - Setting by Linux EDAC.
+ * Bit[1](ECC_OCRAM), Bit[16](ECC_DDR0), Bit[17](ECC_DDR1)
+ */
+#define ALT_SYSMGR_SCRATCH_REG_8_DDR_DBE_MASK	BIT(31)
+#define ALT_SYSMGR_SCRATCH_REG_8_DDR_PROGRESS_MASK	BIT(30)
 
 #define SYSMGR_SDMMC				SYSMGR_SOC64_SDMMC
 
@@ -153,7 +164,8 @@ void populate_sysmgr_pinmux(void);
 
 #define SYSMGR_WDDBG_PAUSE_ALL_CPU	0x0F0F0F0F
 
-/* For n5x only */
+#if IS_ENABLED(CONFIG_TARGET_SOCFPGA_N5X)
 #define	SYSMGR_SOC64_DDR_MODE_MSK	BIT(0)
+#endif
 
 #endif /* _SYSTEM_MANAGER_SOC64_H_ */

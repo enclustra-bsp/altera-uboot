@@ -12,6 +12,7 @@
 
 enum efi_auth_var_type {
 	EFI_AUTH_VAR_NONE = 0,
+	EFI_AUTH_MODE,
 	EFI_AUTH_VAR_PK,
 	EFI_AUTH_VAR_KEK,
 	EFI_AUTH_VAR_DB,
@@ -161,10 +162,13 @@ efi_status_t __maybe_unused efi_var_collect(struct efi_var_file **bufp, loff_t *
 /**
  * efi_var_restore() - restore EFI variables from buffer
  *
+ * Only if @safe is set secure boot related variables will be restored.
+ *
  * @buf:	buffer
+ * @safe:	restoring from tamper-resistant storage
  * Return:	status code
  */
-efi_status_t efi_var_restore(struct efi_var_file *buf);
+efi_status_t efi_var_restore(struct efi_var_file *buf, bool safe);
 
 /**
  * efi_var_from_file() - read variables from file
@@ -305,5 +309,16 @@ efi_get_variable_runtime(u16 *variable_name, const efi_guid_t *guid,
 efi_status_t __efi_runtime EFIAPI
 efi_get_next_variable_name_runtime(efi_uintn_t *variable_name_size,
 				   u16 *variable_name, efi_guid_t *guid);
+
+/**
+ * efi_var_buf_update() - udpate memory buffer for variables
+ *
+ * @var_buf:	source buffer
+ *
+ * This function copies to the memory buffer for UEFI variables. Call this
+ * function in ExitBootServices() if memory backed variables are only used
+ * at runtime to fill the buffer.
+ */
+void efi_var_buf_update(struct efi_var_file *var_buf);
 
 #endif

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2007, 2010-2011 Freescale Semiconductor, Inc
- * Copyright 2019 NXP Semiconductors
+ * Copyright 2019, 2021 NXP
  * Andy Fleming
  * Yangbo Lu <yangbo.lu@nxp.com>
  *
@@ -21,6 +21,7 @@
 #include <mmc.h>
 #include <part.h>
 #include <asm/cache.h>
+#include <asm/global_data.h>
 #include <dm/device_compat.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
@@ -40,6 +41,12 @@
 
 #if !CONFIG_IS_ENABLED(BLK)
 #include "mmc_private.h"
+#endif
+
+#ifndef ESDHCI_QUIRK_BROKEN_TIMEOUT_VALUE
+#ifdef CONFIG_FSL_USDHC
+#define ESDHCI_QUIRK_BROKEN_TIMEOUT_VALUE	1
+#endif
 #endif
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -139,6 +146,7 @@ struct esdhc_soc_data {
  * @start_tuning_tap: the start point for tuning in tuning_ctrl register
  * @strobe_dll_delay_target: settings in strobe_dllctrl
  * @signal_voltage: indicating the current voltage
+ * @signal_voltage_switch_extra_delay_ms: extra delay for IO voltage switch
  * @cd_gpio: gpio for card detection
  * @wp_gpio: gpio for write protection
  */
@@ -163,6 +171,7 @@ struct fsl_esdhc_priv {
 	u32 tuning_start_tap;
 	u32 strobe_dll_delay_target;
 	u32 signal_voltage;
+	u32 signal_voltage_switch_extra_delay_ms;
 #if CONFIG_IS_ENABLED(DM_REGULATOR)
 	struct udevice *vqmmc_dev;
 	struct udevice *vmmc_dev;
@@ -282,7 +291,8 @@ static int esdhc_setup_data(struct fsl_esdhc_priv *priv, struct mmc *mmc,
 {
 	int timeout;
 	struct fsl_esdhc *regs = priv->esdhc_regs;
-#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
+#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M) || \
+	defined(CONFIG_IMX8ULP)
 	dma_addr_t addr;
 #endif
 	uint wml_value;
@@ -295,7 +305,8 @@ static int esdhc_setup_data(struct fsl_esdhc_priv *priv, struct mmc *mmc,
 
 		esdhc_clrsetbits32(&regs->wml, WML_RD_WML_MASK, wml_value);
 #ifndef CONFIG_SYS_FSL_ESDHC_USE_PIO
-#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
+#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M) || \
+	defined(CONFIG_IMX8ULP)
 		addr = virt_to_phys((void *)(data->dest));
 		if (upper_32_bits(addr))
 			printf("Error found for upper 32 bits\n");
@@ -332,7 +343,8 @@ static int esdhc_setup_data(struct fsl_esdhc_priv *priv, struct mmc *mmc,
 		esdhc_clrsetbits32(&regs->wml, WML_WR_WML_MASK,
 					wml_value << 16);
 #ifndef CONFIG_SYS_FSL_ESDHC_USE_PIO
-#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
+#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M) || \
+		defined(CONFIG_IMX8ULP)
 		addr = virt_to_phys((void *)(data->src));
 		if (upper_32_bits(addr))
 			printf("Error found for upper 32 bits\n");
@@ -397,7 +409,8 @@ static void check_and_invalidate_dcache_range
 	unsigned end = 0;
 	unsigned size = roundup(ARCH_DMA_MINALIGN,
 				data->blocks*data->blocksize);
-#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M)
+#if defined(CONFIG_S32V234) || defined(CONFIG_IMX8) || defined(CONFIG_IMX8M) || \
+	defined(CONFIG_IMX8ULP)
 	dma_addr_t addr;
 
 	addr = virt_to_phys((void *)(data->dest));
@@ -512,15 +525,6 @@ static int esdhc_send_cmd_common(struct fsl_esdhc_priv *priv, struct mmc *mmc,
 	if (irqstat & IRQSTAT_CTOE) {
 		err = -ETIMEDOUT;
 		goto out;
-	}
-
-	/* Switch voltage to 1.8V if CMD11 succeeded */
-	if (cmd->cmdidx == SD_CMD_SWITCH_UHS18V) {
-		esdhc_setbits32(&regs->vendorspec, ESDHC_VENDORSPEC_VSELECT);
-
-		printf("Run CMD11 1.8V switch\n");
-		/* Sleep for 5 ms - max time for card to switch to 1.8V */
-		udelay(5000);
 	}
 
 	/* Workaround for ESDHC errata ENGcm03648 */
@@ -790,7 +794,9 @@ static int esdhc_set_voltage(struct mmc *mmc)
 {
 	struct fsl_esdhc_priv *priv = dev_get_priv(mmc->dev);
 	struct fsl_esdhc *regs = priv->esdhc_regs;
+#if CONFIG_IS_ENABLED(DM_REGULATOR)
 	int ret;
+#endif
 
 	priv->signal_voltage = mmc->signal_voltage;
 	switch (mmc->signal_voltage) {
@@ -826,6 +832,14 @@ static int esdhc_set_voltage(struct mmc *mmc)
 		}
 #endif
 		esdhc_setbits32(&regs->vendorspec, ESDHC_VENDORSPEC_VSELECT);
+		/*
+		 * some board like imx8mm-evk need about 18ms to switch
+		 * the IO voltage from 3.3v to 1.8v, common code only
+		 * delay 10ms, so need to delay extra time to make sure
+		 * the IO voltage change to 1.8v.
+		 */
+		if (priv->signal_voltage_switch_extra_delay_ms)
+			mdelay(priv->signal_voltage_switch_extra_delay_ms);
 		if (esdhc_read32(&regs->vendorspec) & ESDHC_VENDORSPEC_VSELECT)
 			return 0;
 
@@ -845,12 +859,12 @@ static void esdhc_stop_tuning(struct mmc *mmc)
 	cmd.cmdarg = 0;
 	cmd.resp_type = MMC_RSP_R1b;
 
-	dm_mmc_send_cmd(mmc->dev, &cmd, NULL);
+	mmc_send_cmd(mmc, &cmd, NULL);
 }
 
 static int fsl_esdhc_execute_tuning(struct udevice *dev, uint32_t opcode)
 {
-	struct fsl_esdhc_plat *plat = dev_get_platdata(dev);
+	struct fsl_esdhc_plat *plat = dev_get_plat(dev);
 	struct fsl_esdhc_priv *priv = dev_get_priv(dev);
 	struct fsl_esdhc *regs = priv->esdhc_regs;
 	struct mmc *mmc = &plat->mmc;
@@ -1211,11 +1225,6 @@ static int fsl_esdhc_init(struct fsl_esdhc_priv *priv,
 			ESDHC_HOSTCAPBLT_VS18 | ESDHC_HOSTCAPBLT_VS30);
 #endif
 
-/* T4240 host controller capabilities register should have VS33 bit */
-#ifdef CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
-	caps = caps | ESDHC_HOSTCAPBLT_VS33;
-#endif
-
 	if (caps & ESDHC_HOSTCAPBLT_VS18)
 		voltage_caps |= MMC_VDD_165_195;
 	if (caps & ESDHC_HOSTCAPBLT_VS30)
@@ -1400,7 +1409,7 @@ __weak void init_clk_usdhc(u32 index)
 {
 }
 
-static int fsl_esdhc_ofdata_to_platdata(struct udevice *dev)
+static int fsl_esdhc_of_to_plat(struct udevice *dev)
 {
 #if !CONFIG_IS_ENABLED(OF_PLATDATA)
 	struct fsl_esdhc_priv *priv = dev_get_priv(dev);
@@ -1437,6 +1446,8 @@ static int fsl_esdhc_ofdata_to_platdata(struct udevice *dev)
 	val = fdtdec_get_int(fdt, node, "fsl,strobe-dll-delay-target",
 			     ESDHC_STROBE_DLL_CTRL_SLV_DLY_TARGET_DEFAULT);
 	priv->strobe_dll_delay_target = val;
+	val = fdtdec_get_int(fdt, node, "fsl,signal-voltage-switch-extra-delay-ms", 0);
+	priv->signal_voltage_switch_extra_delay_ms = val;
 
 	if (dev_read_bool(dev, "broken-cd"))
 		priv->broken_cd = 1;
@@ -1490,7 +1501,7 @@ static int fsl_esdhc_ofdata_to_platdata(struct udevice *dev)
 static int fsl_esdhc_probe(struct udevice *dev)
 {
 	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
-	struct fsl_esdhc_plat *plat = dev_get_platdata(dev);
+	struct fsl_esdhc_plat *plat = dev_get_plat(dev);
 	struct fsl_esdhc_priv *priv = dev_get_priv(dev);
 	struct esdhc_soc_data *data =
 		(struct esdhc_soc_data *)dev_get_driver_data(dev);
@@ -1521,8 +1532,7 @@ static int fsl_esdhc_probe(struct udevice *dev)
 	if (CONFIG_IS_ENABLED(DM_GPIO) && !priv->non_removable) {
 		struct udevice *gpiodev;
 
-		ret = device_get_by_driver_info_idx(dtplat->cd_gpios->idx,
-						    &gpiodev);
+		ret = device_get_by_ofplat_idx(dtplat->cd_gpios->idx, &gpiodev);
 		if (ret)
 			return ret;
 
@@ -1558,7 +1568,7 @@ static int fsl_esdhc_probe(struct udevice *dev)
 	 * work as expected.
 	 */
 
-	init_clk_usdhc(dev->seq);
+	init_clk_usdhc(dev_seq(dev));
 
 #if CONFIG_IS_ENABLED(CLK)
 	/* Assigned clock already set clock */
@@ -1575,7 +1585,7 @@ static int fsl_esdhc_probe(struct udevice *dev)
 
 	priv->sdhc_clk = clk_get_rate(&priv->per_clk);
 #else
-	priv->sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK + dev->seq);
+	priv->sdhc_clk = mxc_get_clock(MXC_ESDHC_CLK + dev_seq(dev));
 	if (priv->sdhc_clk <= 0) {
 		dev_err(dev, "Unable to get clk for %s\n", dev->name);
 		return -EINVAL;
@@ -1633,7 +1643,7 @@ static int fsl_esdhc_get_cd(struct udevice *dev)
 static int fsl_esdhc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
 			      struct mmc_data *data)
 {
-	struct fsl_esdhc_plat *plat = dev_get_platdata(dev);
+	struct fsl_esdhc_plat *plat = dev_get_plat(dev);
 	struct fsl_esdhc_priv *priv = dev_get_priv(dev);
 
 	return esdhc_send_cmd_common(priv, &plat->mmc, cmd, data);
@@ -1641,7 +1651,7 @@ static int fsl_esdhc_send_cmd(struct udevice *dev, struct mmc_cmd *cmd,
 
 static int fsl_esdhc_set_ios(struct udevice *dev)
 {
-	struct fsl_esdhc_plat *plat = dev_get_platdata(dev);
+	struct fsl_esdhc_plat *plat = dev_get_plat(dev);
 	struct fsl_esdhc_priv *priv = dev_get_priv(dev);
 
 	return esdhc_set_ios_common(priv, &plat->mmc);
@@ -1703,6 +1713,7 @@ static struct esdhc_soc_data usdhc_imx8qm_data = {
 };
 
 static const struct udevice_id fsl_esdhc_ids[] = {
+	{ .compatible = "fsl,imx51-esdhc", },
 	{ .compatible = "fsl,imx53-esdhc", },
 	{ .compatible = "fsl,imx6ul-usdhc", },
 	{ .compatible = "fsl,imx6sx-usdhc", },
@@ -1722,7 +1733,7 @@ static const struct udevice_id fsl_esdhc_ids[] = {
 #if CONFIG_IS_ENABLED(BLK)
 static int fsl_esdhc_bind(struct udevice *dev)
 {
-	struct fsl_esdhc_plat *plat = dev_get_platdata(dev);
+	struct fsl_esdhc_plat *plat = dev_get_plat(dev);
 
 	return mmc_bind(dev, &plat->mmc, &plat->cfg);
 }
@@ -1732,15 +1743,15 @@ U_BOOT_DRIVER(fsl_esdhc) = {
 	.name	= "fsl_esdhc",
 	.id	= UCLASS_MMC,
 	.of_match = fsl_esdhc_ids,
-	.ofdata_to_platdata = fsl_esdhc_ofdata_to_platdata,
+	.of_to_plat = fsl_esdhc_of_to_plat,
 	.ops	= &fsl_esdhc_ops,
 #if CONFIG_IS_ENABLED(BLK)
 	.bind	= fsl_esdhc_bind,
 #endif
 	.probe	= fsl_esdhc_probe,
-	.platdata_auto_alloc_size = sizeof(struct fsl_esdhc_plat),
-	.priv_auto_alloc_size = sizeof(struct fsl_esdhc_priv),
+	.plat_auto	= sizeof(struct fsl_esdhc_plat),
+	.priv_auto	= sizeof(struct fsl_esdhc_priv),
 };
 
-U_BOOT_DRIVER_ALIAS(fsl_esdhc, fsl_imx6q_usdhc)
+DM_DRIVER_ALIAS(fsl_esdhc, fsl_imx6q_usdhc)
 #endif

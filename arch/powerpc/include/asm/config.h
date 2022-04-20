@@ -10,15 +10,10 @@
 #include <asm/config_mpc85xx.h>
 #endif
 
-#ifdef CONFIG_MPC86xx
-#include <asm/config_mpc86xx.h>
-#endif
-
 #ifndef HWCONFIG_BUFFER_SIZE
   #define HWCONFIG_BUFFER_SIZE 256
 #endif
 
-#define CONFIG_LMB
 #define CONFIG_SYS_BOOT_RAMDISK_HIGH
 
 #ifndef CONFIG_MAX_MEM_MAPPED

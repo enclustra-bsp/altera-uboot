@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright 2018-2020 NXP
+ * Copyright 2018-2021 NXP
  */
 
 #ifndef __LX2_COMMON_H
@@ -129,11 +129,6 @@
 #define CONFIG_PCI_SCAN_SHOW
 #endif
 
-/* MMC */
-#ifdef CONFIG_MMC
-#define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
-#endif
-
 /* SATA */
 
 #ifdef CONFIG_SCSI
@@ -147,17 +142,17 @@
 #endif
 
 /* USB */
-#ifdef CONFIG_USB
-#define CONFIG_HAS_FSL_XHCI_USB
+#ifdef CONFIG_USB_HOST
 #ifndef CONFIG_TARGET_LX2162AQDS
 #define CONFIG_USB_MAX_CONTROLLER_COUNT	2
 #endif
 #endif
 
-/* FlexSPI */
-#ifdef CONFIG_NXP_FSPI
-#define NXP_FSPI_FLASH_SIZE		SZ_64M
-#define NXP_FSPI_FLASH_NUM		1
+/* GPIO */
+#ifdef CONFIG_DM_GPIO
+#ifndef CONFIG_MPC8XXX_GPIO
+#define CONFIG_MPC8XXX_GPIO
+#endif
 #endif
 
 #ifndef __ASSEMBLY__
@@ -185,6 +180,7 @@ unsigned long get_board_ddr_clk(void);
 #define XSPI_MC_INIT_CMD				\
 	"sf probe 0:0 && "				\
 	"sf read 0x80640000 0x640000 0x80000 && "	\
+	"sf read $fdt_addr_r 0xf00000 0x100000 && "	\
 	"env exists secureboot && "			\
 	"esbc_validate 0x80640000 && "			\
 	"esbc_validate 0x80680000; "			\
@@ -195,6 +191,7 @@ unsigned long get_board_ddr_clk(void);
 #define SD_MC_INIT_CMD				\
 	"mmc read 0x80a00000 0x5000 0x1200;"	\
 	"mmc read 0x80e00000 0x7000 0x800;"	\
+	"mmc read $fdt_addr_r 0x7800 0x800;"	\
 	"env exists secureboot && "		\
 	"mmc read 0x80640000 0x3200 0x20 && "	\
 	"mmc read 0x80680000 0x3400 0x20 && "	\
@@ -205,6 +202,7 @@ unsigned long get_board_ddr_clk(void);
 #define SD2_MC_INIT_CMD				\
 	"mmc dev 1; mmc read 0x80a00000 0x5000 0x1200;"	\
 	"mmc read 0x80e00000 0x7000 0x800;"	\
+	"mmc read $fdt_addr_r 0x7800 0x800;"	\
 	"env exists secureboot && "		\
 	"mmc read 0x80640000 0x3200 0x20 && "	\
 	"mmc read 0x80680000 0x3400 0x20 && "	\

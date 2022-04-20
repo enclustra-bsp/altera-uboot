@@ -74,8 +74,6 @@
  */
 #ifdef CONFIG_IDE
 #define __io
-#define CONFIG_IDE_PREINIT
-#define CONFIG_MVSATA_IDE_USE_PORT1
 /* Needs byte-swapping for ATA data register */
 #define CONFIG_IDE_SWAP_IO
 /* Data, registers and alternate blocks are at the same offset */
@@ -96,9 +94,9 @@
 /*
  * I2C related stuff
  */
-#if defined(CONFIG_CMD_I2C) && !defined(CONFIG_DM_I2C)
+#if defined(CONFIG_CMD_I2C) && !CONFIG_IS_ENABLED(DM_I2C)
 #ifndef CONFIG_SYS_I2C_SOFT
-#define CONFIG_SYS_I2C
+#define CONFIG_SYS_I2C_LEGACY
 #define CONFIG_SYS_I2C_MVTWSI
 #endif
 #define CONFIG_SYS_I2C_SLAVE		0x0

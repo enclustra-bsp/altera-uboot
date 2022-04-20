@@ -6,27 +6,22 @@
 
 #include <altera.h>
 #include <common.h>
-#include <env.h>
-#include <errno.h>
-#include <init.h>
-#include <log.h>
-#include <asm/io.h>
 #include <asm/arch/mailbox_s10.h>
 #include <asm/arch/misc.h>
 #include <asm/arch/reset_manager.h>
 #include <asm/arch/system_manager.h>
+#include <asm/io.h>
+#include <asm/global_data.h>
+#include <env.h>
+#include <errno.h>
+#include <init.h>
+#include <log.h>
 
 #define RSU_DEFAULT_LOG_LEVEL  7
 
 DECLARE_GLOBAL_DATA_PTR;
 
-/* Reset type */
-enum reset_type {
-	por_reset,
-	warm_reset,
-	cold_reset,
-	rsu_reset
-};
+u8 socfpga_get_board_id(void);
 
 /*
  * FPGA programming support for SoC FPGA Stratix 10
@@ -66,6 +61,7 @@ int arch_misc_init(void)
 {
 	char qspi_string[13];
 	char level[4];
+	char id[3];
 
 	snprintf(level, sizeof(level), "%u", RSU_DEFAULT_LOG_LEVEL);
 
@@ -75,6 +71,10 @@ int arch_misc_init(void)
 	/* for RSU, set log level to default if log level is not set */
 	if (!env_get("rsu_log_level"))
 		env_set("rsu_log_level", level);
+
+	/* Export board_id as environment variable */
+	sprintf(id, "%u", socfpga_get_board_id());
+	env_set("board_id", id);
 
 	return 0;
 }
@@ -109,63 +109,3 @@ void arch_preboot_os(void)
 {
 	mbox_hps_stage_notify(HPS_EXECUTION_STATE_OS);
 }
-
-/* Only applicable to DM */
-#if IS_ENABLED(CONFIG_TARGET_SOCFPGA_N5X)
-static bool is_ddr_retention_enabled(u32 boot_scratch_cold0_reg)
-{
-	return boot_scratch_cold0_reg &
-	       ALT_SYSMGR_SCRATCH_REG_0_DDR_RETENTION_MASK;
-}
-
-static bool is_ddr_bitstream_sha_matching(u32 boot_scratch_cold0_reg)
-{
-	return boot_scratch_cold0_reg & ALT_SYSMGR_SCRATCH_REG_0_DDR_SHA_MASK;
-}
-
-static enum reset_type get_reset_type(u32 boot_scratch_cold0_reg)
-{
-	return (boot_scratch_cold0_reg &
-		ALT_SYSMGR_SCRATCH_REG_0_DDR_RESET_TYPE_MASK) >>
-		ALT_SYSMGR_SCRATCH_REG_0_DDR_RESET_TYPE_SHIFT;
-}
-
-bool is_ddr_init_skipped(void)
-{
-	u32 reg = readl(socfpga_get_sysmgr_addr() +
-			SYSMGR_SOC64_BOOT_SCRATCH_COLD0);
-
-	if (get_reset_type(reg) == por_reset) {
-		debug("%s: POR reset is triggered\n", __func__);
-		debug("%s: DDR init is required\n", __func__);
-		return false;
-	}
-
-	if (get_reset_type(reg) == warm_reset) {
-		debug("%s: Warm reset is triggered\n", __func__);
-		debug("%s: DDR init is skipped\n", __func__);
-		return true;
-	}
-
-	if ((get_reset_type(reg) == cold_reset) ||
-	    (get_reset_type(reg) == rsu_reset)) {
-		debug("%s: Cold/RSU reset is triggered\n", __func__);
-
-		if (is_ddr_retention_enabled(reg)) {
-			debug("%s: DDR retention bit is set\n", __func__);
-
-			if (is_ddr_bitstream_sha_matching(reg)) {
-				debug("%s: Matching in DDR bistream\n",
-				      __func__);
-				debug("%s: DDR init is skipped\n", __func__);
-				return true;
-			}
-
-			debug("%s: Mismatch in DDR bistream\n", __func__);
-		}
-	}
-
-	debug("%s: DDR init is required\n", __func__);
-	return false;
-}
-#endif

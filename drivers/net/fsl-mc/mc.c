@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2014 Freescale Semiconductor, Inc.
- * Copyright 2017-2018, 2020 NXP
+ * Copyright 2017-2018, 2020-2021 NXP
  */
 #include <common.h>
 #include <command.h>
@@ -11,6 +11,7 @@
 #include <image.h>
 #include <log.h>
 #include <malloc.h>
+#include <asm/global_data.h>
 #include <linux/bug.h>
 #include <asm/io.h>
 #include <linux/delay.h>
@@ -185,9 +186,9 @@ static int mc_fixup_mac_addr(void *blob, int nodeoffset,
 			     enum mc_fixup_type type)
 {
 #ifdef CONFIG_DM_ETH
-	struct eth_pdata *plat = dev_get_platdata(eth_dev);
+	struct eth_pdata *plat = dev_get_plat(eth_dev);
 	unsigned char *enetaddr = plat->enetaddr;
-	int eth_index = eth_dev->seq;
+	int eth_index = dev_seq(eth_dev);
 #else
 	unsigned char *enetaddr = eth_dev->enetaddr;
 	int eth_index = eth_dev->index;
@@ -641,7 +642,7 @@ static unsigned long get_mc_boot_timeout_ms(void)
 	char *timeout_ms_env_var = env_get(MC_BOOT_TIMEOUT_ENV_VAR);
 
 	if (timeout_ms_env_var) {
-		timeout_ms = simple_strtoul(timeout_ms_env_var, NULL, 10);
+		timeout_ms = dectoul(timeout_ms_env_var, NULL);
 		if (timeout_ms == 0) {
 			printf("fsl-mc: WARNING: Invalid value for \'"
 			       MC_BOOT_TIMEOUT_ENV_VAR
@@ -955,8 +956,7 @@ unsigned long mc_get_dram_block_size(void)
 	char *dram_block_size_env_var = env_get(MC_MEM_SIZE_ENV_VAR);
 
 	if (dram_block_size_env_var) {
-		dram_block_size = simple_strtoul(dram_block_size_env_var, NULL,
-						 16);
+		dram_block_size = hextoul(dram_block_size_env_var, NULL);
 
 		if (dram_block_size < CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE) {
 			printf("fsl-mc: WARNING: Invalid value for \'"
@@ -1125,7 +1125,7 @@ static int dpio_exit(void)
 		goto err;
 	}
 
-	dpio_close(dflt_mc_io, MC_CMD_NO_FLAGS, dflt_dpio->dpio_handle);
+	err = dpio_close(dflt_mc_io, MC_CMD_NO_FLAGS, dflt_dpio->dpio_handle);
 	if (err < 0) {
 		printf("dpio_close() failed: %d\n", err);
 		goto err;

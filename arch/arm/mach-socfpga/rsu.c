@@ -5,6 +5,8 @@
  */
 
 #include <common.h>
+#include <linux/bitops.h>
+#include <linux/errno.h>
 #include <asm/arch/rsu.h>
 #include <asm/arch/rsu_misc.h>
 #include <asm/arch/smc_api.h>
@@ -629,11 +631,6 @@ int rsu_slot_load(int slot)
 		return -ESLOTNUM;
 
 	offset = ll_intf->partition.offset(part_num);
-
-	if (ll_intf->priority.get(part_num) <= 0) {
-		rsu_log(RSU_ERR, "Try to reboot from an erased slot\n");
-		return -EERASE;
-	}
 
 	return ll_intf->fw_ops.load(offset);
 }

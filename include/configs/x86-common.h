@@ -16,8 +16,6 @@
  */
 #define CONFIG_PHYSMEM
 
-#define CONFIG_LMB
-
 #define CONFIG_SYS_BOOTM_LEN		(16 << 20)
 
 /* SATA AHCI storage */
@@ -78,7 +76,6 @@
  * USB configuration
  */
 
-#define CONFIG_TFTP_TSIZE
 #define CONFIG_BOOTP_BOOTFILESIZE
 
 /* Default environment */

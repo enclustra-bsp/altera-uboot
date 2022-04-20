@@ -15,7 +15,7 @@
 #define CQSPI_DECODER_MAX_CS		16
 #define CQSPI_READ_CAPTURE_MAX_DELAY	16
 
-struct cadence_spi_platdata {
+struct cadence_spi_plat {
 	unsigned int	ref_clk_hz;
 	unsigned int	max_hz;
 	void		*regbase;
@@ -26,6 +26,8 @@ struct cadence_spi_platdata {
 	u32		trigger_address;
 	fdt_addr_t	ahbsize;
 	bool		use_dac_mode;
+	int		read_delay;
+	u32		wr_delay;
 
 	/* Flash parameters */
 	u32		page_size;
@@ -34,6 +36,12 @@ struct cadence_spi_platdata {
 	u32		tsd2d_ns;
 	u32		tchsh_ns;
 	u32		tslch_ns;
+
+	/* Transaction protocol parameters. */
+	u8		inst_width;
+	u8		addr_width;
+	u8		data_width;
+	bool		dtr;
 };
 
 struct cadence_spi_priv {
@@ -52,23 +60,27 @@ struct cadence_spi_priv {
 };
 
 /* Functions call declaration */
-void cadence_qspi_apb_controller_init(struct cadence_spi_platdata *plat);
+void cadence_qspi_apb_controller_init(struct cadence_spi_plat *plat);
 void cadence_qspi_apb_controller_enable(void *reg_base_addr);
 void cadence_qspi_apb_controller_disable(void *reg_base_addr);
 void cadence_qspi_apb_dac_mode_enable(void *reg_base);
 
-int cadence_qspi_apb_command_read(void *reg_base_addr,
+int cadence_qspi_apb_command_read_setup(struct cadence_spi_plat *plat,
+					const struct spi_mem_op *op);
+int cadence_qspi_apb_command_read(struct cadence_spi_plat *plat,
 				  const struct spi_mem_op *op);
-int cadence_qspi_apb_command_write(void *reg_base_addr,
+int cadence_qspi_apb_command_write_setup(struct cadence_spi_plat *plat,
+					 const struct spi_mem_op *op);
+int cadence_qspi_apb_command_write(struct cadence_spi_plat *plat,
 				   const struct spi_mem_op *op);
 
-int cadence_qspi_apb_read_setup(struct cadence_spi_platdata *plat,
+int cadence_qspi_apb_read_setup(struct cadence_spi_plat *plat,
 				const struct spi_mem_op *op);
-int cadence_qspi_apb_read_execute(struct cadence_spi_platdata *plat,
+int cadence_qspi_apb_read_execute(struct cadence_spi_plat *plat,
 				  const struct spi_mem_op *op);
-int cadence_qspi_apb_write_setup(struct cadence_spi_platdata *plat,
+int cadence_qspi_apb_write_setup(struct cadence_spi_plat *plat,
 				 const struct spi_mem_op *op);
-int cadence_qspi_apb_write_execute(struct cadence_spi_platdata *plat,
+int cadence_qspi_apb_write_execute(struct cadence_spi_plat *plat,
 				   const struct spi_mem_op *op);
 
 void cadence_qspi_apb_chipselect(void *reg_base,

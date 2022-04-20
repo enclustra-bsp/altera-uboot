@@ -47,6 +47,8 @@ config ARCH_LS1028A
 	select SYS_FSL_ERRATUM_A009663 if !TFABOOT
 	select SYS_FSL_ERRATUM_A009942 if !TFABOOT
 	select SYS_FSL_ERRATUM_A050382
+	select SYS_FSL_ERRATUM_A011334
+	select SYS_FSL_ESDHC_UNRELIABLE_PULSE_DETECTION_WORKAROUND
 	select RESV_RAM if GIC_V3_ITS
 	imply PANIC_HANG
 
@@ -56,6 +58,7 @@ config ARCH_LS1043A
 	select ARM_ERRATA_855873 if !TFABOOT
 	select FSL_LAYERSCAPE
 	select FSL_LSCH2
+	select HAS_FSL_XHCI_USB if USB_HOST
 	select SYS_FSL_SRDS_1
 	select SYS_HAS_SERDES
 	select SYS_FSL_DDR
@@ -87,6 +90,7 @@ config ARCH_LS1046A
 	select ARMV8_SET_SMPEN
 	select FSL_LAYERSCAPE
 	select FSL_LSCH2
+	select HAS_FSL_XHCI_USB if USB_HOST
 	select SYS_FSL_SRDS_1
 	select SYS_HAS_SERDES
 	select SYS_FSL_DDR
@@ -221,7 +225,9 @@ config ARCH_LX2162A
 	select SYS_FSL_DDR_VER_50
 	select SYS_FSL_EC1
 	select SYS_FSL_EC2
-	select SYS_FSL_ERRATUM_A050106
+	select SYS_FSL_ERRATUM_A050204
+	select SYS_FSL_ERRATUM_A011334
+	select SYS_FSL_ESDHC_UNRELIABLE_PULSE_DETECTION_WORKAROUND
 	select SYS_FSL_HAS_RGMII
 	select SYS_FSL_HAS_SEC
 	select SYS_FSL_HAS_CCN508
@@ -241,6 +247,7 @@ config ARCH_LX2160A
 	bool
 	select ARMV8_SET_SMPEN
 	select FSL_LSCH3
+	select HAS_FSL_XHCI_USB if USB_HOST
 	select NXP_LSCH3_2
 	select SYS_HAS_SERDES
 	select SYS_FSL_SRDS_1
@@ -251,7 +258,9 @@ config ARCH_LX2160A
 	select SYS_FSL_DDR_VER_50
 	select SYS_FSL_EC1
 	select SYS_FSL_EC2
-	select SYS_FSL_ERRATUM_A050106
+	select SYS_FSL_ERRATUM_A050204
+	select SYS_FSL_ERRATUM_A011334
+	select SYS_FSL_ESDHC_UNRELIABLE_PULSE_DETECTION_WORKAROUND
 	select SYS_FSL_HAS_RGMII
 	select SYS_FSL_HAS_SEC
 	select SYS_FSL_HAS_CCN508
@@ -369,8 +378,8 @@ config SYS_FSL_ERRATUM_A009008
 config SYS_FSL_ERRATUM_A009798
 	bool "Workaround for USB PHY erratum A009798"
 
-config SYS_FSL_ERRATUM_A050106
-	bool "Workaround for USB PHY erratum A050106"
+config SYS_FSL_ERRATUM_A050204
+	bool "Workaround for USB PHY erratum A050204"
 	help
 	  USB3.0 Receiver needs to enable fixed equalization
 	  for each of PHY instances in an SOC. This is similar
@@ -636,7 +645,16 @@ config SPL_LDSCRIPT
 
 config HAS_FSL_XHCI_USB
 	bool
-	default y if ARCH_LS1043A || ARCH_LS1046A
 	help
-	  For some SoC(such as LS1043A and LS1046A), USB and QE-HDLC multiplex use
+	  For some SoC (such as LS1043A and LS1046A), USB and QE-HDLC multiplex use
 	  pins, select it when the pins are assigned to USB.
+
+config SYS_FSL_BOOTROM_BASE
+	hex
+	depends on FSL_LSCH2
+	default 0
+
+config SYS_FSL_BOOTROM_SIZE
+	hex
+	depends on FSL_LSCH2
+	default 0x1000000

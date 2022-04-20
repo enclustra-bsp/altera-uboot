@@ -4,23 +4,26 @@
  *
  */
 
-#include <asm/io.h>
-#include <asm/u-boot.h>
-#include <asm/utils.h>
 #include <common.h>
-#include <hang.h>
-#include <image.h>
-#include <init.h>
-#include <spl.h>
 #include <asm/arch/clock_manager.h>
 #include <asm/arch/firewall.h>
 #include <asm/arch/mailbox_s10.h>
 #include <asm/arch/misc.h>
 #include <asm/arch/reset_manager.h>
-#include <asm/arch/smmu_s10.h>
 #include <asm/arch/system_manager.h>
-#include <wdt.h>
+#include <asm/global_data.h>
+#include <asm/io.h>
+#include <asm/u-boot.h>
+#include <asm/utils.h>
 #include <dm/uclass.h>
+#include <common.h>
+#include <hang.h>
+#include <image.h>
+#include <init.h>
+#include <spl.h>
+#include <watchdog.h>
+#include <asm/arch/smmu_s10.h>
+#include <wdt.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -71,7 +74,11 @@ void board_init_f(ulong dummy)
 	print_reset_info();
 	cm_print_clock_quick_summary();
 
-	firewall_setup();
+	ret = uclass_get_device_by_name(UCLASS_NOP, "socfpga-secreg", &dev);
+	if (ret) {
+		printf("Firewall & secure settings init failed: %d\n", ret);
+		hang();
+	}
 
 	ret = uclass_get_device(UCLASS_CACHE, 0, &dev);
 	if (ret) {
@@ -79,17 +86,17 @@ void board_init_f(ulong dummy)
 		hang();
 	}
 
+	mbox_init();
+
+#if IS_ENABLED(CONFIG_CADENCE_QSPI)
+	mbox_qspi_open();
+#endif
+
 #if CONFIG_IS_ENABLED(ALTERA_SDRAM)
 	ret = uclass_get_device(UCLASS_RAM, 0, &dev);
 	if (ret) {
 		printf("DRAM init failed: %d\n", ret);
 		hang();
 	}
-#endif
-
-	mbox_init();
-
-#ifdef CONFIG_CADENCE_QSPI
-	mbox_qspi_open();
 #endif
 }

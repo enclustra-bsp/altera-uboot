@@ -6,6 +6,7 @@
 
 #include <common.h>
 #include <hang.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/secure.h>
 #include <asm/arch/reset_manager.h>
@@ -15,7 +16,6 @@
 #include <dt-bindings/reset/altr,rst-mgr-s10.h>
 #include <exports.h>
 #include <linux/intel-smc.h>
-
 DECLARE_GLOBAL_DATA_PTR;
 
 /* F2S manager registers */

@@ -31,6 +31,16 @@ config SPL_PMIC_CHILDREN
 	to call your regulator code (e.g. see rk8xx.c for direct functions
 	for use in SPL).
 
+config PMIC_AB8500
+	bool "Enable driver for ST-Ericsson AB8500 PMIC via PRCMU"
+	depends on DM_PMIC
+	select REGMAP
+	select SYSCON
+	help
+	  Enable support for the ST-Ericsson AB8500 (Analog Baseband) PMIC.
+	  It connects with the ST-Ericsson DB8500 SoC via an I2C bus managed by
+	  the power/reset/clock management unit (PRCMU) firmware.
+
 config PMIC_ACT8846
 	bool "Enable support for the active-semi 8846 PMIC"
 	depends on DM_PMIC && DM_I2C
@@ -90,6 +100,21 @@ config DM_PMIC_FAN53555
 
 	  The driver implements read/write operations for use with the FAN53555
 	  regulator driver and binds the regulator driver to its node.
+
+config DM_PMIC_MP5416
+	bool "Enable Driver Model for PMIC MP5416"
+	depends on DM_PMIC
+	help
+	  This config enables implementation of driver-model pmic uclass features
+	  for PMIC MP5416. The driver implements read/write operations.
+
+config SPL_DM_PMIC_MP5416
+	bool "Enable Driver Model for PMIC MP5416 in SPL stage"
+	depends on DM_PMIC
+	help
+	  This config enables implementation of driver-model pmic uclass
+	  features for PMIC MP5416. The driver implements read/write
+	  operations.
 
 config DM_PMIC_PCA9450
 	bool "Enable Driver Model for PMIC PCA9450"

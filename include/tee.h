@@ -7,6 +7,8 @@
 #define __TEE_H
 
 #include <linux/bitops.h>
+#include <linux/list.h>
+
 #define TEE_UUID_LEN		16
 
 #define TEE_GEN_CAP_GP          BIT(0)	/* GlobalPlatform compliant TEE */
@@ -374,5 +376,11 @@ void tee_optee_ta_uuid_from_octets(struct tee_optee_ta_uuid *d,
  */
 void tee_optee_ta_uuid_to_octets(u8 d[TEE_UUID_LEN],
 				 const struct tee_optee_ta_uuid *s);
+
+/**
+ * tee_flush_all_shm_dcache() - Flush data cache for all shared memories
+ * @dev:	The TEE device
+ */
+void tee_flush_all_shm_dcache(struct udevice *dev);
 
 #endif /* __TEE_H */

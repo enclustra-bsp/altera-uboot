@@ -3,40 +3,23 @@ if ARCH_SOCFPGA
 config ERR_PTR_OFFSET
 	default 0xfffec000 if TARGET_SOCFPGA_GEN5 # Boot ROM range
 
-config LINUX_DBE_WARM_RESET
-	bool "Configure Linux handler for DBEs warm reset"
-	depends on TARGET_SOCFPGA_STRATIX10
-	help
-	 Double Bit ECC errors will trigger a warm reset instead of
-	 a cold reset if this option is y.
-	 1. Peripheral DBEs will trigger a warm reset.
-	 2. SDRAM and OCRAM cause a cold reset because the contents
-            cannot be trusted.
-
 config NR_DRAM_BANKS
 	default 1
 
-config SECURE_VAB_AUTH_ALLOW_NON_FIT_IMAGE
-	bool "Allow non-FIT VAB signed images"
-	depends on SECURE_VAB_AUTH
-
-config SECURE_VAB_AUTH
+config SOCFPGA_SECURE_VAB_AUTH
 	bool "Enable boot image authentication with Secure Device Manager"
 	depends on TARGET_SOCFPGA_AGILEX || TARGET_SOCFPGA_N5X
 	select FIT_IMAGE_POST_PROCESS
-	select SHA512_ALGO
 	select SHA384
+	select SHA512
 	select SPL_FIT_IMAGE_POST_PROCESS
 	help
 	 All images loaded from FIT will be authenticated by Secure Device
 	 Manager.
 
-config CMD_SMC_REG
-	bool "Enable 'smc_reg' command"
-	depends on SPL_ATF
-	help
-	 Allows accessing registers exposed throgh SMC handler. Most useful for
-	 development and testing
+config SOCFPGA_SECURE_VAB_AUTH_ALLOW_NON_FIT_IMAGE
+	bool "Allow non-FIT VAB signed images"
+	depends on SOCFPGA_SECURE_VAB_AUTH
 
 config SPL_SIZE_LIMIT
 	default 0x10000 if TARGET_SOCFPGA_GEN5
@@ -72,13 +55,14 @@ config SYS_HAS_ARMV8_SECURE_BASE
 
 config TARGET_SOCFPGA_AGILEX
 	bool
-	select TARGET_SOCFPGA_SOC64
 	select ARMV8_MULTIENTRY
 	select ARMV8_SET_SMPEN
+	select BINMAN if SPL_ATF
 	select CLK
 	select FPGA_INTEL_SDM_MAILBOX
 	select NCORE_CACHE
 	select SPL_CLK if SPL
+	select TARGET_SOCFPGA_SOC64
 
 config TARGET_SOCFPGA_ARRIA5
 	bool
@@ -113,10 +97,16 @@ config TARGET_SOCFPGA_N5X
 	select TARGET_SOCFPGA_SOC64
 	select ARMV8_MULTIENTRY
 	select ARMV8_SET_SMPEN
+	select BINMAN if SPL_ATF
 	select CLK
 	select NCORE_CACHE
 	select SPL_ALTERA_SDRAM
 	select SPL_CLK if SPL
+
+config TARGET_SOCFPGA_AGILEX_N6010
+	bool "Intel SOCFPGA n6010 (Agilex)"
+	select TARGET_SOCFPGA_AGILEX
+	select BINMAN if !SPL_ATF
 
 config TARGET_SOCFPGA_N5X_SOCDK
 	bool "Intel SOCFPGA SoCDK (N5X)"
@@ -135,16 +125,33 @@ config TARGET_SOCFPGA_GEN5
 	imply SPL_SYS_MALLOC_SIMPLE
 	imply SPL_USE_TINY_PRINTF
 
+config TARGET_SOCFPGA_N5X
+	bool
+	select ARMV8_MULTIENTRY
+	select ARMV8_SET_SMPEN
+	select BINMAN if SPL_ATF
+	select CLK
+	select FPGA_INTEL_SDM_MAILBOX
+	select NCORE_CACHE
+	select SPL_ALTERA_SDRAM
+	select SPL_CLK if SPL
+	select TARGET_SOCFPGA_SOC64
+
+config TARGET_SOCFPGA_N5X_SOCDK
+	bool "Intel eASIC SoCDK (N5X)"
+	select TARGET_SOCFPGA_N5X
+
 config TARGET_SOCFPGA_SOC64
 	bool
 
 config TARGET_SOCFPGA_STRATIX10
 	bool
-	select TARGET_SOCFPGA_SOC64
 	select ARMV8_MULTIENTRY
 	select ARMV8_SET_SMPEN
+	select BINMAN if SPL_ATF
 	select FPGA_INTEL_SDM_MAILBOX
 	select FPGA_STRATIX10
+	select TARGET_SOCFPGA_SOC64
 
 choice
 	prompt "Altera SOCFPGA board select"
@@ -234,6 +241,7 @@ config TARGET_SOCFPGA_CYCLONE5_MARS_MA3
 endchoice
 
 config SYS_BOARD
+	default "agilex-n6010" if TARGET_SOCFPGA_AGILEX_N6010
 	default "agilex-socdk" if TARGET_SOCFPGA_AGILEX_SOCDK
 	default "arria5-socdk" if TARGET_SOCFPGA_ARRIA5_SOCDK
 	default "arria10-socdk" if TARGET_SOCFPGA_ARRIA10_SOCDK
@@ -245,6 +253,7 @@ config SYS_BOARD
 	default "n5x-socdk" if TARGET_SOCFPGA_N5X_SOCDK
 	default "is1" if TARGET_SOCFPGA_IS1
 	default "mcvevk" if TARGET_SOCFPGA_ARIES_MCVEVK
+	default "n5x-socdk" if TARGET_SOCFPGA_N5X_SOCDK
 	default "secu1" if TARGET_SOCFPGA_ARRIA5_SECU1
 	default "sockit" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "mercury" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
@@ -256,6 +265,7 @@ config SYS_BOARD
 	default "vining_fpga" if TARGET_SOCFPGA_SOFTING_VINING_FPGA
 
 config SYS_VENDOR
+	default "intel" if TARGET_SOCFPGA_AGILEX_N6010
 	default "intel" if TARGET_SOCFPGA_AGILEX_SOCDK
 	default "intel" if TARGET_SOCFPGA_N5X_SOCDK
 	default "altera" if TARGET_SOCFPGA_ARRIA5_SOCDK
@@ -279,6 +289,7 @@ config SYS_SOC
 	default "socfpga"
 
 config SYS_CONFIG_NAME
+	default "socfpga_agilex_n6010" if TARGET_SOCFPGA_AGILEX_N6010
 	default "socfpga_agilex_socdk" if TARGET_SOCFPGA_AGILEX_SOCDK
 	default "socfpga_arria5_secu1" if TARGET_SOCFPGA_ARRIA5_SECU1
 	default "socfpga_arria5_socdk" if TARGET_SOCFPGA_ARRIA5_SOCDK
@@ -291,6 +302,7 @@ config SYS_CONFIG_NAME
 	default "socfpga_n5x_socdk" if TARGET_SOCFPGA_N5X_SOCDK
 	default "socfpga_is1" if TARGET_SOCFPGA_IS1
 	default "socfpga_mcvevk" if TARGET_SOCFPGA_ARIES_MCVEVK
+	default "socfpga_n5x_socdk" if TARGET_SOCFPGA_N5X_SOCDK
 	default "socfpga_sockit" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "socfpga_cyclone5_mercury_sa1" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1
 	default "socfpga_cyclone5_mercury_sa1_rev3" if TARGET_SOCFPGA_CYCLONE5_MERCURY_SA1_REV3

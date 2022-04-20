@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Intel Corporation. All rights reserved
+ * Copyright (C) 2020 Intel Corporation. All rights reserved
  *
  * SPDX-License-Identifier:    GPL-2.0
  */

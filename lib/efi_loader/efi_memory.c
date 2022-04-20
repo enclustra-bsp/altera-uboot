@@ -12,6 +12,7 @@
 #include <mapmem.h>
 #include <watchdog.h>
 #include <asm/cache.h>
+#include <asm/global_data.h>
 #include <linux/list_sort.h>
 #include <linux/sizes.h>
 
@@ -453,7 +454,8 @@ static uint64_t efi_find_free_memory(uint64_t len, uint64_t max_addr)
  * @memory		allocated memory
  * @return		status code
  */
-efi_status_t efi_allocate_pages(int type, int memory_type,
+efi_status_t efi_allocate_pages(enum efi_allocate_type type,
+				enum efi_memory_type memory_type,
 				efi_uintn_t pages, uint64_t *memory)
 {
 	u64 len = pages << EFI_PAGE_SHIFT;
@@ -541,8 +543,6 @@ efi_status_t efi_free_pages(uint64_t memory, efi_uintn_t pages)
 
 	ret = efi_add_memory_map_pg(memory, pages, EFI_CONVENTIONAL_MEMORY,
 				    false);
-	/* Merging of adjacent free regions is missing */
-
 	if (ret != EFI_SUCCESS)
 		return EFI_NOT_FOUND;
 
@@ -557,7 +557,7 @@ efi_status_t efi_free_pages(uint64_t memory, efi_uintn_t pages)
  * @buffer:	allocated memory
  * Return:	status code
  */
-efi_status_t efi_allocate_pool(int pool_type, efi_uintn_t size, void **buffer)
+efi_status_t efi_allocate_pool(enum efi_memory_type pool_type, efi_uintn_t size, void **buffer)
 {
 	efi_status_t r;
 	u64 addr;

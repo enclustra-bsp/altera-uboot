@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright 2017, 2020 NXP
+ * Copyright 2017, 2020-2021 NXP
  */
 
 #ifndef __LS1088A_RDB_H
@@ -203,7 +203,7 @@
 
 #define CONFIG_SYS_LS_MC_BOOT_TIMEOUT_MS 5000
 
-#define I2C_MUX_CH_VOL_MONITOR          0xA
+#define I2C_MUX_CH_VOL_MONITOR         0xA
 /* Voltage monitor on channel 2*/
 #define I2C_VOL_MONITOR_ADDR           0x63
 #define I2C_VOL_MONITOR_BUS_V_OFFSET   0x2
@@ -220,12 +220,6 @@
 
 #define CONFIG_VOL_MONITOR_LTC3882_SET
 #define CONFIG_VOL_MONITOR_LTC3882_READ
-
-/* PM Bus commands code for LTC3882*/
-#define PMBUS_CMD_PAGE                  0x0
-#define PMBUS_CMD_READ_VOUT             0x8B
-#define PMBUS_CMD_PAGE_PLUS_WRITE       0x05
-#define PMBUS_CMD_VOUT_COMMAND          0x21
 
 #define PWM_CHANNEL0                    0x0
 
@@ -267,45 +261,45 @@
 /* Initial environment variables */
 #ifdef CONFIG_TFABOOT
 #define QSPI_MC_INIT_CMD				\
-	"sf probe 0:0;sf read 0x80000000 0xA00000 0x100000;"	\
-	"sf read 0x80100000 0xE00000 0x100000;"				\
+	"sf probe 0:0;sf read 0x80a00000 0xA00000 0x200000;"	\
+	"sf read 0x80e00000 0xE00000 0x100000;"				\
 	"env exists secureboot && "			\
 	"sf read 0x80640000 0x640000 0x40000 && "	\
 	"sf read 0x80680000 0x680000 0x40000 && "	\
 	"esbc_validate 0x80640000 && "			\
 	"esbc_validate 0x80680000 ;"			\
-	"fsl_mc start mc 0x80000000 0x80100000\0"
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"
 #define SD_MC_INIT_CMD				\
-	"mmcinfo;mmc read 0x80000000 0x5000 0x800;"		\
-	"mmc read 0x80100000 0x7000 0x800;"				\
+	"mmcinfo;mmc read 0x80a00000 0x5000 0x1000;"		\
+	"mmc read 0x80e00000 0x7000 0x800;"				\
 	"env exists secureboot && "			\
 	"mmc read 0x80640000 0x3200 0x20 && "		\
 	"mmc read 0x80680000 0x3400 0x20 && "		\
 	"esbc_validate 0x80640000 && "			\
 	"esbc_validate 0x80680000 ;"			\
-	"fsl_mc start mc 0x80000000 0x80100000\0"
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"
 #else
 #if defined(CONFIG_QSPI_BOOT)
 #define MC_INIT_CMD				\
-	"mcinitcmd=sf probe 0:0;sf read 0x80000000 0xA00000 0x100000;"	\
-	"sf read 0x80100000 0xE00000 0x100000;"				\
+	"mcinitcmd=sf probe 0:0;sf read 0x80a00000 0xA00000 0x200000;"	\
+	"sf read 0x80e00000 0xE00000 0x100000;"				\
 	"env exists secureboot && "			\
 	"sf read 0x80640000 0x640000 0x40000 && "	\
 	"sf read 0x80680000 0x680000 0x40000 && "	\
 	"esbc_validate 0x80640000 && "			\
 	"esbc_validate 0x80680000 ;"			\
-	"fsl_mc start mc 0x80000000 0x80100000\0"	\
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"	\
 	"mcmemsize=0x70000000\0"
 #elif defined(CONFIG_SD_BOOT)
 #define MC_INIT_CMD				\
-	"mcinitcmd=mmcinfo;mmc read 0x80000000 0x5000 0x800;"		\
-	"mmc read 0x80100000 0x7000 0x800;"				\
+	"mcinitcmd=mmcinfo;mmc read 0x80a00000 0x5000 0x1000;"		\
+	"mmc read 0x80e00000 0x7000 0x800;"				\
 	"env exists secureboot && "			\
 	"mmc read 0x80640000 0x3200 0x20 && "		\
 	"mmc read 0x80680000 0x3400 0x20 && "		\
 	"esbc_validate 0x80640000 && "			\
 	"esbc_validate 0x80680000 ;"			\
-	"fsl_mc start mc 0x80000000 0x80100000\0"	\
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"	\
 	"mcmemsize=0x70000000\0"
 #endif
 #endif /* CONFIG_TFABOOT */
@@ -511,11 +505,6 @@
 #define CONFIG_ETHPRIME		"DPMAC1@xgmii"
 #define CONFIG_PHY_GIGE
 #endif
-#endif
-
-/*  MMC  */
-#ifdef CONFIG_MMC
-#define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
 #endif
 
 #ifndef SPL_NO_ENV

@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2017-2020 Intel Corporation <www.intel.com>
+ * Copyright (C) 2017-2018 Intel Corporation <www.intel.com>
  *
  */
 
 #include <common.h>
-#include <hang.h>
-#include <wait_bit.h>
-#include <asm/io.h>
+#include <asm/arch/clock_manager.h>
 #include <asm/arch/mailbox_s10.h>
+#include <asm/arch/rsu.h>
 #include <asm/arch/smc_api.h>
 #include <asm/arch/system_manager.h>
 #include <asm/arch/timer.h>
-#include <asm/arch/rsu.h>
+#include <asm/global_data.h>
+#include <asm/io.h>
 #include <asm/secure.h>
 #include <asm/system.h>
+#include <hang.h>
+#include <wait_bit.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -363,7 +365,7 @@ int mbox_qspi_open(void)
 {
 	int ret;
 	u32 resp_buf[1];
-	u32 resp_buf_len, temp;
+	u32 resp_buf_len;
 
 	ret = mbox_send_cmd(MBOX_ID_UBOOT, MBOX_QSPI_OPEN, MBOX_CMD_DIRECT,
 			    0, NULL, 0, 0, NULL);
@@ -387,32 +389,10 @@ int mbox_qspi_open(void)
 	if (ret)
 		goto error;
 
-	/* We are getting QSPI ref clock and set into sysmgr boot register */
-	/*
-	 * Only clock freq in kHz degree is accepted due to limited bits[27:0]
-	 * is reserved for storing the QSPI clock freq into boot scratch cold0
-	 * register
-	 */
-	if (resp_buf[0] < CLOCK_1K) {
-		ret = -EINVAL;
+	/* Store QSPI controller ref clock frequency */
+	ret = cm_set_qspi_controller_clk_hz(resp_buf[0]);
+	if (ret)
 		goto error;
-	} else {
-		resp_buf[0] /= CLOCK_1K;
-	}
-
-	printf("QSPI: Reference clock at %d kHz\n", resp_buf[0]);
-
-	/*
-	 * DDR retention bit, SHA comparison bit and reset type bits sharing the
-	 * same scratch register in DM, ensure the content inside register is
-	 * not overwritten by QSPI ref clock(kHz)
-	 */
-	temp = readl(socfpga_get_sysmgr_addr() +
-		    SYSMGR_SOC64_BOOT_SCRATCH_COLD0) &
-		    ~(SYSMGR_SCRATCH_REG_0_QSPI_REFCLK_MASK);
-
-	writel((resp_buf[0] & SYSMGR_SCRATCH_REG_0_QSPI_REFCLK_MASK) | temp,
-	       socfpga_get_sysmgr_addr() + SYSMGR_SOC64_BOOT_SCRATCH_COLD0);
 
 	return 0;
 

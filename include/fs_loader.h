@@ -77,7 +77,7 @@ enum storage_types {
  * @struct sf_config: Serial flash configuration.
  * @struct spi_flash: Information about a SPI flash.
  */
-struct device_platdata {
+struct device_plat {
 	struct phandle_part phandlepart;
 	char *mtdpart;
 	char *ubivol;

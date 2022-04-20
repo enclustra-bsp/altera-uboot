@@ -3,7 +3,8 @@
 # (C) Copyright 2000-2003
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 #
-# Copyright (C) 2012-2021 Altera Corporation <www.altera.com>
+# Copyright (C) 2012-2017 Altera Corporation <www.altera.com>
+# Copyright (C) 2017-2021 Intel Corporation <www.intel.com>
 
 obj-y	+= board.o
 obj-y	+= clock_manager.o
@@ -40,11 +41,10 @@ obj-y	+= timer_s10.o
 obj-y	+= wrap_handoff_soc64.o
 obj-y	+= wrap_pll_config_soc64.o
 ifndef CONFIG_SPL_BUILD
-obj-y	+= rsu_s10.o
 obj-y   += rsu.o
 obj-y   += rsu_ll_qspi.o
 obj-y   += rsu_misc.o
-obj-$(CONFIG_CMD_SMC_REG) += smc_reg.o
+obj-y	+= rsu_s10.o
 obj-$(CONFIG_ARMV8_PSCI) += psci.o
 obj-$(CONFIG_ARMV8_PSCI) += smc_ecc_dbe_s10.o
 obj-$(CONFIG_ARMV8_PSCI) += smc_fpga_reconfig_s10.o
@@ -60,19 +60,18 @@ obj-y	+= mailbox_s10.o
 obj-y	+= misc_soc64.o
 obj-y	+= mmu-arm64_s10.o
 obj-y	+= reset_manager_s10.o
-obj-$(CONFIG_SECURE_VAB_AUTH)	+= secure_vab.o
+obj-$(CONFIG_SOCFPGA_SECURE_VAB_AUTH)	+= secure_vab.o
 obj-y	+= smmu_s10.o
 obj-y	+= system_manager_soc64.o
 obj-y	+= timer_s10.o
-obj-$(CONFIG_SECURE_VAB_AUTH)	+= vab.o
+obj-$(CONFIG_SOCFPGA_SECURE_VAB_AUTH)	+= vab.o
 obj-y	+= wrap_handoff_soc64.o
 obj-y	+= wrap_pll_config_soc64.o
 ifndef CONFIG_SPL_BUILD
-obj-y	+= rsu_s10.o
 obj-y   += rsu.o
 obj-y   += rsu_ll_qspi.o
 obj-y   += rsu_misc.o
-obj-$(CONFIG_CMD_SMC_REG) += smc_reg.o
+obj-y	+= rsu_s10.o
 obj-$(CONFIG_ARMV8_PSCI) += psci.o
 obj-$(CONFIG_ARMV8_PSCI) += smc_ecc_dbe_s10.o
 obj-$(CONFIG_ARMV8_PSCI) += smc_fpga_reconfig_s10.o
@@ -88,18 +87,18 @@ obj-y	+= mailbox_s10.o
 obj-y	+= misc_soc64.o
 obj-y	+= mmu-arm64_s10.o
 obj-y	+= reset_manager_s10.o
-obj-$(CONFIG_SECURE_VAB_AUTH)	+= secure_vab.o
+obj-$(CONFIG_SOCFPGA_SECURE_VAB_AUTH)	+= secure_vab.o
 obj-y	+= smmu_s10.o
 obj-y	+= system_manager_soc64.o
 obj-y	+= timer_s10.o
-obj-$(CONFIG_SECURE_VAB_AUTH)	+= vab.o
+obj-$(CONFIG_SOCFPGA_SECURE_VAB_AUTH)	+= vab.o
 obj-y	+= wrap_handoff_soc64.o
 obj-y	+= wrap_pll_config_soc64.o
 ifndef CONFIG_SPL_BUILD
-obj-y	+= rsu_s10.o
 obj-y   += rsu.o
 obj-y   += rsu_ll_qspi.o
 obj-y   += rsu_misc.o
+obj-y	+= rsu_s10.o
 obj-$(CONFIG_ARMV8_PSCI) += psci.o
 obj-$(CONFIG_ARMV8_PSCI) += smc_ecc_dbe_s10.o
 obj-$(CONFIG_ARMV8_PSCI) += smc_registers_s10.o
@@ -119,21 +118,19 @@ ifdef CONFIG_TARGET_SOCFPGA_ARRIA10
 obj-y	+= spl_a10.o
 endif
 ifdef CONFIG_TARGET_SOCFPGA_STRATIX10
-obj-y	+= firewall.o
 obj-y	+= spl_s10.o
 obj-y	+= spl_soc64.o
 endif
 ifdef CONFIG_TARGET_SOCFPGA_AGILEX
-obj-y	+= firewall.o
 obj-y	+= spl_agilex.o
 obj-y	+= spl_soc64.o
 endif
 ifdef CONFIG_TARGET_SOCFPGA_N5X
-obj-y	+= firewall.o
 obj-y	+= spl_n5x.o
 obj-y	+= spl_soc64.o
 endif
 else
+obj-$(CONFIG_SPL_ATF) += secure_reg_helper.o
 obj-$(CONFIG_SPL_ATF) += smc_api.o
 endif
 

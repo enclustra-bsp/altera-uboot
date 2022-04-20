@@ -14,6 +14,7 @@
 #include <image.h>
 #include <lmb.h>
 #include <log.h>
+#include <asm/global_data.h>
 #include <linux/libfdt.h>
 #include <malloc.h>
 #include <mapmem.h>
@@ -237,7 +238,7 @@ static int do_bootm_plan9(int flag, int argc, char *const argv[],
 	/* See README.plan9 */
 	s = env_get("confaddr");
 	if (s != NULL) {
-		char *confaddr = (char *)simple_strtoul(s, NULL, 16);
+		char *confaddr = (char *)hextoul(s, NULL);
 
 		if (argc > 0) {
 			copy_args(confaddr, argc, argv, '\n');
@@ -359,8 +360,7 @@ int do_bootm_vxworks(int flag, int argc, char *const argv[],
 			/* find f=0xnumber flag */
 			if ((bootargs[pos] == '=') && (pos >= 1) &&
 			    (bootargs[pos - 1] == 'f')) {
-				vxflags = simple_strtoul(&bootargs[pos + 1],
-							 NULL, 16);
+				vxflags = hextoul(&bootargs[pos + 1], NULL);
 				if (vxflags & VXWORKS_SYSFLG_STD_DTB)
 					std_dtb = true;
 			}

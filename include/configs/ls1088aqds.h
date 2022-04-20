@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
- * Copyright 2017, 2020 NXP
+ * Copyright 2017, 2020-2021 NXP
  */
 
 #ifndef __LS1088A_QDS_H
@@ -26,7 +26,7 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_DDR_CLK_FREQ		100000000
 #else
 #define CONFIG_QIXIS_I2C_ACCESS
-#ifndef CONFIG_DM_I2C
+#if !CONFIG_IS_ENABLED(DM_I2C)
 #define CONFIG_SYS_I2C_EARLY_INIT
 #endif
 #define CONFIG_SYS_CLK_FREQ		get_board_sys_clk()
@@ -326,12 +326,6 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_VOL_MONITOR_LTC3882_SET
 #define CONFIG_VOL_MONITOR_LTC3882_READ
 
-/* PM Bus commands code for LTC3882*/
-#define PMBUS_CMD_PAGE                  0x0
-#define PMBUS_CMD_READ_VOUT             0x8B
-#define PMBUS_CMD_PAGE_PLUS_WRITE       0x05
-#define PMBUS_CMD_VOUT_COMMAND          0x21
-
 #define PWM_CHANNEL0                    0x0
 
 /*
@@ -367,14 +361,21 @@ unsigned long get_board_ddr_clk(void);
 #define CONFIG_FSL_MEMAC
 
 /*  MMC  */
-#define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
 #define CONFIG_ESDHC_DETECT_QUIRK ((readb(QIXIS_BASE + QIXIS_STAT_PRES1) & \
 	QIXIS_SDID_MASK) != QIXIS_ESDHC_NO_ADAPTER)
+
+#define COMMON_ENV \
+	"kernelheader_addr_r=0x80200000\0"	\
+	"fdtheader_addr_r=0x80100000\0"		\
+	"kernel_addr_r=0x81000000\0"		\
+	"fdt_addr_r=0x90000000\0"		\
+	"load_addr=0xa0000000\0"
 
 /* Initial environment variables */
 #ifdef CONFIG_NXP_ESBC
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS		\
+	COMMON_ENV				\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
 	"loadaddr=0x90100000\0"			\
 	"kernel_addr=0x100000\0"		\
@@ -385,7 +386,7 @@ unsigned long get_board_ddr_clk(void);
 	"kernel_start=0x1000000\0"		\
 	"kernel_load=0xa0000000\0"		\
 	"kernel_size=0x2800000\0"		\
-	"mcinitcmd=sf probe 0:0;sf read 0xa0a00000 0xa00000 0x100000;"	\
+	"mcinitcmd=sf probe 0:0;sf read 0xa0a00000 0xa00000 0x200000;"	\
 	"sf read 0xa0640000 0x640000 0x4000; esbc_validate 0xa0640000;"	\
 	"sf read 0xa0e00000 0xe00000 0x100000;"	\
 	"sf read 0xa0680000 0x680000 0x4000;esbc_validate 0xa0680000;"	\
@@ -394,18 +395,19 @@ unsigned long get_board_ddr_clk(void);
 #else /* if !(CONFIG_NXP_ESBC) */
 #ifdef CONFIG_TFABOOT
 #define QSPI_MC_INIT_CMD				\
-	"sf probe 0:0;sf read 0x80000000 0xA00000 0x100000;"	\
-	"sf read 0x80100000 0xE00000 0x100000;" \
-	"fsl_mc start mc 0x80000000 0x80100000\0"
+	"sf probe 0:0;sf read 0x80a00000 0xA00000 0x200000;"	\
+	"sf read 0x80e00000 0xE00000 0x100000;" \
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"
 #define SD_MC_INIT_CMD				\
-	"mmcinfo;mmc read 0x80000000 0x5000 0x800;"  \
-	"mmc read 0x80100000 0x7000 0x800;" \
-	"fsl_mc start mc 0x80000000 0x80100000\0"
+	"mmcinfo;mmc read 0x80a00000 0x5000 0x1000;"  \
+	"mmc read 0x80e00000 0x7000 0x800;" \
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"
 #define IFC_MC_INIT_CMD				\
 	"fsl_mc start mc 0x580A00000 0x580E00000\0"
 
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS		\
+	COMMON_ENV				\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
 	"loadaddr=0x90100000\0"			\
 	"kernel_addr=0x100000\0"		\
@@ -419,9 +421,9 @@ unsigned long get_board_ddr_clk(void);
 	"kernel_load=0xa0000000\0"		\
 	"kernel_size=0x2800000\0"		\
 	"kernel_size_sd=0x14000\0"               \
-	"mcinitcmd=sf probe 0:0;sf read 0x80000000 0xA00000 0x100000;"	\
-	"sf read 0x80100000 0xE00000 0x100000;" \
-	"fsl_mc start mc 0x80000000 0x80100000\0"	\
+	"mcinitcmd=sf probe 0:0;sf read 0x80a00000 0xA00000 0x200000;"	\
+	"sf read 0x80e00000 0xE00000 0x100000;" \
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"	\
 	"mcmemsize=0x70000000 \0"		\
 	"BOARD=ls1088aqds\0" \
 	"scriptaddr=0x80000000\0"		\
@@ -467,6 +469,7 @@ unsigned long get_board_ddr_clk(void);
 #if defined(CONFIG_QSPI_BOOT)
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS		\
+	COMMON_ENV				\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
 	"loadaddr=0x90100000\0"			\
 	"kernel_addr=0x100000\0"		\
@@ -477,13 +480,14 @@ unsigned long get_board_ddr_clk(void);
 	"kernel_start=0x1000000\0"		\
 	"kernel_load=0xa0000000\0"		\
 	"kernel_size=0x2800000\0"		\
-	"mcinitcmd=sf probe 0:0;sf read 0x80000000 0xA00000 0x100000;"	\
-	"sf read 0x80100000 0xE00000 0x100000;" \
-	"fsl_mc start mc 0x80000000 0x80100000\0"	\
+	"mcinitcmd=sf probe 0:0;sf read 0x80a00000 0xA00000 0x200000;"	\
+	"sf read 0x80e00000 0xE00000 0x100000;" \
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"	\
 	"mcmemsize=0x70000000 \0"
 #elif defined(CONFIG_SD_BOOT)
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS               \
+	COMMON_ENV				\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"    \
 	"loadaddr=0x90100000\0"                 \
 	"kernel_addr=0x800\0"                \
@@ -494,13 +498,14 @@ unsigned long get_board_ddr_clk(void);
 	"kernel_start=0x8000\0"              \
 	"kernel_load=0xa0000000\0"              \
 	"kernel_size=0x14000\0"               \
-	"mcinitcmd=mmcinfo;mmc read 0x80000000 0x5000 0x800;"  \
-	"mmc read 0x80100000 0x7000 0x800;" \
-	"fsl_mc start mc 0x80000000 0x80100000\0"       \
+	"mcinitcmd=mmcinfo;mmc read 0x80a00000 0x5000 0x1000;"  \
+	"mmc read 0x80e00000 0x7000 0x800;" \
+	"fsl_mc start mc 0x80a00000 0x80e00000\0"       \
 	"mcmemsize=0x70000000 \0"
 #else	/* NOR BOOT */
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #define CONFIG_EXTRA_ENV_SETTINGS		\
+	COMMON_ENV				\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
 	"loadaddr=0x90100000\0"			\
 	"kernel_addr=0x100000\0"		\

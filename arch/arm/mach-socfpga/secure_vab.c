@@ -1,22 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2020 Intel Corporation <www.intel.com>
+ * Copyright (C) 2020-2021 Intel Corporation <www.intel.com>
  *
  */
 
 #include <common.h>
-#include <hang.h>
+#include <log.h>
+#include <malloc.h>
 #include <asm/arch/mailbox_s10.h>
 #include <asm/arch/secure_vab.h>
 #include <asm/arch/smc_api.h>
 #include <asm/unaligned.h>
-#include <exports.h>
-#include <image.h>
+#include <linux/delay.h>
 #include <linux/errno.h>
 #include <linux/intel-smc.h>
-#include <log.h>
 
-#define CHUNKSZ_PER_WD_RESET		(256 * 1024)
+#define CHUNKSZ_PER_WD_RESET		(256 * SZ_1K)
 
 /*
  * Read the length of the VAB certificate from the end of image
@@ -38,6 +37,23 @@ static size_t get_img_size(u8 *img_buf, size_t img_buf_sz)
 	return 0;
 }
 
+/*
+ * Vendor Authorized Boot (VAB) is a security feature for authenticating
+ * the images such as U-Boot, ARM trusted Firmware, Linux kernel,
+ * device tree blob and etc loaded from FIT. User can also trigger
+ * the VAB authentication from U-Boot command.
+ *
+ * This function extracts the VAB certificate and signature block
+ * appended at the end of the image, then send to Secure Device Manager
+ * (SDM) for authentication. This function will validate the SHA384
+ * of the image against the SHA384 hash stored in the VAB certificate
+ * before sending the VAB certificate to SDM for authentication.
+ *
+ * RETURN
+ * 0 if authentication success or
+ *   if authentication is not required and bypassed on a non-secure device
+ * negative error code if authentication fail
+ */
 int socfpga_vendor_authentication(void **p_image, size_t *p_size)
 {
 	int retry_count = 20;
@@ -84,7 +100,7 @@ int socfpga_vendor_authentication(void **p_image, size_t *p_size)
 
 	mbox_data_addr = img_addr + img_sz - sizeof(u32);
 	/* Size in word (32bits) */
-	mbox_data_sz = (ALIGN(*p_size - img_sz, 4)) >> 2;
+	mbox_data_sz = (ALIGN(*p_size - img_sz, sizeof(u32))) >> 2;
 
 	debug("mbox_data_addr = 0x%016llx\n", mbox_data_addr);
 	debug("mbox_data_sz = %ld words\n", mbox_data_sz);
@@ -95,7 +111,7 @@ int socfpga_vendor_authentication(void **p_image, size_t *p_size)
 	 * memory block.
 	 */
 	mbox_relocate_data_addr = (u8 *)malloc(mbox_data_sz * sizeof(u32));
-	if (mbox_relocate_data_addr == NULL) {
+	if (!mbox_relocate_data_addr) {
 		puts("Out of memory for VAB certificate relocation!\n");
 		return -ENOMEM;
 	}
@@ -106,18 +122,18 @@ int socfpga_vendor_authentication(void **p_image, size_t *p_size)
 	debug("mbox_relocate_data_addr = 0x%p\n", mbox_relocate_data_addr);
 
 	do {
-#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_ATF)
-		/* Invoke SMC call to ATF to send the VAB certificate to SDM */
-		ret  = smc_send_mailbox(MBOX_VAB_SRC_CERT, mbox_data_sz,
-					(u32 *)mbox_relocate_data_addr, 0, &resp_len,
-					&resp);
-#else
-		/* Send the VAB certficate to SDM for authentication */
-		ret = mbox_send_cmd(MBOX_ID_UBOOT, MBOX_VAB_SRC_CERT,
-				    MBOX_CMD_DIRECT, mbox_data_sz,
-				    (u32 *)mbox_relocate_data_addr, 0, &resp_len,
-				    &resp);
-#endif
+		if (!IS_ENABLED(CONFIG_SPL_BUILD) && IS_ENABLED(CONFIG_SPL_ATF)) {
+			/* Invoke SMC call to ATF to send the VAB certificate to SDM */
+			ret  = smc_send_mailbox(MBOX_VAB_SRC_CERT, mbox_data_sz,
+						(u32 *)mbox_relocate_data_addr, 0, &resp_len,
+						&resp);
+		} else {
+			/* Send the VAB certficate to SDM for authentication */
+			ret = mbox_send_cmd(MBOX_ID_UBOOT, MBOX_VAB_SRC_CERT,
+					    MBOX_CMD_DIRECT, mbox_data_sz,
+					    (u32 *)mbox_relocate_data_addr, 0, &resp_len,
+					    &resp);
+		}
 		/* If SDM is not available, just delay 50ms and retry again */
 		if (ret == MBOX_RESP_DEVICE_BUSY)
 			mdelay(50);
@@ -169,33 +185,3 @@ int socfpga_vendor_authentication(void **p_image, size_t *p_size)
 
 	return 0;
 }
-
-void board_fit_image_post_process(void **p_image, size_t *p_size)
-{
-	if (socfpga_vendor_authentication(p_image, p_size))
-		hang();
-}
-
-#ifndef CONFIG_SPL_BUILD
-void board_prep_linux(bootm_headers_t *images)
-{
-#ifndef CONFIG_SECURE_VAB_AUTH_ALLOW_NON_FIT_IMAGE
-	/*
-	 * Ensure the OS is always booted from FIT and with
-	 * VAB signed certificate
-	 */
-	if (!images->fit_uname_cfg) {
-		printf("Please use FIT with VAB signed images!\n");
-		hang();
-	}
-
-	env_set_hex("fdt_addr", (ulong)images->ft_addr);
-	debug("images->ft_addr = 0x%08lx\n", (ulong)images->ft_addr);
-#endif
-
-#ifdef CONFIG_CADENCE_QSPI
-	if (env_get("linux_qspi_enable"))
-		run_command(env_get("linux_qspi_enable"), 0);
-#endif
-}
-#endif

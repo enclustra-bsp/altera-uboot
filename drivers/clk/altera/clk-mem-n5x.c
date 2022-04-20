@@ -5,21 +5,22 @@
 
 #include <common.h>
 #include <asm/arch/clock_manager.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include "clk-mem-n5x.h"
 #include <clk-uclass.h>
-#include <dt-bindings/clock/n5x-clock.h>
 #include <dm.h>
 #include <dm/lists.h>
 #include <dm/util.h>
+#include <dt-bindings/clock/n5x-clock.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-struct socfpga_mem_clk_platdata {
+struct socfpga_mem_clk_plat {
 	void __iomem *regs;
 };
 
-void clk_mem_wait_for_lock(struct socfpga_mem_clk_platdata *plat, u32 mask)
+void clk_mem_wait_for_lock(struct socfpga_mem_clk_plat *plat, u32 mask)
 {
 	u32 inter_val;
 	u32 retry = 0;
@@ -42,7 +43,7 @@ void clk_mem_wait_for_lock(struct socfpga_mem_clk_platdata *plat, u32 mask)
  * function to write the bypass register which requires a poll of the
  * busy bit
  */
-void clk_mem_write_bypass_mempll(struct socfpga_mem_clk_platdata *plat, u32 val)
+void clk_mem_write_bypass_mempll(struct socfpga_mem_clk_plat *plat, u32 val)
 {
 	CM_REG_WRITEL(plat, val, MEMCLKMGR_MEMPLL_BYPASS);
 }
@@ -53,7 +54,7 @@ void clk_mem_write_bypass_mempll(struct socfpga_mem_clk_platdata *plat, u32 val)
 static void clk_mem_basic_init(struct udevice *dev,
 			       const struct cm_config * const cfg)
 {
-	struct socfpga_mem_clk_platdata *plat = dev_get_platdata(dev);
+	struct socfpga_mem_clk_plat *plat = dev_get_plat(dev);
 
 	if (!cfg)
 		return;
@@ -79,7 +80,7 @@ static void clk_mem_basic_init(struct udevice *dev,
 static int socfpga_mem_clk_enable(struct clk *clk)
 {
 	const struct cm_config *cm_default_cfg = cm_get_default_config();
-	struct socfpga_mem_clk_platdata *plat = dev_get_platdata(clk->dev);
+	struct socfpga_mem_clk_plat *plat = dev_get_plat(clk->dev);
 
 	clk_mem_basic_init(clk->dev, cm_default_cfg);
 
@@ -103,9 +104,9 @@ static int socfpga_mem_clk_enable(struct clk *clk)
 	return 0;
 }
 
-static int socfpga_mem_clk_ofdata_to_platdata(struct udevice *dev)
+static int socfpga_mem_clk_of_to_plat(struct udevice *dev)
 {
-	struct socfpga_mem_clk_platdata *plat = dev_get_platdata(dev);
+	struct socfpga_mem_clk_plat *plat = dev_get_plat(dev);
 	fdt_addr_t addr;
 
 	addr = devfdt_get_addr(dev);
@@ -130,6 +131,6 @@ U_BOOT_DRIVER(socfpga_n5x_mem_clk) = {
 	.id		= UCLASS_CLK,
 	.of_match	= socfpga_mem_clk_match,
 	.ops		= &socfpga_mem_clk_ops,
-	.ofdata_to_platdata = socfpga_mem_clk_ofdata_to_platdata,
-	.platdata_auto_alloc_size = sizeof(struct socfpga_mem_clk_platdata),
+	.of_to_plat     = socfpga_mem_clk_of_to_plat,
+	.plat_auto	= sizeof(struct socfpga_mem_clk_plat),
 };

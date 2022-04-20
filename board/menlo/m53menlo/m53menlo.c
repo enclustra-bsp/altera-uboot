@@ -10,6 +10,7 @@
 #include <dm.h>
 #include <init.h>
 #include <malloc.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/sys_proto.h>
@@ -346,7 +347,7 @@ int board_late_init(void)
 	if (!s)
 		return 0;
 
-	addr = simple_strtoul(s, NULL, 16);
+	addr = hextoul(s, NULL);
 	dst = malloc(CONFIG_SYS_VIDEO_LOGO_MAX_SIZE);
 	if (!dst)
 		return -ENOMEM;

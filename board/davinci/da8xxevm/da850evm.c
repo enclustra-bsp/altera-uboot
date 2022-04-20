@@ -17,6 +17,7 @@
 #include <spi.h>
 #include <spi_flash.h>
 #include <asm/arch/hardware.h>
+#include <asm/global_data.h>
 #include <asm/ti-common/davinci_nand.h>
 #include <asm/arch/emac_defs.h>
 #include <asm/arch/pinmux_defs.h>
@@ -283,7 +284,7 @@ u32 get_board_rev(void)
 
 	s = env_get("maxcpuclk");
 	if (s)
-		maxcpuclk = simple_strtoul(s, NULL, 10);
+		maxcpuclk = dectoul(s, NULL);
 
 	if (maxcpuclk >= 456000000)
 		rev = 3;

@@ -6,6 +6,7 @@
 #include <common.h>
 #include <cpu_func.h>
 #include <init.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <env.h>
 #include <errno.h>
@@ -137,7 +138,8 @@ int print_cpuinfo(void)
 #ifdef CONFIG_ARCH_MISC_INIT
 int arch_misc_init(void)
 {
-	u32 bsel = readl(&sysmgr_regs->bootinfo) & 0x7;
+	const u32 bsel = readl(socfpga_get_sysmgr_addr() +
+			       SYSMGR_GEN5_BOOTINFO) & 0x7;
 	const int fpga_id = socfpga_fpga_id(0);
 #if defined(CONFIG_TARGET_SOCFPGA_CYCLONE5_MARS_MA3)
 	int ret;

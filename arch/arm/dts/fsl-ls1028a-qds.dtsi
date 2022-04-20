@@ -251,10 +251,13 @@
 
 &enetc1 {
 	status = "okay";
-	phy-mode = "rgmii";
+	phy-mode = "rgmii-id";
 	phy-handle = <&qds_phy0>;
 };
 
 &mdio0 {
 	status = "okay";
 };
+
+#include "fsl-ls1028a-qds-8xxx-sch-24801.dtsi"
+#include "fsl-ls1028a-qds-x5xx-sch-28021-LBRW.dtsi"

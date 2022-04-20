@@ -36,6 +36,7 @@
 #include <xilinx.h>
 #endif
 
+#include <asm/global_data.h>
 #include <u-boot/md5.h>
 #include <u-boot/sha1.h>
 #include <linux/errno.h>
@@ -189,6 +190,7 @@ static const table_entry_t uimage_type[] = {
 	{	IH_TYPE_STM32IMAGE, "stm32image", "STMicroelectronics STM32 Image" },
 	{	IH_TYPE_MTKIMAGE,   "mtk_image",   "MediaTek BootROM loadable Image" },
 	{	IH_TYPE_COPRO, "copro", "Coprocessor Image"},
+	{	IH_TYPE_SUNXI_EGON, "sunxi_egon",  "Allwinner eGON Boot Image" },
 	{	-1,		    "",		  "",			},
 };
 
@@ -460,13 +462,16 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 		else
 			ret = -ENOSPC;
 		break;
-#ifdef CONFIG_GZIP
+#ifndef USE_HOSTCC
+#if CONFIG_IS_ENABLED(GZIP)
 	case IH_COMP_GZIP: {
 		ret = gunzip(load_buf, unc_len, image_buf, &image_len);
 		break;
 	}
 #endif /* CONFIG_GZIP */
-#ifdef CONFIG_BZIP2
+#endif
+#ifndef USE_HOSTCC
+#if CONFIG_IS_ENABLED(BZIP2)
 	case IH_COMP_BZIP2: {
 		uint size = unc_len;
 
@@ -482,7 +487,9 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 		break;
 	}
 #endif /* CONFIG_BZIP2 */
-#ifdef CONFIG_LZMA
+#endif
+#ifndef USE_HOSTCC
+#if CONFIG_IS_ENABLED(LZMA)
 	case IH_COMP_LZMA: {
 		SizeT lzma_len = unc_len;
 
@@ -492,7 +499,9 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 		break;
 	}
 #endif /* CONFIG_LZMA */
-#ifdef CONFIG_LZO
+#endif
+#ifndef USE_HOSTCC
+#if CONFIG_IS_ENABLED(LZO)
 	case IH_COMP_LZO: {
 		size_t size = unc_len;
 
@@ -501,7 +510,9 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 		break;
 	}
 #endif /* CONFIG_LZO */
-#ifdef CONFIG_LZ4
+#endif
+#ifndef USE_HOSTCC
+#if CONFIG_IS_ENABLED(LZ4)
 	case IH_COMP_LZ4: {
 		size_t size = unc_len;
 
@@ -510,7 +521,9 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 		break;
 	}
 #endif /* CONFIG_LZ4 */
-#ifdef CONFIG_ZSTD
+#endif
+#ifndef USE_HOSTCC
+#if CONFIG_IS_ENABLED(ZSTD)
 	case IH_COMP_ZSTD: {
 		size_t size = unc_len;
 		ZSTD_DStream *dstream;
@@ -560,6 +573,7 @@ int image_decomp(int comp, ulong load, ulong image_start, int type,
 		break;
 	}
 #endif /* CONFIG_ZSTD */
+#endif
 	default:
 		printf("Unimplemented compression type %d\n", comp);
 		return -ENOSYS;
@@ -648,7 +662,7 @@ static int on_loadaddr(const char *name, const char *value, enum env_op op,
 	switch (op) {
 	case env_op_create:
 	case env_op_overwrite:
-		image_load_addr = simple_strtoul(value, NULL, 16);
+		image_load_addr = hextoul(value, NULL);
 		break;
 	default:
 		break;
@@ -662,7 +676,7 @@ ulong env_get_bootm_low(void)
 {
 	char *s = env_get("bootm_low");
 	if (s) {
-		ulong tmp = simple_strtoul(s, NULL, 16);
+		ulong tmp = hextoul(s, NULL);
 		return tmp;
 	}
 
@@ -1046,7 +1060,7 @@ ulong genimg_get_kernel_addr_fit(char * const img_addr,
 		      *fit_uname_kernel, kernel_addr);
 #endif
 	} else {
-		kernel_addr = simple_strtoul(img_addr, NULL, 16);
+		kernel_addr = hextoul(img_addr, NULL);
 		debug("*  kernel: cmdline image address = 0x%08lx\n",
 		      kernel_addr);
 	}
@@ -1213,7 +1227,7 @@ int boot_get_ramdisk(int argc, char *const argv[], bootm_headers_t *images,
 			} else
 #endif
 			{
-				rd_addr = simple_strtoul(select, NULL, 16);
+				rd_addr = hextoul(select, NULL);
 				debug("*  ramdisk: cmdline image address = "
 						"0x%08lx\n",
 						rd_addr);
@@ -1287,7 +1301,7 @@ int boot_get_ramdisk(int argc, char *const argv[], bootm_headers_t *images,
 			if (select)
 				end = strchr(select, ':');
 			if (end) {
-				rd_len = simple_strtoul(++end, NULL, 16);
+				rd_len = hextoul(++end, NULL);
 				rd_data = rd_addr;
 			} else
 #endif
@@ -1365,7 +1379,7 @@ int boot_ramdisk_high(struct lmb *lmb, ulong rd_data, ulong rd_len,
 		/* a value of "no" or a similar string will act like 0,
 		 * turning the "load high" feature off. This is intentional.
 		 */
-		initrd_high = simple_strtoul(s, NULL, 16);
+		initrd_high = hextoul(s, NULL);
 		if (initrd_high == ~0)
 			initrd_copy_to_ram = 0;
 	} else {

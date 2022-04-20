@@ -51,6 +51,10 @@ struct udevice;
 				 PHY_100BT_FEATURES | \
 				 PHY_DEFAULT_FEATURES)
 
+#define PHY_100BT1_FEATURES	(SUPPORTED_TP | \
+				 SUPPORTED_MII | \
+				 SUPPORTED_100baseT_Full)
+
 #define PHY_GBIT_FEATURES	(PHY_BASIC_FEATURES | \
 				 PHY_1000BT_FEATURES)
 
@@ -402,6 +406,27 @@ int phy_reset(struct phy_device *phydev);
 struct phy_device *phy_find_by_mask(struct mii_dev *bus, unsigned phy_mask,
 		phy_interface_t interface);
 
+#ifdef CONFIG_PHY_FIXED
+
+/**
+ * fixed_phy_create() - create an unconnected fixed-link pseudo-PHY device
+ * @node: OF node for the container of the fixed-link node
+ *
+ * Description: Creates a struct phy_device based on a fixed-link of_node
+ * description. Can be used without phy_connect by drivers which do not expose
+ * a UCLASS_ETH udevice.
+ */
+struct phy_device *fixed_phy_create(ofnode node);
+
+#else
+
+static inline struct phy_device *fixed_phy_create(ofnode node)
+{
+	return NULL;
+}
+
+#endif
+
 #ifdef CONFIG_DM_ETH
 
 /**
@@ -493,6 +518,7 @@ int phy_aquantia_init(void);
 int phy_atheros_init(void);
 int phy_broadcom_init(void);
 int phy_cortina_init(void);
+int phy_cortina_access_init(void);
 int phy_davicom_init(void);
 int phy_et1011c_init(void);
 int phy_lxt_init(void);
@@ -501,6 +527,7 @@ int phy_micrel_ksz8xxx_init(void);
 int phy_micrel_ksz90x1_init(void);
 int phy_meson_gxl_init(void);
 int phy_natsemi_init(void);
+int phy_nxp_tja11xx_init(void);
 int phy_realtek_init(void);
 int phy_smsc_init(void);
 int phy_teranetics_init(void);

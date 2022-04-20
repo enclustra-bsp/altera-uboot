@@ -46,6 +46,8 @@ obj-$(CONFIG_SEMIHOSTING) += semihosting.o
 
 obj-y	+= bdinfo.o
 obj-y	+= sections.o
+CFLAGS_REMOVE_sections.o := $(LTO_CFLAGS)
+
 obj-y	+= stack.o
 ifdef CONFIG_CPU_V7M
 obj-y	+= interrupts_m.o
@@ -65,6 +67,7 @@ endif
 
 obj-y	+= cache.o
 obj-$(CONFIG_SYS_ARM_CACHE_CP15)	+= cache-cp15.o
+CFLAGS_REMOVE_cache-cp15.o := $(LTO_CFLAGS)
 
 obj-y	+= psci-dt.o
 

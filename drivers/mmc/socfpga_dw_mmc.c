@@ -6,13 +6,14 @@
 #include <common.h>
 #include <log.h>
 #include <asm/arch/clock_manager.h>
-#include <asm/arch/smc_api.h>
+#include <asm/arch/secure_reg_helper.h>
 #include <asm/arch/system_manager.h>
 #include <clk.h>
 #include <dm.h>
 #include <dwmmc.h>
 #include <errno.h>
 #include <fdtdec.h>
+#include <asm/global_data.h>
 #include <dm/device_compat.h>
 #include <linux/intel-smc.h>
 #include <linux/libfdt.h>
@@ -49,11 +50,8 @@ static void socfpga_dwmci_reset(struct udevice *dev)
 	reset_deassert_bulk(&reset_bulk);
 }
 
-static void socfpga_dwmci_clksel(struct dwmci_host *host)
+static int socfpga_dwmci_clksel(struct dwmci_host *host)
 {
-#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_ATF)
-	u64 args[2];
-#endif
 
 	struct dwmci_socfpga_priv_data *priv = host->priv;
 	u32 sdmmc_mask = ((priv->smplsel & 0x7) << SYSMGR_SDMMC_SMPLSEL_SHIFT) |
@@ -67,23 +65,26 @@ static void socfpga_dwmci_clksel(struct dwmci_host *host)
 	      priv->drvsel, priv->smplsel);
 
 #if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_ATF)
-	args[0] = socfpga_get_sysmgr_addr() + SYSMGR_SDMMC;
-	args[1] = sdmmc_mask;
-	if (invoke_smc(INTEL_SIP_SMC_REG_WRITE, args, 2, NULL, 0))
-	{
+	int ret;
+
+	ret = socfpga_secure_reg_write32(SOCFPGA_SECURE_REG_SYSMGR_SOC64_SDMMC,
+					 sdmmc_mask);
+	if (ret) {
 		printf("DWMMC: Failed to set clksel via SMC call");
-		return;
+		return ret;
 	}
 #else
 	writel(sdmmc_mask, socfpga_get_sysmgr_addr() + SYSMGR_SDMMC);
-#endif
 
 	debug("%s: SYSMGR_SDMMCGRP_CTRL_REG = 0x%x\n", __func__,
 		readl(socfpga_get_sysmgr_addr() + SYSMGR_SDMMC));
+#endif
 
 	/* Enable SDMMC clock */
 	setbits_le32(socfpga_get_clkmgr_addr() + CLKMGR_PERPLL_EN,
 		     CLKMGR_PERPLLGRP_EN_SDMMCCLK_MASK);
+
+	return 0;
 }
 
 static int socfpga_dwmmc_get_clk_rate(struct udevice *dev)
@@ -113,7 +114,7 @@ static int socfpga_dwmmc_get_clk_rate(struct udevice *dev)
 	return 0;
 }
 
-static int socfpga_dwmmc_ofdata_to_platdata(struct udevice *dev)
+static int socfpga_dwmmc_of_to_plat(struct udevice *dev)
 {
 	struct dwmci_socfpga_priv_data *priv = dev_get_priv(dev);
 	struct dwmci_host *host = &priv->host;
@@ -145,11 +146,14 @@ static int socfpga_dwmmc_ofdata_to_platdata(struct udevice *dev)
 					"smplsel", 0);
 	host->priv = priv;
 
+
 	if (fdt_get_property(gd->fdt_blob, dev_of_offset(dev),
 				"mmc_8bit_cap", NULL))
 		priv->mmc_8bit_cap = 1;
 	else
 		priv->mmc_8bit_cap = 0;
+
+	host->fifo_mode = dev_read_bool(dev, "fifo-mode");
 
 	return 0;
 }
@@ -157,7 +161,7 @@ static int socfpga_dwmmc_ofdata_to_platdata(struct udevice *dev)
 static int socfpga_dwmmc_probe(struct udevice *dev)
 {
 #ifdef CONFIG_BLK
-	struct socfpga_dwmci_plat *plat = dev_get_platdata(dev);
+	struct socfpga_dwmci_plat *plat = dev_get_plat(dev);
 #endif
 	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
 	struct dwmci_socfpga_priv_data *priv = dev_get_priv(dev);
@@ -192,7 +196,7 @@ static int socfpga_dwmmc_probe(struct udevice *dev)
 static int socfpga_dwmmc_bind(struct udevice *dev)
 {
 #ifdef CONFIG_BLK
-	struct socfpga_dwmci_plat *plat = dev_get_platdata(dev);
+	struct socfpga_dwmci_plat *plat = dev_get_plat(dev);
 	int ret;
 
 	ret = dwmci_bind(dev, &plat->mmc, &plat->cfg);
@@ -212,10 +216,10 @@ U_BOOT_DRIVER(socfpga_dwmmc_drv) = {
 	.name		= "socfpga_dwmmc",
 	.id		= UCLASS_MMC,
 	.of_match	= socfpga_dwmmc_ids,
-	.ofdata_to_platdata = socfpga_dwmmc_ofdata_to_platdata,
+	.of_to_plat = socfpga_dwmmc_of_to_plat,
 	.ops		= &dm_dwmci_ops,
 	.bind		= socfpga_dwmmc_bind,
 	.probe		= socfpga_dwmmc_probe,
-	.priv_auto_alloc_size = sizeof(struct dwmci_socfpga_priv_data),
-	.platdata_auto_alloc_size = sizeof(struct socfpga_dwmci_plat),
+	.priv_auto	= sizeof(struct dwmci_socfpga_priv_data),
+	.plat_auto	= sizeof(struct socfpga_dwmci_plat),
 };

@@ -7,7 +7,7 @@
 #ifndef __CONFIG_SOCFPGA_SOC64_COMMON_H__
 #define __CONFIG_SOCFPGA_SOC64_COMMON_H__
 
-#include <asm/arch/base_addr_s10.h>
+#include <asm/arch/base_addr_soc64.h>
 #include <asm/arch/handoff_soc64.h>
 #include <linux/stringify.h>
 
@@ -20,6 +20,7 @@
 #define CONFIG_REMAKE_ELF
 /* sysmgr.boot_scratch_cold4 & 5 (64bit) will be used for PSCI_CPU_ON call */
 #define CPU_RELEASE_ADDR		0xFFD12210
+
 /*
  * sysmgr.boot_scratch_cold6 & 7 (64bit) will be used by master CPU to
  * store its VBAR_EL3 value. Other slave CPUs will read from this
@@ -81,7 +82,6 @@
 
 #ifndef __ASSEMBLY__
 unsigned int cm_get_qspi_controller_clk_hz(void);
-#define CLOCK_1K	1000
 #define CONFIG_CQSPI_REF_CLK		cm_get_qspi_controller_clk_hz()
 #endif
 
@@ -91,9 +91,6 @@ unsigned int cm_get_qspi_controller_clk_hz(void);
  * NAND support
  */
 #ifdef CONFIG_NAND_DENALI
-#ifndef CONFIG_SPL_FIT
-#define CONFIG_SPL_NAND_RAW_ONLY
-#endif
 #define CONFIG_SYS_NAND_ONFI_DETECTION
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 
@@ -101,11 +98,93 @@ unsigned int cm_get_qspi_controller_clk_hz(void);
 #define CONFIG_SYS_NAND_U_BOOT_DST	CONFIG_SYS_TEXT_BASE
 #endif /* CONFIG_NAND_DENALI */
 
-#ifdef CONFIG_SECURE_VAB_AUTH
-#define CONFIG_BOOTFILE "kernel_vab.itb"
+/*
+ * Environment variable
+ */
+
+#if IS_ENABLED(CONFIG_SPL_ATF)
+#define CONFIG_BOOTFILE "kernel.itb"
 #else
 #define CONFIG_BOOTFILE "Image"
 #endif
+
+#if IS_ENABLED(CONFIG_DISTRO_DEFAULTS)
+#if IS_ENABLED(CONFIG_CMD_MMC)
+#define BOOT_TARGET_DEVICES_MMC(func) func(MMC, mmc, 0)
+#else
+#define BOOT_TARGET_DEVICES_MMC(func)
+#endif
+
+#if IS_ENABLED(CONFIG_CMD_SF)
+#define BOOT_TARGET_DEVICES_QSPI(func) func(QSPI, qspi, na)
+#else
+#define BOOT_TARGET_DEVICES_QSPI(func)
+#endif
+
+#define BOOTENV_DEV_QSPI(devtypeu, devtypel, instance) \
+	"bootcmd_qspi=sf probe && " \
+	"sf read ${scriptaddr} ${qspiscriptaddr} ${scriptsize} && " \
+	"echo QSPI: Trying to boot script at ${scriptaddr} && " \
+	"source ${scriptaddr}; " \
+	"echo QSPI: SCRIPT FAILED: continuing...;\0"
+
+#define BOOTENV_DEV_NAME_QSPI(devtypeu, devtypel, instance) \
+	"qspi "
+
+#if IS_ENABLED(CONFIG_CMD_NAND)
+# define BOOT_TARGET_DEVICES_NAND(func)	func(NAND, nand, na)
+#else
+# define BOOT_TARGET_DEVICES_NAND(func)
+#endif
+
+#define BOOTENV_DEV_NAND(devtypeu, devtypel, instance) \
+	"bootcmd_nand=ubi part root && " \
+	"ubi readvol ${scriptaddr} script && " \
+	"echo NAND: Trying to boot script at ${scriptaddr} && " \
+	"source ${scriptaddr}; " \
+	"echo NAND: SCRIPT FAILED: continuing...;\0"
+
+#define BOOTENV_DEV_NAME_NAND(devtypeu, devtypel, instance) \
+	"nand "
+
+#define BOOT_TARGET_DEVICES(func) \
+	BOOT_TARGET_DEVICES_MMC(func) \
+	BOOT_TARGET_DEVICES_QSPI(func) \
+	BOOT_TARGET_DEVICES_NAND(func)
+
+#include <config_distro_bootcmd.h>
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	"kernel_addr_r=0x2000000\0" \
+	"fdt_addr_r=0x6000000\0" \
+	"qspiscriptaddr=0x02110000\0" \
+	"scriptsize=0x00010000\0" \
+	"qspibootimageaddr=0x02120000\0" \
+	"bootimagesize=0x03200000\0" \
+	"loadaddr=" __stringify(CONFIG_SYS_LOAD_ADDR) "\0" \
+	"bootfile=" CONFIG_BOOTFILE "\0" \
+	"mmcroot=/dev/mmcblk0p2\0" \
+	"mtdids=" CONFIG_MTDIDS_DEFAULT "\0" \
+	"mtdparts=" CONFIG_MTDPARTS_DEFAULT "\0" \
+	"linux_qspi_enable=if sf probe; then " \
+		"echo Enabling QSPI at Linux DTB...;" \
+		"fdt addr ${fdt_addr}; fdt resize;" \
+		"fdt set /soc/spi@ff8d2000 status okay;" \
+		"if fdt set /soc/clocks/qspi-clk clock-frequency" \
+		" ${qspi_clock}; then" \
+		" else fdt set /soc/clkmgr/clocks/qspi_clk clock-frequency" \
+		" ${qspi_clock}; fi; fi\0" \
+	"scriptaddr=0x05FF0000\0" \
+	"scriptfile=boot.scr\0" \
+	"nandroot=ubi0:rootfs\0" \
+	"socfpga_legacy_reset_compat=1\0" \
+	"rsu_status=rsu dtb; rsu display_dcmf_version; "\
+		"rsu display_dcmf_status; rsu display_max_retry\0" \
+	"smc_fid_rd=0xC2000007\0" \
+	"smc_fid_wr=0xC2000008\0" \
+	"smc_fid_upd=0xC2000009\0 " \
+	BOOTENV
+
+#else
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"qspibootimageaddr=0x020E0000\0" \
@@ -116,22 +195,25 @@ unsigned int cm_get_qspi_controller_clk_hz(void);
 		"sf read ${fdt_addr} ${qspifdtaddr} ${fdtimagesize}\0" \
 	"qspiboot=setenv bootargs earlycon root=/dev/mtdblock1 rw " \
 		"rootfstype=jffs2 rootwait;booti ${loadaddr} - ${fdt_addr}\0" \
+	"qspifitload=sf read ${loadaddr} ${qspibootimageaddr} ${bootimagesize}\0" \
+	"qspifitboot=setenv bootargs earlycon root=/dev/mtdblock1 rw " \
+		"rootfstype=jffs2 rootwait;bootm ${loadaddr}\0" \
 	"loadaddr=" __stringify(CONFIG_SYS_LOAD_ADDR) "\0" \
 	"bootfile=" CONFIG_BOOTFILE "\0" \
 	"fdt_addr=8000000\0" \
 	"fdtimage=" CONFIG_DEFAULT_DEVICE_TREE ".dtb\0" \
 	"mmcroot=/dev/mmcblk0p2\0" \
-	"mmcvabboot=setenv bootargs " CONFIG_BOOTARGS \
-		" root=${mmcroot} rw rootwait;" \
-		"bootm ${loadaddr}\0" \
-	"mmcvabload=mmc rescan;" \
-		"load mmc 0:1 ${loadaddr} ${bootfile}\0" \
 	"mmcboot=setenv bootargs " CONFIG_BOOTARGS \
 		" root=${mmcroot} rw rootwait;" \
 		"booti ${loadaddr} - ${fdt_addr}\0" \
 	"mmcload=mmc rescan;" \
 		"load mmc 0:1 ${loadaddr} ${bootfile};" \
 		"load mmc 0:1 ${fdt_addr} ${fdtimage}\0" \
+	"mmcfitboot=setenv bootargs " CONFIG_BOOTARGS \
+		" root=${mmcroot} rw rootwait;" \
+		"bootm ${loadaddr}\0" \
+	"mmcfitload=mmc rescan;" \
+		"load mmc 0:1 ${loadaddr} ${bootfile}\0" \
 	"mtdids=" CONFIG_MTDIDS_DEFAULT "\0" \
 	"mtdparts=" CONFIG_MTDPARTS_DEFAULT "\0" \
 	"linux_qspi_enable=if sf probe; then " \
@@ -145,15 +227,23 @@ unsigned int cm_get_qspi_controller_clk_hz(void);
 	"scriptaddr=0x02100000\0" \
 	"scriptfile=u-boot.scr\0" \
 	"fatscript=if fatload mmc 0:1 ${scriptaddr} ${scriptfile};" \
-		   "then source ${scriptaddr}; fi\0" \
-	"nandroot=/dev/mtdblock5\0" \
-	"nandload=nand read ${loadaddr} kernel; nand read ${fdt_addr} dtb\0" \
+		   "then source ${scriptaddr}:script; fi\0" \
+	"nandroot=ubi0:rootfs\0" \
+	"nandload=ubi part root; ubi readvol ${loadaddr} kernel; ubi readvol ${fdt_addr} dtb\0" \
 	"nandboot=setenv bootargs " CONFIG_BOOTARGS \
-			" root=${nandroot} rw rootwait rootfstype=jffs2; " \
+			" root=${nandroot} rw rootwait rootfstype=ubifs ubi.mtd=1; " \
 			"booti ${loadaddr} - ${fdt_addr}\0" \
+	"nandfitboot=setenv bootargs " CONFIG_BOOTARGS \
+			" root=${nandroot} rw rootwait rootfstype=ubifs ubi.mtd=1; " \
+			"bootm ${loadaddr}\0" \
+	"nandfitload=ubi part root; ubi readvol ${loadaddr} kernel\0" \
 	"socfpga_legacy_reset_compat=1\0" \
 	"rsu_status=rsu dtb; rsu display_dcmf_version; "\
-		"rsu display_dcmf_status; rsu display_max_retry\0"
+		"rsu display_dcmf_status; rsu display_max_retry\0" \
+	"smc_fid_rd=0xC2000007\0" \
+	"smc_fid_wr=0xC2000008\0" \
+	"smc_fid_upd=0xC2000009\0 "
+#endif /*#if IS_ENABLED(CONFIG_DISTRO_DEFAULTS)*/
 
 /*
  * Generic Interrupt Controller Definitions
@@ -243,7 +333,6 @@ unsigned int cm_get_l4_sys_free_clk_hz(void);
 					- CONFIG_SYS_SPL_MALLOC_SIZE)
 
 /* SPL SDMMC boot support */
-#define CONFIG_SYS_MMCSD_FS_BOOT_PARTITION	1
 #ifdef CONFIG_SPL_LOAD_FIT
 #define CONFIG_SPL_FS_LOAD_PAYLOAD_NAME		"u-boot.itb"
 #else

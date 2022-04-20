@@ -10,28 +10,15 @@
 #include <common.h>
 #include <log.h>
 #include <malloc.h>
+#include <asm/global_data.h>
 DECLARE_GLOBAL_DATA_PTR;
 #endif /* !USE_HOSTCC*/
 #include <fdt_region.h>
 #include <image.h>
 #include <u-boot/rsa.h>
-#include <u-boot/rsa-checksum.h>
+#include <u-boot/hash-checksum.h>
 
 #define IMAGE_MAX_HASHED_NODES		100
-
-#ifdef USE_HOSTCC
-void *host_blob;
-
-void image_set_host_blob(void *blob)
-{
-	host_blob = blob;
-}
-
-void *image_get_host_blob(void)
-{
-	return host_blob;
-}
-#endif
 
 /**
  * fit_region_make_list() - Make a list of image regions
@@ -258,7 +245,13 @@ static int fit_config_check_sig(const void *fit, int noffset,
 				int required_keynode, int conf_noffset,
 				char **err_msgp)
 {
-	char * const exc_prop[] = {"data", "data-size", "data-position"};
+	static char * const exc_prop[] = {
+		"data",
+		"data-size",
+		"data-position",
+		"data-offset"
+	};
+
 	const char *prop, *end, *name;
 	struct image_sign_info info;
 	const uint32_t *strings;
@@ -382,7 +375,7 @@ static int fit_config_verify_sig(const void *fit, int conf_noffset,
 				 const void *sig_blob, int sig_offset)
 {
 	int noffset;
-	char *err_msg = "";
+	char *err_msg = "No 'signature' subnode found";
 	int verified = 0;
 	int ret;
 

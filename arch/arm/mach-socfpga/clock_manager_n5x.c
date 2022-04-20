@@ -4,14 +4,16 @@
  *
  */
 
-#include <clk.h>
 #include <common.h>
-#include <dm.h>
-#include <malloc.h>
 #include <asm/arch/clock_manager.h>
 #include <asm/arch/system_manager.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
+#include <clk.h>
+#include <dm.h>
 #include <dt-bindings/clock/n5x-clock.h>
+#include <malloc.h>
+#include <common.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -23,7 +25,7 @@ static ulong cm_get_rate_dm(u32 id)
 	int ret;
 
 	ret = uclass_get_device_by_driver(UCLASS_CLK,
-					  DM_GET_DRIVER(socfpga_n5x_clk),
+					  DM_DRIVER_GET(socfpga_n5x_clk),
 					  &dev);
 	if (ret)
 		return 0;
