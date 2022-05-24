@@ -1,0 +1,13 @@
+&usb0 {
+	status = "okay";
+	dr_mode = "host";
+	disable-over-current;
+};
+
+&usb1 {
+	status = "disabled";
+};
+
+/*TODO: sdhci1: see socfgpa_enclustra_mercury_sdmmc.dtsi*/
+
+/*TODO: check: i2c0: "silabs,si5338";*/

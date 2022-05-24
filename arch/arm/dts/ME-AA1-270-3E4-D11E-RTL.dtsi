@@ -1,0 +1,14 @@
+#include "socfpga_arria10.dtsi"
+#include "socfpga_arria10_socdk-u-boot.dtsi"
+#include "socfpga_arria10_enclustra_mercury_aa1.dtsi"
+
+/ {
+	model = "Enclustra ME-AA1-270-3E4-D11E-RTL SOM";
+	compatible = "altr,socfpga-arria10", "altr,socfpga";
+
+	memory@0 {
+		name = "memory";
+		device_type = "memory";
+		reg = <0x0 0x80000000>; /* 2GB */
+	};
+};

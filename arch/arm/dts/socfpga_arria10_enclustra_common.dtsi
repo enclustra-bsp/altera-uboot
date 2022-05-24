@@ -1,0 +1,33 @@
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+/*TODO: remove me placeholder qspi*/
+
+&i2c1 {
+	status = "okay";
+	clock-frequency = <50000>;
+	/* Max value set according to HW spec */
+	i2c-scl-falling-time-ns = <300>;
+	
+	isl12022: isl12022@6f {
+		status = "okay";
+		compatible = "isil,isl12022";
+		reg = <0x6f>;
+	};
+};
+
+/*TODO: remove me placeholder sdhci0*/
+
+&uart0 {
+	status = "disabled";
+};
+
+&uart1 {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};

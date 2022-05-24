@@ -1,0 +1,35 @@
+/ {
+	chosen {
+		bootargs = "earlyprintk";
+		stdout-path = "serial0:115200n8";
+	};
+
+	aliases {
+		/* this allow the ethaddr uboot environmnet variable contents
+		 * to be added to the gmac1 device tree blob.
+		 */
+		ethernet0 = &gmac1;
+		spi0 = &qspi;
+	};
+
+	regulator_3_3v: 3-3-v-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "3.3V";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+};
+
+&gmac1 {
+	status = "okay";
+	phy-mode = "rgmii";
+
+	rxd0-skew-ps = <60>;
+	rxd1-skew-ps = <60>;
+	rxd2-skew-ps = <0>;
+	rxd3-skew-ps = <60>;
+	txen-skew-ps = <0>;
+	txc-skew-ps = <1800>;
+	rxdv-skew-ps = <0>;
+	rxc-skew-ps = <1800>;
+};

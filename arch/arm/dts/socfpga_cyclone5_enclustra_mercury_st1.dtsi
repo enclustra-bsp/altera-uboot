@@ -1,0 +1,14 @@
+&usb0 {
+	status = "disabled";
+};
+
+&usb1 {
+	status = "okay";
+	dr_mode = "host";
+};
+
+/*TODO: sdhci1: see socfgpa_enclustra_mercury_sdmmc.dtsi*/
+
+/*TODO: check: i2c0 "silabs,si5338";*/
+
+/* display port */

@@ -1,0 +1,13 @@
+#include "socfpga_cyclone5.dtsi"
+#include "socfpga_cyclone5_enclustra_mars_ma3.dtsi"
+
+/ {
+	model = "Enclustra MA-MA3-C6-7I-D10 SOM";
+	compatible = "altr,socfpga-cyclone5-socdk", "altr,socfpga-cyclone5", "altr,socfpga";
+
+	memory@0 {
+		name = "memory";
+		device_type = "memory";
+		reg = <0x0 0x40000000>; /* 1GB */
+	};
+};
