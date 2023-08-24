@@ -1,8 +1,0 @@
-run qspiramdiskargs;
-sf read ${kernel_loadaddr} ${qspi_kernel_offset} ${kernel_size} || exit;
-sf read ${devicetree_loadaddr} ${qspi_devicetree_offset} ${devicetree_size} || exit;
-sf read ${rootfs_loadaddr} ${qspi_ramdisk_offset} ${ramdisk_size} || exit;
-
-run altera_mux_sd_memory;
-
-bootm ${kernel_loadaddr} ${rootfs_loadaddr} ${devicetree_loadaddr}

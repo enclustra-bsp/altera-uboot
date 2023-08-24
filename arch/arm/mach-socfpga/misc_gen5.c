@@ -25,7 +25,6 @@
 #include <asm/arch/nic301.h>
 #include <asm/arch/scu.h>
 #include <asm/pl310.h>
-#include <asm/gpio.h>
 
 #include <dt-bindings/reset/altr,rst-mgr.h>
 
@@ -141,18 +140,6 @@ int arch_misc_init(void)
 	const u32 bsel = readl(socfpga_get_sysmgr_addr() +
 			       SYSMGR_GEN5_BOOTINFO) & 0x7;
 	const int fpga_id = socfpga_fpga_id(0);
-#if defined(CONFIG_TARGET_SOCFPGA_CYCLONE5_MARS_MA3)
-	int ret;
-	if (bsel == 4 || bsel == 5) {
-		ret = gpio_request(53, "emmc_en");
-		if (!ret) {
-			gpio_direction_input(53);
-			ret = gpio_get_value(53);
-			if (ret == 0)
-				bsel += 4;
-			}
-	}
-#endif
 	env_set("bootmode", bsel_str[bsel].mode);
 	if (fpga_id >= 0)
 		env_set("fpgatype", socfpga_fpga_model[fpga_id].var);

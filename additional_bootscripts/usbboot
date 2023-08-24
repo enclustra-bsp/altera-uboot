@@ -1,1 +1,0 @@
-run usbargs; usb start && load usb 0 ${kernel_loadaddr} ${kernel_image} && load usb 0 ${devicetree_loadaddr} ${devicetree_image} && bootm ${kernel_loadaddr} - ${devicetree_loadaddr}

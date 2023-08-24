@@ -25,8 +25,6 @@
 #include <asm/arch/nic301.h>
 #include <asm/arch/scu.h>
 #include <asm/pl310.h>
-#include <asm/gpio.h>
-#include <dt-bindings/reset/altr,rst-mgr.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -48,8 +46,6 @@ struct bsel bsel_str[] = {
 	{ "sd", "SD/MMC Internal Transceiver (3.0V)", },
 	{ "qspi", "QSPI Flash (1.8V)", },
 	{ "qspi", "QSPI Flash (3.0V)", },
-	{ "emmc", "SD/eMMC Internal Transceiver (1.8V)", },
-	{ "emmc", "SD/eMMC Internal Transceiver (3.0V)", },
 };
 
 int dram_init(void)
