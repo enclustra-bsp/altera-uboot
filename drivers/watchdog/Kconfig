@@ -35,7 +35,7 @@ config WATCHDOG_TIMEOUT_MSECS
 	  Watchdog timeout in msec
 
 config HW_WATCHDOG
-	bool "Enable hardware watchdog"
+	bool
 
 config IMX_WATCHDOG
 	bool "Enable Watchdog Timer support for IMX and LSCH2 of NXP"

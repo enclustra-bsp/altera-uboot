@@ -822,6 +822,7 @@ cadence_qspi_apb_indirect_write_execute(struct cadence_spi_priv *priv,
 {
 	unsigned int page_size = priv->page_size;
 	unsigned int remaining = n_tx;
+	const u8 *bb_txbuf = txbuf;
 	void *bounce_buf = NULL;
 	unsigned int write_bytes;
 	int ret;
@@ -835,6 +836,7 @@ cadence_qspi_apb_indirect_write_execute(struct cadence_spi_priv *priv,
 		if (!bounce_buf)
 			return -ENOMEM;
 		memcpy(bounce_buf, txbuf, n_tx);
+		bb_txbuf = bounce_buf;
 	}
 
 	/* Configure the indirect read transfer bytes */
@@ -866,7 +868,7 @@ cadence_qspi_apb_indirect_write_execute(struct cadence_spi_priv *priv,
 			goto failwr;
 		}
 
-		txbuf += write_bytes;
+		bb_txbuf += write_bytes;
 		remaining -= write_bytes;
 		schedule();
 	}

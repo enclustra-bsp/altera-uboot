@@ -446,8 +446,6 @@ dtb-$(CONFIG_ARCH_SOCFPGA) +=				\
 	socfpga_cyclone5_mcvevk.dtb			\
 	socfpga_cyclone5_is1.dtb			\
 	socfpga_cyclone5_socdk.dtb			\
-	socfpga_cyclone5_mercury_sa1.dtb		\
-	socfpga_cyclone5_mars_ma3.dtb			\
 	socfpga_cyclone5_dbm_soc1.dtb			\
 	socfpga_cyclone5_de0_nano_soc.dtb		\
 	socfpga_cyclone5_de1_soc.dtb			\

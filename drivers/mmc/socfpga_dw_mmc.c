@@ -33,7 +33,6 @@ struct dwmci_socfpga_priv_data {
 	struct dwmci_host	host;
 	unsigned int		drvsel;
 	unsigned int		smplsel;
-	unsigned int		mmc_8bit_cap;
 };
 
 static void socfpga_dwmci_reset(struct udevice *dev)
@@ -165,9 +164,6 @@ static int socfpga_dwmmc_probe(struct udevice *dev)
 		return ret;
 
 	socfpga_dwmci_reset(dev);
-
-	if (priv->mmc_8bit_cap)
-		host->quirks |= DWMCI_QUIRK_MMC_8BIT_CAP;
 
 #ifdef CONFIG_BLK
 	dwmci_setup_cfg(&plat->cfg, host, host->bus_hz, 400000);
