@@ -8,7 +8,11 @@
 
 #include <common.h>
 #include <adc.h>
+#include <dm.h>
 #include <asm/io.h>
+#include <dm/device_compat.h>
+#include <linux/bitops.h>
+#include <linux/delay.h>
 #include <linux/iopoll.h>
 #include "stm32-adc-core.h"
 
@@ -76,7 +80,7 @@ static int stm32_adc_stop(struct udevice *dev)
 
 static int stm32_adc_start_channel(struct udevice *dev, int channel)
 {
-	struct adc_uclass_platdata *uc_pdata = dev_get_uclass_platdata(dev);
+	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
 	struct stm32_adc_common *common = dev_get_priv(dev_get_parent(dev));
 	struct stm32_adc *adc = dev_get_priv(dev);
 	int ret;
@@ -158,25 +162,26 @@ static int stm32_adc_channel_data(struct udevice *dev, int channel,
 	return 0;
 }
 
-static int stm32_adc_chan_of_init(struct udevice *dev)
+static int stm32_adc_get_legacy_chan_count(struct udevice *dev)
 {
-	struct adc_uclass_platdata *uc_pdata = dev_get_uclass_platdata(dev);
-	struct stm32_adc *adc = dev_get_priv(dev);
-	u32 chans[STM32_ADC_CH_MAX];
-	int i, num_channels, ret;
+	int ret;
 
 	/* Retrieve single ended channels listed in device tree */
-	num_channels = dev_read_size(dev, "st,adc-channels");
-	if (num_channels < 0) {
-		dev_err(dev, "can't get st,adc-channels: %d\n", num_channels);
-		return num_channels;
+	ret = dev_read_size(dev, "st,adc-channels");
+	if (ret < 0) {
+		dev_err(dev, "can't get st,adc-channels: %d\n", ret);
+		return ret;
 	}
-	num_channels /= sizeof(u32);
 
-	if (num_channels > adc->cfg->max_channels) {
-		dev_err(dev, "too many st,adc-channels: %d\n", num_channels);
-		return -EINVAL;
-	}
+	return (ret / sizeof(u32));
+}
+
+static int stm32_adc_legacy_chan_init(struct udevice *dev, unsigned int num_channels)
+{
+	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
+	struct stm32_adc *adc = dev_get_priv(dev);
+	u32 chans[STM32_ADC_CH_MAX];
+	int i, ret;
 
 	ret = dev_read_u32_array(dev, "st,adc-channels", chans, num_channels);
 	if (ret < 0) {
@@ -192,6 +197,69 @@ static int stm32_adc_chan_of_init(struct udevice *dev)
 		uc_pdata->channel_mask |= 1 << chans[i];
 	}
 
+	return ret;
+}
+
+static int stm32_adc_generic_chan_init(struct udevice *dev, unsigned int num_channels)
+{
+	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
+	struct stm32_adc *adc = dev_get_priv(dev);
+	ofnode child;
+	int val, ret;
+
+	ofnode_for_each_subnode(child, dev_ofnode(dev)) {
+		ret = ofnode_read_u32(child, "reg", &val);
+		if (ret) {
+			dev_err(dev, "Missing channel index %d\n", ret);
+			return ret;
+		}
+
+		if (val >= adc->cfg->max_channels) {
+			dev_err(dev, "Invalid channel %d\n", val);
+			return -EINVAL;
+		}
+
+		uc_pdata->channel_mask |= 1 << val;
+	}
+
+	return 0;
+}
+
+static int stm32_adc_chan_of_init(struct udevice *dev)
+{
+	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
+	struct stm32_adc *adc = dev_get_priv(dev);
+	unsigned int num_channels;
+	int ret;
+	bool legacy = false;
+
+	num_channels = dev_get_child_count(dev);
+	/* If no channels have been found, fallback to channels legacy properties. */
+	if (!num_channels) {
+		legacy = true;
+
+		ret = stm32_adc_get_legacy_chan_count(dev);
+		if (!ret) {
+			dev_err(dev, "No channel found\n");
+			return -ENODATA;
+		} else if (ret < 0) {
+			return ret;
+		}
+		num_channels = ret;
+	}
+
+	if (num_channels > adc->cfg->max_channels) {
+		dev_err(dev, "too many st,adc-channels: %d\n", num_channels);
+		return -EINVAL;
+	}
+
+	if (legacy)
+		ret = stm32_adc_legacy_chan_init(dev, num_channels);
+	else
+		ret = stm32_adc_generic_chan_init(dev, num_channels);
+	if (ret < 0)
+		return ret;
+
 	uc_pdata->data_mask = (1 << adc->cfg->num_bits) - 1;
 	uc_pdata->data_format = ADC_DATA_FORMAT_BIN;
 	uc_pdata->data_timeout_us = 100000;
@@ -201,7 +269,7 @@ static int stm32_adc_chan_of_init(struct udevice *dev)
 
 static int stm32_adc_probe(struct udevice *dev)
 {
-	struct adc_uclass_platdata *uc_pdata = dev_get_uclass_platdata(dev);
+	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
 	struct stm32_adc_common *common = dev_get_priv(dev_get_parent(dev));
 	struct stm32_adc *adc = dev_get_priv(dev);
 	int offset;
@@ -253,5 +321,5 @@ U_BOOT_DRIVER(stm32_adc) = {
 	.of_match = stm32_adc_ids,
 	.probe = stm32_adc_probe,
 	.ops = &stm32_adc_ops,
-	.priv_auto_alloc_size = sizeof(struct stm32_adc),
+	.priv_auto	= sizeof(struct stm32_adc),
 };

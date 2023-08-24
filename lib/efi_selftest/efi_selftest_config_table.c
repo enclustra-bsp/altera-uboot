@@ -9,6 +9,7 @@
  */
 
 #include <efi_selftest.h>
+#include <u-boot/crc.h>
 
 static const struct efi_system_table *sys_table;
 static struct efi_boot_services *boottime;
@@ -67,7 +68,7 @@ static int check_table(const void *table)
  *
  * @handle:	handle of the loaded image
  * @systable:	system table
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int setup(const efi_handle_t handle,
 		 const struct efi_system_table *systable)
@@ -84,7 +85,7 @@ static int setup(const efi_handle_t handle,
  * A table is installed, updated, removed. The table entry and the
  * triggering of events is checked.
  *
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int execute(void)
 {
@@ -153,8 +154,8 @@ static int execute(void)
 	}
 	table = NULL;
 	for (i = 0; i < sys_table->nr_tables; ++i) {
-		if (!efi_st_memcmp(&sys_table->tables[i].guid, &table_guid,
-				   sizeof(efi_guid_t)))
+		if (!memcmp(&sys_table->tables[i].guid, &table_guid,
+			    sizeof(efi_guid_t)))
 			table = sys_table->tables[i].table;
 	}
 	if (!table) {
@@ -192,8 +193,8 @@ static int execute(void)
 	table = NULL;
 	tabcnt = 0;
 	for (i = 0; i < sys_table->nr_tables; ++i) {
-		if (!efi_st_memcmp(&sys_table->tables[i].guid, &table_guid,
-				   sizeof(efi_guid_t))) {
+		if (!memcmp(&sys_table->tables[i].guid, &table_guid,
+			    sizeof(efi_guid_t))) {
 			table = sys_table->tables[i].table;
 			++tabcnt;
 		}
@@ -235,8 +236,8 @@ static int execute(void)
 	}
 	table = NULL;
 	for (i = 0; i < sys_table->nr_tables; ++i) {
-		if (!efi_st_memcmp(&sys_table->tables[i].guid, &table_guid,
-				   sizeof(efi_guid_t))) {
+		if (!memcmp(&sys_table->tables[i].guid, &table_guid,
+			    sizeof(efi_guid_t))) {
 			table = sys_table->tables[i].table;
 		}
 	}

@@ -9,12 +9,11 @@
 #include <linux/sizes.h>
 #include <asm/arch/timer.h>
 
-#if defined(CONFIG_TARGET_RPI_2) || defined(CONFIG_TARGET_RPI_3_32B)
-#define CONFIG_SKIP_LOWLEVEL_INIT
+#ifndef __ASSEMBLY__
+#include <asm/arch/base.h>
 #endif
 
 /* Architecture, CPU, etc.*/
-#define CONFIG_ARCH_CPU_INIT
 
 /* Use SoC timer for AArch32, but architected timer for AArch64 */
 #ifndef CONFIG_ARM64
@@ -23,24 +22,9 @@
 	(&((struct bcm2835_timer_regs *)BCM2835_TIMER_PHYSADDR)->clo)
 #endif
 
-/*
- * 2835 is a SKU in a series for which the 2708 is the first or primary SoC,
- * so 2708 has historically been used rather than a dedicated 2835 ID.
- *
- * We don't define a machine type for bcm2709/bcm2836 since the RPi Foundation
- * chose to use someone else's previously registered machine ID (3139, MX51_GGC)
- * rather than obtaining a valid ID:-/
- *
- * For the bcm2837, hopefully a machine type is not needed, since everything
- * is DT.
- */
-#ifdef CONFIG_BCM2835
-#define CONFIG_MACH_TYPE		MACH_TYPE_BCM2708
-#endif
-
 /* Memory layout */
 #define CONFIG_SYS_SDRAM_BASE		0x00000000
-#define CONFIG_SYS_UBOOT_BASE		CONFIG_SYS_TEXT_BASE
+#define CONFIG_SYS_UBOOT_BASE		CONFIG_TEXT_BASE
 /*
  * The board really has 256M. However, the VC (VideoCore co-processor) shares
  * the RAM, and uses a configurable portion at the top. We tell U-Boot that a
@@ -48,39 +32,31 @@
  * the VC uses.
  */
 #define CONFIG_SYS_SDRAM_SIZE		SZ_128M
-#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_SDRAM_BASE + \
-					 CONFIG_SYS_SDRAM_SIZE - \
-					 GENERATED_GBL_DATA_SIZE)
-#define CONFIG_SYS_MALLOC_LEN		SZ_4M
-#define CONFIG_SYS_MEMTEST_START	0x00100000
-#define CONFIG_SYS_MEMTEST_END		0x00200000
-#define CONFIG_LOADADDR			0x00200000
 
 /* Devices */
-/* GPIO */
-#define CONFIG_BCM2835_GPIO
 /* LCD */
-#define CONFIG_LCD_DT_SIMPLEFB
-#define CONFIG_VIDEO_BCM2835
 
-#ifdef CONFIG_CMD_USB
-#define CONFIG_TFTP_TSIZE
+/* DFU over USB/UDC */
+#ifdef CONFIG_CMD_DFU
+#ifdef CONFIG_ARM64
+#define KERNEL_FILENAME		"Image"
+#else
+#define KERNEL_FILENAME		"zImage"
+#endif
+
+#define ENV_DFU_SETTINGS \
+	"dfu_alt_info=u-boot.bin fat 0 1;uboot.env fat 0 1;" \
+		      "config.txt fat 0 1;" \
+		      KERNEL_FILENAME " fat 0 1\0"
+#else
+#define ENV_DFU_SETTINGS ""
 #endif
 
 /* Console configuration */
-#define CONFIG_SYS_CBSIZE		1024
 
 /* Environment */
-#define CONFIG_ENV_SIZE			SZ_16K
-#define CONFIG_SYS_LOAD_ADDR		0x1000000
-#define CONFIG_PREBOOT			"usb start"
 
 /* Shell */
-
-/* ATAGs support for bootm/bootz */
-#define CONFIG_SETUP_MEMORY_TAGS
-#define CONFIG_CMDLINE_TAG
-#define CONFIG_INITRD_TAG
 
 /* Environment */
 #define ENV_DEVICE_SETTINGS \
@@ -146,17 +122,45 @@
 	"fdt_addr_r=0x02600000\0" \
 	"ramdisk_addr_r=0x02700000\0"
 
+#if CONFIG_IS_ENABLED(CMD_MMC)
+	#define BOOT_TARGET_MMC(func) \
+		func(MMC, mmc, 0) \
+		func(MMC, mmc, 1) \
+		func(MMC, mmc, 2)
+#else
+	#define BOOT_TARGET_MMC(func)
+#endif
+
+#if CONFIG_IS_ENABLED(CMD_USB)
+	#define BOOT_TARGET_USB(func) func(USB, usb, 0)
+#else
+	#define BOOT_TARGET_USB(func)
+#endif
+
+#if CONFIG_IS_ENABLED(CMD_PXE)
+	#define BOOT_TARGET_PXE(func) func(PXE, pxe, na)
+#else
+	#define BOOT_TARGET_PXE(func)
+#endif
+
+#if CONFIG_IS_ENABLED(CMD_DHCP)
+	#define BOOT_TARGET_DHCP(func) func(DHCP, dhcp, na)
+#else
+	#define BOOT_TARGET_DHCP(func)
+#endif
+
 #define BOOT_TARGET_DEVICES(func) \
-	func(MMC, mmc, 0) \
-	func(MMC, mmc, 1) \
-	func(USB, usb, 0) \
-	func(PXE, pxe, na) \
-	func(DHCP, dhcp, na)
+	BOOT_TARGET_MMC(func) \
+	BOOT_TARGET_USB(func) \
+	BOOT_TARGET_PXE(func) \
+	BOOT_TARGET_DHCP(func)
+
 #include <config_distro_bootcmd.h>
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"dhcpuboot=usb start; dhcp u-boot.uimg; bootm\0" \
 	ENV_DEVICE_SETTINGS \
+	ENV_DFU_SETTINGS \
 	ENV_MEM_LAYOUT_SETTINGS \
 	BOOTENV
 

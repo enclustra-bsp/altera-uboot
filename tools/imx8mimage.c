@@ -21,14 +21,19 @@ static uint32_t sld_header_off;
 static uint32_t ivt_offset;
 static uint32_t using_fit;
 
+#define ROM_V1 1
+#define ROM_V2 2
+
+static uint32_t rom_version = ROM_V1;
+
 #define CSF_SIZE 0x2000
 #define HDMI_IVT_ID 0
 #define IMAGE_IVT_ID 1
 
 #define HDMI_FW_SIZE		0x17000 /* Use Last 0x1000 for IVT and CSF */
 #define ALIGN_SIZE		0x1000
-#define ALIGN(x,a)	__ALIGN_MASK((x), (__typeof__(x))(a) - 1, a)
-#define __ALIGN_MASK(x,mask,mask2) (((x) + (mask)) / (mask2) * (mask2))
+#define ALIGN_IMX(x, a)			__ALIGN_MASK_IMX((x), (__typeof__(x))(a) - 1, a)
+#define __ALIGN_MASK_IMX(x, mask, mask2)	(((x) + (mask)) / (mask2) * (mask2))
 
 static uint32_t get_cfg_value(char *token, char *name,  int linenr)
 {
@@ -71,6 +76,7 @@ static table_entry_t imx8mimage_cmds[] = {
 	{CMD_LOADER,            "LOADER",               "loader image",       },
 	{CMD_SECOND_LOADER,     "SECOND_LOADER",        "2nd loader image",   },
 	{CMD_DDR_FW,            "DDR_FW",               "ddr firmware",       },
+	{CMD_ROM_VERSION,       "ROM_VERSION",          "rom version",        },
 	{-1,                    "",                     "",	              },
 };
 
@@ -90,6 +96,9 @@ static void parse_cfg_cmd(int32_t cmd, char *token, char *name, int lineno)
 						token);
 		if (!strncmp(token, "sd", 2))
 			rom_image_offset = 0x8000;
+
+		if (rom_version == ROM_V2)
+			ivt_offset = 0;
 		break;
 	case CMD_LOADER:
 		ap_img = token;
@@ -99,11 +108,17 @@ static void parse_cfg_cmd(int32_t cmd, char *token, char *name, int lineno)
 		break;
 	case CMD_SIGNED_HDMI:
 		signed_hdmi = token;
-	case CMD_FIT:
-		using_fit = 1;
 		break;
 	case CMD_DDR_FW:
 		/* Do nothing */
+		break;
+	case CMD_ROM_VERSION:
+		if (!strncmp(token, "v2", 2)) {
+			rom_version = ROM_V2;
+			ivt_offset = 0;
+		} else if (!strncmp(token, "v1", 2)) {
+			rom_version = ROM_V1;
+		}
 		break;
 	}
 }
@@ -119,6 +134,11 @@ static void parse_cfg_fld(int32_t *cmd, char *token,
 			fprintf(stderr, "Error: %s[%d] - Invalid command" "(%s)\n",
 				name, lineno, token);
 			exit(EXIT_FAILURE);
+		}
+		switch (*cmd) {
+		case CMD_FIT:
+			using_fit = 1;
+			break;
 		}
 		break;
 	case CFG_REG_SIZE:
@@ -227,7 +247,7 @@ static void copy_file(int ifd, const char *datafile, int pad, int offset,
 	struct stat sbuf;
 	unsigned char *ptr;
 	int tail;
-	int zero = 0;
+	uint64_t zero = 0;
 	uint8_t zeros[4096];
 	int size, ret;
 
@@ -250,7 +270,7 @@ static void copy_file(int ifd, const char *datafile, int pad, int offset,
 	if (ptr == MAP_FAILED) {
 		fprintf(stderr, "Can't read %s: %s\n",
 			datafile, strerror(errno));
-		exit(EXIT_FAILURE);
+		goto err_mmap;
 	}
 
 	size = sbuf.st_size - datafile_offset;
@@ -290,6 +310,7 @@ static void copy_file(int ifd, const char *datafile, int pad, int offset,
 	}
 
 	munmap((void *)ptr, sbuf.st_size);
+err_mmap:
 	close(dfd);
 }
 
@@ -297,7 +318,7 @@ static void copy_file(int ifd, const char *datafile, int pad, int offset,
 static int generate_ivt_for_fit(int fd, int fit_offset, uint32_t ep,
 				uint32_t *fit_load_addr)
 {
-	image_header_t image_header;
+	struct legacy_img_hdr image_header;
 	int ret;
 
 	uint32_t fit_size, load_addr;
@@ -309,8 +330,8 @@ static int generate_ivt_for_fit(int fd, int fit_offset, uint32_t ep,
 		exit(EXIT_FAILURE);
 	}
 
-	if (read(fd, (char *)&image_header, sizeof(image_header_t)) !=
-	    sizeof(image_header_t)) {
+	if (read(fd, (char *)&image_header, sizeof(struct legacy_img_hdr)) !=
+	    sizeof(struct legacy_img_hdr)) {
 		fprintf(stderr, "generate_ivt_for_fit read failed: %s\n",
 			strerror(errno));
 		exit(EXIT_FAILURE);
@@ -322,9 +343,8 @@ static int generate_ivt_for_fit(int fd, int fit_offset, uint32_t ep,
 	}
 
 	fit_size = fdt_totalsize(&image_header);
-	fit_size = (fit_size + 3) & ~3;
 
-	fit_size = ALIGN(fit_size, ALIGN_SIZE);
+	fit_size = ALIGN_IMX(fit_size, ALIGN_SIZE);
 
 	ret = lseek(fd, fit_offset + fit_size, SEEK_SET);
 	if (ret < 0) {
@@ -391,9 +411,75 @@ static void dump_header_v2(imx_header_v3_t *imx_header, int index)
 		imx_header[index].boot_data.plugin);
 }
 
+#ifdef CONFIG_FSPI_CONF_HEADER
+static int generate_fspi_header (int ifd)
+{
+	int ret, i = 0;
+	char *val;
+	char lut_str[] = CONFIG_LUT_SEQUENCE;
+
+	fspi_conf fspi_conf_data = {
+	.tag = {0x46, 0x43, 0x46, 0x42},
+	.version = {0x00, 0x00, 0x01, 0x56},
+	.reserved_1 = {0x00, 0x00, 0x00, 0x00},
+	.read_sample = CONFIG_READ_CLK_SOURCE,
+	.datahold =  0x03,
+	.datasetup = 0x03,
+	.coladdrwidth = 0x00,
+	.devcfgenable = 0x00,
+	.reserved_2 = {0x00, 0x00, 0x00},
+	.devmodeseq =  {0x00, 0x00, 0x00, 0x00},
+	.devmodearg =  {0x00, 0x00, 0x00, 0x00},
+	.cmd_enable =  0x00,
+	.reserved_3 = {0x00},
+	.cmd_seq = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+							0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+	.cmd_arg = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+							0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+	.controllermisc = {0x00, 0x00, 0x00, 0x00},
+	.dev_type = CONFIG_DEVICE_TYPE,
+	.sflash_pad = CONFIG_FLASH_PAD_TYPE,
+	.serial_clk = CONFIG_SERIAL_CLK_FREQUENCY,
+	.lut_custom = CONFIG_LUT_CUSTOM_SEQUENCE,
+	.reserved_4 = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+	.sflashA1  =  {0x00, 0x00, 0x00, 0x10},
+	.sflashA2 = {0x00, 0x00, 0x00, 0x00},
+	.sflashB1 = {0x00, 0x00, 0x00, 0x00},
+	.sflashB2 =  {0x00, 0x00, 0x00, 0x00},
+	.cspadover = {0x00, 0x00, 0x00, 0x00},
+	.sclkpadover = {0x00, 0x00, 0x00, 0x00},
+	.datapadover = {0x00, 0x00, 0x00, 0x00},
+	.dqspadover = {0x00, 0x00, 0x00, 0x00},
+	.timeout =  {0x00, 0x00, 0x00, 0x00},
+	.commandInt = {0x00, 0x00, 0x00, 0x00},
+	.datavalid  = {0x00, 0x00, 0x00, 0x00},
+	.busyoffset = {0x00, 0x00},
+	.busybitpolarity = {0x00, 0x00},
+	};
+
+	for (val = strtok(lut_str, ","); val; val = strtok(NULL, ",")) {
+		fspi_conf_data.lut[i++] = strtoul(val, NULL, 16);
+	}
+
+	ret = lseek(ifd, 0, SEEK_CUR);
+	if (write(ifd, &fspi_conf_data, sizeof(fspi_conf_data)) == -1)
+		exit(EXIT_FAILURE);
+
+	ret = lseek(ifd, sizeof(fspi_conf_data), SEEK_CUR);
+
+	return ret;
+}
+#endif
+
 void build_image(int ofd)
 {
 	int file_off, header_hdmi_off = 0, header_image_off;
+
+#ifdef CONFIG_FSPI_CONF_HEADER
+	int fspi_off, fspi_fd;
+	char *fspi;
+#endif
+
 	int hdmi_fd, ap_fd, sld_fd;
 	uint32_t sld_load_addr = 0;
 	uint32_t csf_off, sld_csf_off = 0;
@@ -428,12 +514,26 @@ void build_image(int ofd)
 		 * Aligned to 104KB = 92KB FW image + 0x8000
 		 * (IVT and alignment) + 0x4000 (second IVT + CSF)
 		 */
-		file_off += ALIGN(sbuf.st_size,
+		file_off += ALIGN_IMX(sbuf.st_size,
 				  HDMI_FW_SIZE + 0x2000 + 0x1000);
 	}
 
 	header_image_off = file_off + ivt_offset;
 
+#ifdef CONFIG_FSPI_CONF_HEADER
+	fspi = CONFIG_FSPI_CONF_FILE;
+	fspi_fd = open(fspi, O_RDWR | O_CREAT, S_IRWXU);
+	if (fspi_fd < 0) {
+		fprintf(stderr, "Can't open %s: %s\n",
+			fspi, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	fspi_off = generate_fspi_header(fspi_fd);
+	file_off = header_image_off + fspi_off;
+	close(fspi_fd);
+
+#endif
 	ap_fd = open(ap_img, O_RDONLY | O_BINARY);
 	if (ap_fd < 0) {
 		fprintf(stderr, "%s: Can't open: %s\n",
@@ -461,7 +561,7 @@ void build_image(int ofd)
 	imx_header[IMAGE_IVT_ID].boot_data.start =
 		imx_header[IMAGE_IVT_ID].fhdr.self - ivt_offset;
 	imx_header[IMAGE_IVT_ID].boot_data.size =
-		ALIGN(sbuf.st_size + sizeof(imx_header_v3_t) + ivt_offset,
+		ALIGN_IMX(sbuf.st_size + sizeof(imx_header_v3_t) + ivt_offset,
 		      sector_size);
 
 	image_off = header_image_off + sizeof(imx_header_v3_t);
@@ -484,12 +584,6 @@ void build_image(int ofd)
 			exit(EXIT_FAILURE);
 		} else {
 			sld_header_off = sld_src_off - rom_image_offset;
-			/*
-			 * Record the second bootloader relative offset in
-			 * image's IVT reserved1
-			 */
-			imx_header[IMAGE_IVT_ID].fhdr.reserved1 =
-				sld_header_off - header_image_off;
 			sld_fd = open(sld_img, O_RDONLY | O_BINARY);
 			if (sld_fd < 0) {
 				fprintf(stderr, "%s: Can't open: %s\n",
@@ -506,7 +600,7 @@ void build_image(int ofd)
 			close(sld_fd);
 
 			file_off = sld_header_off;
-			file_off += sbuf.st_size + sizeof(image_header_t);
+			file_off += sbuf.st_size + sizeof(struct legacy_img_hdr);
 		}
 	}
 

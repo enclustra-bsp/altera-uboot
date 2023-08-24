@@ -5,12 +5,14 @@
  */
 
 #include <common.h>
+#include <init.h>
 #include <asm/processor.h>
 #include <asm/immap_85xx.h>
 #include <fsl_ddr_sdram.h>
 #include <asm/processor.h>
 #include <asm/mmu.h>
 #include <spd_sdram.h>
+#include <linux/delay.h>
 
 
 #if !defined(CONFIG_SPD_EEPROM)
@@ -24,7 +26,7 @@
 phys_size_t fixed_sdram(void)
 {
 	struct ccsr_ddr __iomem *ddr =
-		(struct ccsr_ddr __iomem *)(CONFIG_SYS_FSL_DDR_ADDR);
+		(struct ccsr_ddr __iomem *)(CFG_SYS_FSL_DDR_ADDR);
 
 	/*
 	 * Disable memory controller.
@@ -61,7 +63,7 @@ phys_size_t fixed_sdram(void)
 #endif
 
 #if defined(CONFIG_SYS_DRAM_TEST)
-int testdram (void)
+int testdram(void)
 {
 	uint *pstart = (uint *) CONFIG_SYS_MEMTEST_START;
 	uint *pend = (uint *) CONFIG_SYS_MEMTEST_END;

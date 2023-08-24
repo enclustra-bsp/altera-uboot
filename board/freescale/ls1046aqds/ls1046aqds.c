@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2016 Freescale Semiconductor, Inc.
+ * Copyright 2019-2021 NXP
  */
 
 #include <common.h>
+#include <clock_legacy.h>
 #include <i2c.h>
 #include <fdt_support.h>
 #include <fsl_ddr_sdram.h>
+#include <init.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/fsl_serdes.h>
@@ -24,8 +28,8 @@
 #include <fsl_csu.h>
 #include <fsl_esdhc.h>
 #include <fsl_ifc.h>
-#include <fsl_sec.h>
 #include <spl.h>
+#include "../common/i2c_mux.h"
 
 #include "../common/vid.h"
 #include "../common/qixis.h"
@@ -269,27 +273,16 @@ u32 get_lpuart_clk(void)
 }
 #endif
 
-int select_i2c_ch_pca9547(u8 ch)
-{
-	int ret;
-
-	ret = i2c_write(I2C_MUX_PCA_ADDR_PRI, 0, 1, &ch, 1);
-	if (ret) {
-		puts("PCA: failed to select proper channel\n");
-		return ret;
-	}
-
-	return 0;
-}
-
 int dram_init(void)
 {
 	/*
 	 * When resuming from deep sleep, the I2C channel may not be
 	 * in the default channel. So, switch to the default channel
 	 * before accessing DDR SPD.
+	 *
+	 * PCA9547 mount on I2C1 bus
 	 */
-	select_i2c_ch_pca9547(I2C_MUX_CH_DEFAULT);
+	select_i2c_ch_pca9547(I2C_MUX_CH_DEFAULT, 0);
 	fsl_initdram();
 #if (!defined(CONFIG_SPL) && !defined(CONFIG_TFABOOT)) || \
 	defined(CONFIG_SPL_BUILD)
@@ -302,20 +295,26 @@ int dram_init(void)
 
 int i2c_multiplexer_select_vid_channel(u8 channel)
 {
-	return select_i2c_ch_pca9547(channel);
+	return select_i2c_ch_pca9547(channel, 0);
 }
 
 int board_early_init_f(void)
 {
+	u32 __iomem *cntcr = (u32 *)CFG_SYS_FSL_TIMER_ADDR;
 #ifdef CONFIG_HAS_FSL_XHCI_USB
-	struct ccsr_scfg *scfg = (struct ccsr_scfg *)CONFIG_SYS_FSL_SCFG_ADDR;
+	struct ccsr_scfg *scfg = (struct ccsr_scfg *)CFG_SYS_FSL_SCFG_ADDR;
 	u32 usb_pwrfault;
 #endif
 #ifdef CONFIG_LPUART
 	u8 uart;
 #endif
 
-#ifdef CONFIG_SYS_I2C_EARLY_INIT
+	/*
+	 * Enable secure system counter for timer
+	 */
+	out_le32(cntcr, 0x1);
+
+#if defined(CONFIG_SYS_I2C_EARLY_INIT)
 	i2c_early_init_f();
 #endif
 	fsl_lsch2_early_init_f();
@@ -348,7 +347,7 @@ int board_early_init_f(void)
 bool is_warm_boot(void)
 {
 #define DCFG_CCSR_CRSTSR_WDRFR	(1 << 3)
-	struct ccsr_gur __iomem *gur = (void *)CONFIG_SYS_FSL_GUTS_ADDR;
+	struct ccsr_gur __iomem *gur = (void *)CFG_SYS_FSL_GUTS_ADDR;
 
 	if (in_be32(&gur->crstsr) & DCFG_CCSR_CRSTSR_WDRFR)
 		return 1;
@@ -394,9 +393,9 @@ int misc_init_r(void)
 
 int board_init(void)
 {
-	select_i2c_ch_pca9547(I2C_MUX_CH_DEFAULT);
+	select_i2c_ch_pca9547(I2C_MUX_CH_DEFAULT, 0);
 
-#ifdef CONFIG_SYS_FSL_SERDES
+#ifdef CFG_SYS_FSL_SERDES
 	config_serdes_mux();
 #endif
 
@@ -407,7 +406,7 @@ int board_init(void)
 	ppa_init();
 #endif
 
-#ifdef CONFIG_SECURE_BOOT
+#ifdef CONFIG_NXP_ESBC
 	/*
 	 * In case of Secure Boot, the IBR configures the SMMU
 	 * to allow only Secure transactions.
@@ -421,15 +420,11 @@ int board_init(void)
 	out_le32(SMMU_NSCR0, val);
 #endif
 
-#ifdef CONFIG_FSL_CAAM
-	sec_init();
-#endif
-
 	return 0;
 }
 
 #ifdef CONFIG_OF_BOARD_SETUP
-int ft_board_setup(void *blob, bd_t *bd)
+int ft_board_setup(void *blob, struct bd_info *bd)
 {
 	u64 base[CONFIG_NR_DRAM_BANKS];
 	u64 size[CONFIG_NR_DRAM_BANKS];
@@ -444,8 +439,7 @@ int ft_board_setup(void *blob, bd_t *bd)
 	fdt_fixup_memory_banks(blob, base, size, 2);
 	ft_cpu_setup(blob, bd);
 
-#ifdef CONFIG_SYS_DPAA_FMAN
-	fdt_fixup_fman_ethernet(blob);
+#ifdef CONFIG_FMAN_ENET
 	fdt_fixup_board_enet(blob);
 #endif
 
@@ -482,9 +476,9 @@ u16 flash_read16(void *addr)
 	return (((val) >> 8) & 0x00ff) | (((val) << 8) & 0xff00);
 }
 
-#ifdef CONFIG_TFABOOT
+#if defined(CONFIG_TFABOOT) && defined(CONFIG_ENV_IS_IN_SPI_FLASH)
 void *env_sf_get_env_addr(void)
 {
-	return (void *)(CONFIG_SYS_FSL_QSPI_BASE + CONFIG_ENV_OFFSET);
+	return (void *)(CFG_SYS_FSL_QSPI_BASE + CONFIG_ENV_OFFSET);
 }
 #endif

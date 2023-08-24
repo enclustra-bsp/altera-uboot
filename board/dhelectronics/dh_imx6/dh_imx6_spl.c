@@ -6,6 +6,8 @@
  */
 
 #include <common.h>
+#include <cpu_func.h>
+#include <init.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/arch/imx-regs.h>
@@ -13,17 +15,20 @@
 #include <asm/arch/mx6-ddr.h>
 #include <asm/arch/mx6-pins.h>
 #include <asm/arch/sys_proto.h>
+#include <asm/cache.h>
 #include <asm/gpio.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/mach-imx/mxc_i2c.h>
 #include <asm/io.h>
+#include <asm/system.h>
 #include <errno.h>
 #include <fuse.h>
-#include <fsl_esdhc.h>
+#include <fsl_esdhc_imx.h>
 #include <i2c.h>
 #include <mmc.h>
 #include <spl.h>
+#include <linux/delay.h>
 
 #define ENET_PAD_CTRL							\
 	(PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |	\
@@ -161,18 +166,18 @@ static const struct mx6_mmdc_calibration dhcom_mmdc_calib_2x4g_800 = {
 };
 
 static const struct mx6_mmdc_calibration dhcom_mmdc_calib_4x2g_1066 = {
-	.p0_mpwldectrl0	= 0x0011000E,
-	.p0_mpwldectrl1	= 0x000E001B,
-	.p1_mpwldectrl0	= 0x00190015,
-	.p1_mpwldectrl1	= 0x00070018,
-	.p0_mpdgctrl0	= 0x42720306,
-	.p0_mpdgctrl1	= 0x026F0266,
-	.p1_mpdgctrl0	= 0x4273030A,
-	.p1_mpdgctrl1	= 0x02740240,
-	.p0_mprddlctl	= 0x45393B3E,
-	.p1_mprddlctl	= 0x403A3747,
-	.p0_mpwrdlctl	= 0x40434541,
-	.p1_mpwrdlctl	= 0x473E4A3B,
+	.p0_mpwldectrl0	= 0x001a001a,
+	.p0_mpwldectrl1	= 0x00260015,
+	.p0_mpdgctrl0	= 0x030c0320,
+	.p0_mpdgctrl1	= 0x03100304,
+	.p0_mprddlctl	= 0x432e3538,
+	.p0_mpwrdlctl	= 0x363f423d,
+	.p1_mpwldectrl0	= 0x0006001e,
+	.p1_mpwldectrl1	= 0x00050015,
+	.p1_mpdgctrl0	= 0x031c0324,
+	.p1_mpdgctrl1	= 0x030c0258,
+	.p1_mprddlctl	= 0x3834313f,
+	.p1_mpwrdlctl	= 0x47374a42,
 };
 
 static const struct mx6_mmdc_calibration dhcom_mmdc_calib_4x2g_800 = {
@@ -440,8 +445,13 @@ static void setup_iomux_sd(void)
 
 /* SPI */
 static iomux_v3_cfg_t const ecspi1_pads[] = {
-	/* SS0 */
-	IOMUX_PADS(PAD_EIM_EB2__GPIO2_IO30	| MUX_PAD_CTRL(SPI_PAD_CTRL)),
+	/* SS0 - SS of boot flash */
+	IOMUX_PADS(PAD_EIM_EB2__GPIO2_IO30	|
+		MUX_PAD_CTRL(SPI_PAD_CTRL | PAD_CTL_PUS_100K_UP)),
+	/* SS2 - SS of DHCOM SPI1 */
+	IOMUX_PADS(PAD_KEY_ROW2__GPIO4_IO11	|
+		MUX_PAD_CTRL(SPI_PAD_CTRL | PAD_CTL_PUS_100K_UP)),
+
 	IOMUX_PADS(PAD_EIM_D17__ECSPI1_MISO	| MUX_PAD_CTRL(SPI_PAD_CTRL)),
 	IOMUX_PADS(PAD_EIM_D18__ECSPI1_MOSI	| MUX_PAD_CTRL(SPI_PAD_CTRL)),
 	IOMUX_PADS(PAD_EIM_D16__ECSPI1_SCLK	| MUX_PAD_CTRL(SPI_PAD_CTRL)),
@@ -471,6 +481,32 @@ static void setup_iomux_uart(void)
 	SETUP_IOMUX_PADS(uart1_pads);
 }
 
+#ifdef CONFIG_FSL_USDHC
+struct fsl_esdhc_cfg usdhc_cfg[1] = {
+	{USDHC4_BASE_ADDR},
+};
+
+int board_mmc_get_env_dev(int devno)
+{
+	return devno - 1;
+}
+
+int board_mmc_getcd(struct mmc *mmc)
+{
+	return 1; /* eMMC/uSDHC4 is always present */
+}
+
+int board_mmc_init(struct bd_info *bis)
+{
+	SETUP_IOMUX_PADS(usdhc4_pads);
+	usdhc_cfg[0].esdhc_base = USDHC4_BASE_ADDR;
+	usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC4_CLK);
+	usdhc_cfg[0].max_bus_width = 8;
+
+	return fsl_esdhc_initialize(bis, &usdhc_cfg[0]);
+}
+#endif
+
 /* USB */
 static iomux_v3_cfg_t const usb_pads[] = {
 	IOMUX_PADS(PAD_GPIO_1__USB_OTG_ID	| MUX_PAD_CTRL(NO_PAD_CTRL)),
@@ -480,6 +516,29 @@ static iomux_v3_cfg_t const usb_pads[] = {
 static void setup_iomux_usb(void)
 {
 	SETUP_IOMUX_PADS(usb_pads);
+}
+
+/* Perform DDR DRAM calibration */
+static int spl_dram_perform_cal(struct mx6_ddr_sysinfo const *sysinfo)
+{
+	int ret = 0;
+
+#ifdef CONFIG_MX6_DDRCAL
+	udelay(100);
+	ret = mmdc_do_write_level_calibration(sysinfo);
+	if (ret) {
+		printf("DDR3: Write level calibration error [%d]\n", ret);
+		return ret;
+	}
+
+	ret = mmdc_do_dqs_calibration(sysinfo);
+	if (ret) {
+		printf("DDR3: DQS calibration error [%d]\n", ret);
+		return ret;
+	}
+#endif /* CONFIG_MX6_DDRCAL */
+
+	return ret;
 }
 
 
@@ -509,8 +568,7 @@ static void dhcom_spl_dram_init(void)
 		}
 
 		/* Perform DDR DRAM calibration */
-		udelay(100);
-		mmdc_do_dqs_calibration(&dhcom_ddr_64bit);
+		spl_dram_perform_cal(&dhcom_ddr_64bit);
 
 	} else if (is_cpu_type(MXC_CPU_MX6DL)) {
 		mx6sdl_dram_iocfg(64, &dhcom6sdl_ddr_ioregs,
@@ -528,8 +586,7 @@ static void dhcom_spl_dram_init(void)
 		}
 
 		/* Perform DDR DRAM calibration */
-		udelay(100);
-		mmdc_do_dqs_calibration(&dhcom_ddr_64bit);
+		spl_dram_perform_cal(&dhcom_ddr_64bit);
 
 	} else if (is_cpu_type(MXC_CPU_MX6SOLO)) {
 		mx6sdl_dram_iocfg(32, &dhcom6sdl_ddr_ioregs,
@@ -552,9 +609,22 @@ static void dhcom_spl_dram_init(void)
 		}
 
 		/* Perform DDR DRAM calibration */
-		udelay(100);
-		mmdc_do_dqs_calibration(&dhcom_ddr_32bit);
+		spl_dram_perform_cal(&dhcom_ddr_32bit);
 	}
+}
+
+void dram_bank_mmu_setup(int bank)
+{
+	int i;
+
+	set_section_dcache(ROMCP_ARB_BASE_ADDR >> MMU_SECTION_SHIFT, DCACHE_DEFAULT_OPTION);
+	set_section_dcache(IRAM_BASE_ADDR >> MMU_SECTION_SHIFT, DCACHE_DEFAULT_OPTION);
+
+	for (i = MMDC0_ARB_BASE_ADDR >> MMU_SECTION_SHIFT;
+			i < ((MMDC0_ARB_BASE_ADDR >> MMU_SECTION_SHIFT) +
+			(SZ_1G >> MMU_SECTION_SHIFT));
+			i++)
+		set_section_dcache(i, DCACHE_DEFAULT_OPTION);
 }
 
 void board_init_f(ulong dummy)
@@ -583,9 +653,33 @@ void board_init_f(ulong dummy)
 	/* DDR3 initialization */
 	dhcom_spl_dram_init();
 
+	/* Set up early MMU tables at the beginning of DRAM and start d-cache */
+	gd->arch.tlb_addr = MMDC0_ARB_BASE_ADDR + SZ_32M;
+	gd->arch.tlb_size = PGTABLE_SIZE;
+	enable_caches();
+
 	/* Clear the BSS. */
 	memset(__bss_start, 0, __bss_end - __bss_start);
 
 	/* load/boot image from boot device */
 	board_init_r(NULL, 0);
+}
+
+void spl_board_prepare_for_boot(void)
+{
+	/*
+	 * Flush and disable dcache. Without it, the following bootstage might fail randomly because
+	 * dirty cache lines may not have been written back to DRAM.
+	 *
+	 * If dcache_disable() would be omitted, the following scenario may occur:
+	 *
+	 * The SPL enables dcache and cachelines get populated with data. Then dcache gets disabled
+	 * in U-Boot proper, but still contains dirty data, i.e. the corresponding DRAM locations
+	 * have not yet been updated. When U-Boot reads these locations, it sees an (incorrect) old
+	 * state of the content.
+	 *
+	 * Furthermore, the DRAM contents have likely been modified by U-Boot while dcache was
+	 * disabled. Thus, U-Boot flushing dcache would corrupt DRAM with stale data.
+	 */
+	dcache_disable(); /* implies flush_dcache_all() */
 }

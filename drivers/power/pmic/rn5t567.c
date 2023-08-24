@@ -8,6 +8,7 @@
 #include <dm.h>
 #include <errno.h>
 #include <fdtdec.h>
+#include <log.h>
 #include <linux/libfdt.h>
 #include <power/rn5t567_pmic.h>
 #include <power/pmic.h>
@@ -52,6 +53,7 @@ static struct dm_pmic_ops rn5t567_ops = {
 
 static const struct udevice_id rn5t567_ids[] = {
 	{ .compatible = "ricoh,rn5t567" },
+	{ .compatible = "ricoh,rn5t568" },
 	{ }
 };
 

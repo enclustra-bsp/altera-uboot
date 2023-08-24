@@ -14,6 +14,7 @@
  */
 
 #include <common.h>
+#include <display_options.h>
 #include <linux/compat.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/onenand.h>
@@ -43,7 +44,7 @@ void onenand_init(void)
 			puts("Flex-");
 		puts("OneNAND: ");
 
-#ifdef CONFIG_MTD_DEVICE
+#ifdef CONFIG_MTD
 		/*
 		 * Add MTD device so that we can reference it later
 		 * via the mtdcore infrastructure (e.g. ubi).

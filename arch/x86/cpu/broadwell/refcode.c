@@ -7,7 +7,10 @@
  */
 
 #include <common.h>
+#include <display_options.h>
 #include <errno.h>
+#include <init.h>
+#include <log.h>
 #include <asm/arch/pei_data.h>
 
 #define RMODULE_MAGIC		0xf8fe
@@ -63,7 +66,7 @@ struct rmodule_header {
  * platform controller hub (PCH). This function should be implemented by the
  * CPU-specific code.
  *
- * @return 0 on success, -ve on failure
+ * Return: 0 on success, -ve on failure
  */
 static int cpu_run_reference_code(void)
 {

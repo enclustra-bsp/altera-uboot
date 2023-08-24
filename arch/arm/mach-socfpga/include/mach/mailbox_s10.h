@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0
  *
- * Copyright (C) 2017-2018 Intel Corporation <www.intel.com>
+ * Copyright (C) 2017-2023 Intel Corporation <www.intel.com>
  *
  */
 
@@ -8,6 +8,7 @@
 #define _MAILBOX_S10_H_
 
 /* user define Uboot ID */
+#include <linux/bitops.h>
 #define MBOX_CLIENT_ID_UBOOT	0xB
 #define MBOX_ID_UBOOT		0x1
 
@@ -66,8 +67,44 @@ enum ALT_SDM_MBOX_RESP_CODE {
 	MBOX_RESP_UNKNOWN_BR = 2,
 	/* CMD code not recognized by firmware */
 	MBOX_RESP_UNKNOWN = 3,
-	/* Indicates that the device is not configured */
-	MBOX_RESP_NOT_CONFIGURED = 256,
+	/* Length setting is not a valid length for this CMD type */
+	MBOX_RESP_INVALID_LEN = 4,
+	/* Indirect setting is not valid for this CMD type */
+	MBOX_RESP_INVALID_INDIRECT_SETTING = 5,
+	/* HW source which is not allowed to send CMD type */
+	MBOX_RESP_CMD_INVALID_ON_SRC = 6,
+	/* Client with ID not associated with any running PR CMD tries to run
+	 * RECONFIG_DATA RECONFIG_STATUS and accessing QSPI / SDMMC using ID
+	 * without exclusive access
+	 */
+	MBOX_RESP_CLIENT_ID_NO_MATCH = 8,
+	/* Address provided to the system is invalid (alignment, range
+	 * permission)
+	 */
+	MBOX_RESP_INVALID_ADDR = 0x9,
+	/* Signature authentication failed */
+	MBOX_RESP_AUTH_FAIL = 0xA,
+	/* CMD timed out */
+	MBOX_RESP_TIMEOUT = 0xB,
+	/* HW (i.e. QSPI) is not ready (initialized or configured) */
+	MBOX_RESP_HW_NOT_RDY = 0xC,
+	/* Function is not supported in this firmware */
+	MBOX_FUNC_NOT_SUPPORTED = 0xF,
+	/* Invalid license for IID registration */
+	MBOX_RESP_PUF_ACCCES_FAILED = 0x80,
+	MBOX_PUF_ENROLL_DISABLE = 0x81,
+	MBOX_RESP_PUF_ENROLL_FAIL = 0x82,
+	MBOX_RESP_PUF_RAM_TEST_FAIL = 0x83,
+	MBOX_RESP_ATTEST_CERT_GEN_FAIL = 0x84,
+	/* Operation not allowed under current security settings */
+	MBOX_RESP_NOT_ALLOWED_UNDER_SECURITY_SETTINGS = 0x85,
+	MBOX_RESP_PUF_TRNG_FAIL = 0x86,
+	MBOX_RESP_FUSE_ALREADY_BLOWN = 0x87,
+	MBOX_RESP_INVALID_SIGNATURE = 0x88,
+	MBOX_RESP_INVALID_HASH = 0x8b,
+	MBOX_RESP_INVALID_CERTIFICATE = 0x91,
+	/* Indicates that the device (FPGA or HPS) is not configured */
+	MBOX_RESP_NOT_CONFIGURED = 0x100,
 	/* Indicates that the device is busy */
 	MBOX_RESP_DEVICE_BUSY = 0x1FF,
 	/* Indicates that there is no valid response available */
@@ -77,16 +114,22 @@ enum ALT_SDM_MBOX_RESP_CODE {
 };
 
 /* Mailbox command list */
-#define MBOX_RESTART		2
-#define MBOX_CONFIG_STATUS	4
-#define MBOX_RECONFIG		6
-#define MBOX_RECONFIG_MSEL	7
-#define MBOX_RECONFIG_DATA	8
-#define MBOX_RECONFIG_STATUS	9
-#define MBOX_QSPI_OPEN		50
-#define MBOX_QSPI_CLOSE		51
-#define MBOX_QSPI_DIRECT	59
-#define MBOX_REBOOT_HPS		71
+#define MBOX_RESTART			2
+#define MBOX_CONFIG_STATUS		4
+#define MBOX_RECONFIG			6
+#define MBOX_RECONFIG_MSEL		7
+#define MBOX_RECONFIG_DATA		8
+#define MBOX_RECONFIG_STATUS		9
+#define MBOX_VAB_SRC_CERT		11
+#define MBOX_GET_USERCODE		19
+#define MBOX_QSPI_OPEN			50
+#define MBOX_QSPI_CLOSE			51
+#define MBOX_QSPI_DIRECT		59
+#define MBOX_REBOOT_HPS			71
+#define MBOX_GET_SUBPARTITION_TABLE	90
+#define MBOX_RSU_STATUS			91
+#define MBOX_RSU_UPDATE			92
+#define MBOX_HPS_STAGE_NOTIFY		93
 
 /* Mailbox registers */
 #define MBOX_CIN			0	/* command valid offset */
@@ -130,6 +173,11 @@ enum ALT_SDM_MBOX_RESP_CODE {
 #define RCF_SOFTFUNC_STATUS_SEU_ERROR			BIT(3)
 #define RCF_PIN_STATUS_NSTATUS				BIT(31)
 
+/* Defines for HPS_STAGE_NOTIFY */
+#define HPS_EXECUTION_STATE_FSBL	0
+#define HPS_EXECUTION_STATE_SSBL	1
+#define HPS_EXECUTION_STATE_OS		2
+
 int mbox_send_cmd(u8 id, u32 cmd, u8 is_indirect, u32 len, u32 *arg, u8 urgent,
 		  u32 *resp_buf_len, u32 *resp_buf);
 int mbox_send_cmd_psci(u8 id, u32 cmd, u8 is_indirect, u32 len, u32 *arg,
@@ -146,6 +194,13 @@ int mbox_qspi_open(void);
 #endif
 
 int mbox_reset_cold(void);
+int mbox_rsu_get_spt_offset(u32 *resp_buf, u32 resp_buf_len);
+int mbox_rsu_status(u32 *resp_buf, u32 resp_buf_len);
+int mbox_rsu_status_psci(u32 *resp_buf, u32 resp_buf_len);
+int mbox_rsu_update(u32 *flash_offset);
+int mbox_rsu_update_psci(u32 *flash_offset);
+int mbox_hps_stage_notify(u32 execution_stage);
+int mbox_hps_stage_notify_psci(u32 execution_stage);
 int mbox_get_fpga_config_status(u32 cmd);
 int mbox_get_fpga_config_status_psci(u32 cmd);
 #endif /* _MAILBOX_S10_H_ */

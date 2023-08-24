@@ -529,6 +529,8 @@ enum msg_response {
 #define DDRC_SBRWDATA0(X)        (DDRC_IPS_BASE_ADDR(X) + 0xf2c)
 #define DDRC_SBRWDATA1(X)        (DDRC_IPS_BASE_ADDR(X) + 0xf30)
 #define DDRC_PDCH(X)             (DDRC_IPS_BASE_ADDR(X) + 0xf34)
+#define DDRC_SBRSTART0(X)        (DDRC_IPS_BASE_ADDR(X) + 0xf38)
+#define DDRC_SBRRANGE0(X)        (DDRC_IPS_BASE_ADDR(X) + 0xf40)
 
 #define DDRC_FREQ1_DERATEEN(X)         (DDRC_IPS_BASE_ADDR(X) + 0x2020)
 #define DDRC_FREQ1_DERATEINT(X)        (DDRC_IPS_BASE_ADDR(X) + 0x2024)
@@ -703,16 +705,27 @@ struct dram_timing_info {
 extern struct dram_timing_info dram_timing;
 
 void ddr_load_train_firmware(enum fw_type type);
-void ddr_init(struct dram_timing_info *timing_info);
-void ddr_cfg_phy(struct dram_timing_info *timing_info);
+int ddr_init(struct dram_timing_info *timing_info);
+int ddr_cfg_phy(struct dram_timing_info *timing_info);
 void load_lpddr4_phy_pie(void);
 void ddrphy_trained_csr_save(struct dram_cfg_param *param, unsigned int num);
 void dram_config_save(struct dram_timing_info *info, unsigned long base);
+void board_dram_ecc_scrub(void);
+void ddrc_inline_ecc_scrub(unsigned int start_address,
+			   unsigned int range_address);
+void ddrc_inline_ecc_scrub_end(unsigned int start_address,
+			       unsigned int range_address);
 
 /* utils function for ddr phy training */
-void wait_ddrphy_training_complete(void);
+int wait_ddrphy_training_complete(void);
 void ddrphy_init_set_dfi_clk(unsigned int drate);
 void ddrphy_init_read_msg_block(enum fw_type type);
+
+void update_umctl2_rank_space_setting(unsigned int pstat_num);
+void get_trained_CDD(unsigned int fsp);
+unsigned int lpddr4_mr_read(unsigned int mr_rank, unsigned int mr_addr);
+
+ulong ddrphy_addr_remap(uint32_t paddr_apb_from_ctlr);
 
 static inline void reg32_write(unsigned long addr, u32 val)
 {
@@ -730,9 +743,9 @@ static inline void reg32setbit(unsigned long addr, u32 bit)
 }
 
 #define dwc_ddrphy_apb_wr(addr, data) \
-	reg32_write(IP2APB_DDRPHY_IPS_BASE_ADDR(0) + 4 * (addr), data)
+	reg32_write(IP2APB_DDRPHY_IPS_BASE_ADDR(0) + ddrphy_addr_remap(addr), data)
 #define dwc_ddrphy_apb_rd(addr) \
-	reg32_read(IP2APB_DDRPHY_IPS_BASE_ADDR(0) + 4 * (addr))
+	reg32_read(IP2APB_DDRPHY_IPS_BASE_ADDR(0) + ddrphy_addr_remap(addr))
 
 extern struct dram_cfg_param ddrphy_trained_csr[];
 extern uint32_t ddrphy_trained_csr_num;

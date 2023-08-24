@@ -6,6 +6,7 @@
 
 #include <common.h>
 #include <config.h>
+#include <image.h>
 #include <nand.h>
 #include <onenand_uboot.h>
 #include <ubispl.h>
@@ -14,7 +15,7 @@
 int spl_ubi_load_image(struct spl_image_info *spl_image,
 		       struct spl_boot_device *bootdev)
 {
-	struct image_header *header;
+	struct legacy_img_hdr *header;
 	struct ubispl_info info;
 	struct ubispl_load volumes[2];
 	int ret = 1;
@@ -44,7 +45,7 @@ int spl_ubi_load_image(struct spl_image_info *spl_image,
 	info.leb_start = CONFIG_SPL_UBI_LEB_START;
 	info.peb_count = CONFIG_SPL_UBI_MAX_PEBS - info.peb_offset;
 
-#ifdef CONFIG_SPL_OS_BOOT
+#if CONFIG_IS_ENABLED(OS_BOOT)
 	if (!spl_start_uboot()) {
 		volumes[0].vol_id = CONFIG_SPL_UBI_LOAD_KERNEL_ID;
 		volumes[0].load_addr = (void *)CONFIG_SYS_LOAD_ADDR;
@@ -53,8 +54,8 @@ int spl_ubi_load_image(struct spl_image_info *spl_image,
 
 		ret = ubispl_load_volumes(&info, volumes, 2);
 		if (!ret) {
-			header = (struct image_header *)volumes[0].load_addr;
-			spl_parse_image_header(spl_image, header);
+			header = (struct legacy_img_hdr *)volumes[0].load_addr;
+			spl_parse_image_header(spl_image, bootdev, header);
 			puts("Linux loaded.\n");
 			goto out;
 		}
@@ -62,12 +63,19 @@ int spl_ubi_load_image(struct spl_image_info *spl_image,
 	}
 #endif
 	header = spl_get_load_buffer(-sizeof(*header), sizeof(header));
+#ifdef CONFIG_SPL_UBI_LOAD_BY_VOLNAME
+	volumes[0].vol_id = -1;
+	strncpy(volumes[0].name,
+		CONFIG_SPL_UBI_LOAD_MONITOR_VOLNAME,
+		UBI_VOL_NAME_MAX + 1);
+#else
 	volumes[0].vol_id = CONFIG_SPL_UBI_LOAD_MONITOR_ID;
+#endif
 	volumes[0].load_addr = (void *)header;
 
 	ret = ubispl_load_volumes(&info, volumes, 1);
 	if (!ret)
-		spl_parse_image_header(spl_image, header);
+		spl_parse_image_header(spl_image, bootdev, header);
 out:
 #ifdef CONFIG_SPL_NAND_SUPPORT
 	if (bootdev->boot_device == BOOT_DEVICE_NAND)

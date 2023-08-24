@@ -3,8 +3,8 @@
  * Copyright 2018 NXP
  */
 
-&qspi1 {
+&qspi {
 	flash0: mx25l51245g@0 {
-		compatible = "spi-flash";
+		compatible = "jedec,spi-nor";
 	};
 };

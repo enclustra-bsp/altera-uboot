@@ -6,6 +6,10 @@
 #include <common.h>
 #include <dm.h>
 #include <fdtdec.h>
+#include <init.h>
+#include <asm/cache.h>
+#include <asm/global_data.h>
+#include <asm/ptrace.h>
 #include <linux/libfdt.h>
 #include <linux/sizes.h>
 #include <pci.h>
@@ -24,14 +28,13 @@ DECLARE_GLOBAL_DATA_PTR;
  * Currently only 2GiB are mapped for system memory. This is what
  * we pass to the U-Boot subsystem here.
  */
-#define USABLE_RAM_SIZE		0x80000000
+#define USABLE_RAM_SIZE		0x80000000ULL
 
-ulong board_get_usable_ram_top(ulong total_size)
+phys_size_t board_get_usable_ram_top(phys_size_t total_size)
 {
-	if (gd->ram_size > USABLE_RAM_SIZE)
-		return USABLE_RAM_SIZE;
+	unsigned long top = CONFIG_SYS_SDRAM_BASE + min(gd->ram_size, USABLE_RAM_SIZE);
 
-	return gd->ram_size;
+	return (gd->ram_top > top) ? top : gd->ram_top;
 }
 
 /*
@@ -44,54 +47,16 @@ const struct mbus_dram_target_info *mvebu_mbus_dram_info(void)
 	return NULL;
 }
 
-/* DRAM init code ... */
-
-#define MV_SIP_DRAM_SIZE	0x82000010
-
-static u64 a8k_dram_scan_ap_sz(void)
-{
-	struct pt_regs pregs;
-
-	pregs.regs[0] = MV_SIP_DRAM_SIZE;
-	pregs.regs[1] = SOC_REGS_PHY_BASE;
-	smc_call(&pregs);
-
-	return pregs.regs[0];
-}
-
-static void a8k_dram_init_banksize(void)
-{
-	/*
-	 * The firmware (ATF) leaves a 1G whole above the 3G mark for IO
-	 * devices. Higher RAM is mapped at 4G.
-	 *
-	 * Config 2 DRAM banks:
-	 * Bank 0 - max size 4G - 1G
-	 * Bank 1 - ram size - 4G + 1G
-	 */
-	phys_size_t max_bank0_size = SZ_4G - SZ_1G;
-
-	gd->bd->bi_dram[0].start = CONFIG_SYS_SDRAM_BASE;
-	if (gd->ram_size <= max_bank0_size) {
-		gd->bd->bi_dram[0].size = gd->ram_size;
-		return;
-	}
-
-	gd->bd->bi_dram[0].size = max_bank0_size;
-	if (CONFIG_NR_DRAM_BANKS > 1) {
-		gd->bd->bi_dram[1].start = SZ_4G;
-		gd->bd->bi_dram[1].size = gd->ram_size - max_bank0_size;
-	}
-}
-
 __weak int dram_init_banksize(void)
 {
 	if (CONFIG_IS_ENABLED(ARMADA_8K))
-		a8k_dram_init_banksize();
+		return a8k_dram_init_banksize();
+	else if (CONFIG_IS_ENABLED(ARMADA_3700))
+		return a3700_dram_init_banksize();
+	else if (CONFIG_IS_ENABLED(ALLEYCAT_5))
+		return alleycat5_dram_init_banksize();
 	else
-		fdtdec_setup_memory_banksize();
-
-	return 0;
+		return fdtdec_setup_memory_banksize();
 }
 
 __weak int dram_init(void)
@@ -101,6 +66,12 @@ __weak int dram_init(void)
 		if (gd->ram_size != 0)
 			return 0;
 	}
+
+	if (CONFIG_IS_ENABLED(ARMADA_3700))
+		return a3700_dram_init();
+
+	if (CONFIG_IS_ENABLED(ALLEYCAT_5))
+		return alleycat5_dram_init();
 
 	if (fdtdec_setup_mem_size_base() != 0)
 		return -EINVAL;
@@ -137,10 +108,9 @@ int arch_early_init_r(void)
 	/* Cause the SATA device to do its early init */
 	uclass_first_device(UCLASS_AHCI, &dev);
 
-#ifdef CONFIG_DM_PCI
 	/* Trigger PCIe devices detection */
-	pci_init();
-#endif
+	if (IS_ENABLED(CONFIG_PCI))
+		pci_init();
 
 	return 0;
 }

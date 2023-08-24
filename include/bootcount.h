@@ -7,8 +7,10 @@
 #define _BOOTCOUNT_H__
 
 #include <common.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/byteorder.h>
+#include <env.h>
 
 #ifdef CONFIG_DM_BOOTCOUNT
 
@@ -43,7 +45,7 @@ struct bootcount_ops {
  *
  * @dev:	Device to read from
  * @bootcount:	Place to put the current bootcount
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int dm_bootcount_get(struct udevice *dev, u32 *bootcount);
 
@@ -52,21 +54,23 @@ int dm_bootcount_get(struct udevice *dev, u32 *bootcount);
  *
  * @dev:	Device to read from
  * @bootcount:  Value to be written to the backing storage
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int dm_bootcount_set(struct udevice *dev, u32 bootcount);
 
 #endif
 
-#if defined(CONFIG_SPL_BOOTCOUNT_LIMIT) || defined(CONFIG_BOOTCOUNT_LIMIT)
+/** bootcount_store() - store the current bootcount */
+void bootcount_store(ulong);
 
-#if !defined(CONFIG_SYS_BOOTCOUNT_LE) && !defined(CONFIG_SYS_BOOTCOUNT_BE)
-# if __BYTE_ORDER == __LITTLE_ENDIAN
-#  define CONFIG_SYS_BOOTCOUNT_LE
-# else
-#  define CONFIG_SYS_BOOTCOUNT_BE
-# endif
-#endif
+/**
+ * bootcount_load() - load the current bootcount
+ *
+ * Return: bootcount, read from the appropriate location
+ */
+ulong bootcount_load(void);
+
+#if defined(CONFIG_SPL_BOOTCOUNT_LIMIT) || defined(CONFIG_TPL_BOOTCOUNT_LIMIT) || defined(CONFIG_BOOTCOUNT_LIMIT)
 
 #ifdef CONFIG_SYS_BOOTCOUNT_LE
 static inline void raw_bootcount_store(volatile u32 *addr, u32 data)
@@ -119,19 +123,15 @@ static inline void bootcount_inc(void)
 
 #ifndef CONFIG_SPL_BUILD
 	/* Only increment bootcount when no bootcount support in SPL */
-#ifndef CONFIG_SPL_BOOTCOUNT_LIMIT
+#if !defined(CONFIG_SPL_BOOTCOUNT_LIMIT) && !defined(CONFIG_TPL_BOOTCOUNT_LIMIT)
 	bootcount_store(++bootcount);
 #endif
 	env_set_ulong("bootcount", bootcount);
 #endif /* !CONFIG_SPL_BUILD */
 }
 
-#if defined(CONFIG_SPL_BUILD) && !defined(CONFIG_SPL_BOOTCOUNT_LIMIT)
-void bootcount_store(ulong a) {};
-ulong bootcount_load(void) { return 0; }
-#endif /* CONFIG_SPL_BUILD && !CONFIG_SPL_BOOTCOUNT_LIMIT */
 #else
 static inline int bootcount_error(void) { return 0; }
 static inline void bootcount_inc(void) {}
-#endif /* CONFIG_SPL_BOOTCOUNT_LIMIT || CONFIG_BOOTCOUNT_LIMIT */
+#endif /* CONFIG_SPL_BOOTCOUNT_LIMIT || CONFIG_TPL_BOOTCOUNT_LIMIT || CONFIG_BOOTCOUNT_LIMIT */
 #endif /* _BOOTCOUNT_H__ */

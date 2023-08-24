@@ -24,9 +24,9 @@
 
 
 #if defined(CONFIG_MPC83xx)
-dma83xx_t *dma_base = (void *)(CONFIG_SYS_MPC83xx_DMA_ADDR);
+dma83xx_t *dma_base = (void *)(CFG_SYS_MPC83xx_DMA_ADDR);
 #elif defined(CONFIG_MPC85xx)
-ccsr_dma_t *dma_base = (void *)(CONFIG_SYS_MPC85xx_DMA_ADDR);
+ccsr_dma_t *dma_base = (void *)(CFG_SYS_MPC85xx_DMA_ADDR);
 #elif defined(CONFIG_MPC86xx)
 ccsr_dma_t *dma_base = (void *)(CONFIG_SYS_MPC86xx_DMA_ADDR);
 #else
@@ -130,11 +130,9 @@ int dmacpy(phys_addr_t dest, phys_addr_t src, phys_size_t count) {
 
 /*
  * 85xx/86xx use dma to initialize SDRAM when !CONFIG_ECC_INIT_VIA_DDRCONTROLLER
- * while 83xx uses dma to initialize SDRAM when CONFIG_DDR_ECC_INIT_VIA_DMA
  */
 #if ((!defined CONFIG_MPC83xx && defined(CONFIG_DDR_ECC) &&	\
-	!defined(CONFIG_ECC_INIT_VIA_DDRCONTROLLER)) ||		\
-	(defined(CONFIG_MPC83xx) && defined(CONFIG_DDR_ECC_INIT_VIA_DMA)))
+	!defined(CONFIG_ECC_INIT_VIA_DDRCONTROLLER)))
 void dma_meminit(uint val, uint size)
 {
 	uint *p = 0;

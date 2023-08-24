@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fdt_region.h>
 
 #include "fdt_host.h"
 #include "libfdt_internal.h"
@@ -212,7 +213,7 @@ static void utilfdt_print_data(const char *data, int len)
 	} else {
 		printf(" = [");
 		for (i = 0; i < len; i++)
-			printf("%02x%s", *p++, i < len - 1 ? " " : "");
+			printf("%02x%s", (unsigned char)*p++, i < len - 1 ? " " : "");
 		printf("]");
 	}
 }
@@ -437,8 +438,7 @@ static int dump_fdt_regions(struct display_info *disp, const void *blob,
 	fdt = (struct fdt_header *)out;
 	memset(fdt, '\0', sizeof(*fdt));
 	fdt_set_magic(fdt, FDT_MAGIC);
-	struct_start = FDT_ALIGN(sizeof(struct fdt_header),
-					sizeof(struct fdt_reserve_entry));
+	struct_start = sizeof(struct fdt_header);
 	fdt_set_off_mem_rsvmap(fdt, struct_start);
 	fdt_set_version(fdt, FDT_LAST_SUPPORTED_VERSION);
 	fdt_set_last_comp_version(fdt, FDT_FIRST_SUPPORTED_VERSION);
@@ -805,7 +805,7 @@ static int do_fdtgrep(struct display_info *disp, const char *filename)
 	 * we do another pass to actually record them.
 	 */
 	for (i = 0; i < 2; i++) {
-		region = malloc(count * sizeof(struct fdt_region));
+		region = realloc(region, count * sizeof(struct fdt_region));
 		if (!region) {
 			fprintf(stderr, "Out of memory for %d regions\n",
 				count);
@@ -823,8 +823,10 @@ static int do_fdtgrep(struct display_info *disp, const char *filename)
 		}
 		if (count <= max_regions)
 			break;
+	}
+	if (count > max_regions) {
 		free(region);
-		fprintf(stderr, "Internal error with fdtgrep_find_region)(\n");
+		fprintf(stderr, "Internal error with fdtgrep_find_region()\n");
 		return -1;
 	}
 
@@ -920,7 +922,9 @@ static const char usage_synopsis[] =
 /* Helper for getopt case statements */
 #define case_USAGE_COMMON_FLAGS \
 	case 'h': usage(NULL); \
+	/* fallthrough */ \
 	case 'V': util_version(); \
+	/* fallthrough */ \
 	case '?': usage("unknown option");
 
 static const char usage_short_opts[] =
@@ -1082,6 +1086,7 @@ static void scan_args(struct display_info *disp, int argc, char *argv[])
 
 		switch (opt) {
 		case_USAGE_COMMON_FLAGS
+		/* fallthrough */
 		case 'a':
 			disp->show_addr = 1;
 			break;
@@ -1093,7 +1098,7 @@ static void scan_args(struct display_info *disp, int argc, char *argv[])
 			break;
 		case 'C':
 			inc = 0;
-			/* no break */
+			/* fallthrough */
 		case 'c':
 			type = FDT_IS_COMPAT;
 			break;
@@ -1108,7 +1113,7 @@ static void scan_args(struct display_info *disp, int argc, char *argv[])
 			break;
 		case 'G':
 			inc = 0;
-			/* no break */
+			/* fallthrough */
 		case 'g':
 			type = FDT_ANY_GLOBAL;
 			break;
@@ -1126,7 +1131,7 @@ static void scan_args(struct display_info *disp, int argc, char *argv[])
 			break;
 		case 'N':
 			inc = 0;
-			/* no break */
+			/* fallthrough */
 		case 'n':
 			type = FDT_IS_NODE;
 			break;
@@ -1145,7 +1150,7 @@ static void scan_args(struct display_info *disp, int argc, char *argv[])
 			break;
 		case 'P':
 			inc = 0;
-			/* no break */
+			/* fallthrough */
 		case 'p':
 			type = FDT_IS_PROP;
 			break;

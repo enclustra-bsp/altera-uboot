@@ -27,7 +27,7 @@ def calc_check_sum(filename):
 
 
 def arg_verify(uboot_bin_filename, uboot_elf_filename, arc_id):
-    if arc_id not in [0x52, 0x53]:
+    if arc_id not in [0x52, 0x53, 0x54]:
         print("unknown ARC ID: " + hex(arc_id))
         sys.exit(2)
 
@@ -55,7 +55,7 @@ def main():
     uboot_scrypt_file   = "u-boot-update.txt"
 
     # initial header values: place where preloader will store u-boot binary,
-    # should be equal to CONFIG_SYS_TEXT_BASE
+    # should be equal to CONFIG_TEXT_BASE
     image_copy_adr  = 0x81000000
 
     # initial constant header values, do not change these values

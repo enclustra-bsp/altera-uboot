@@ -6,6 +6,9 @@
  */
 
 #include <common.h>
+#include <init.h>
+#include <net.h>
+#include <asm/global_data.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
 #include <asm/arch/sromc.h>
@@ -66,12 +69,3 @@ int checkboard(void)
 	return 0;
 }
 #endif
-
-int board_eth_init(bd_t *bis)
-{
-	int rc = 0;
-#ifdef CONFIG_SMC911X
-	rc = smc911x_initialize(0, CONFIG_SMC911X_BASE);
-#endif
-	return rc;
-}

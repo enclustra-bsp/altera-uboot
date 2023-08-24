@@ -4,7 +4,11 @@
  */
 
 #include <console.h>
+#include <time.h>
 #include <watchdog.h>
+#include <linux/bitops.h>
+#include <linux/delay.h>
+#include <linux/errno.h>
 
 /* USB Vendor Requests */
 #define USB_VENDOR_REQUEST_WRITE_REGISTER	0xA0
@@ -122,6 +126,10 @@ int lan7x_write_reg(struct usb_device *udev, u32 index, u32 data);
 
 int lan7x_read_reg(struct usb_device *udev, u32 index, u32 *data);
 
+/*
+ * FIXME: Code should not be in header files. Nive this to a file common to
+ * the two drivers.
+ */
 static inline int lan7x_wait_for_bit(struct usb_device *udev,
 				     const char *prefix, const u32 reg,
 				     const u32 mask, const bool set,
@@ -149,7 +157,7 @@ static inline int lan7x_wait_for_bit(struct usb_device *udev,
 		}
 
 		udelay(1);
-		WATCHDOG_RESET();
+		schedule();
 	}
 
 	debug("%s: Timeout (reg=0x%x mask=%08x wait_set=%i)\n", prefix, reg,
@@ -191,7 +199,7 @@ static inline int lan7x_mdio_wait_for_bit(struct usb_device *udev,
 		}
 
 		udelay(1);
-		WATCHDOG_RESET();
+		schedule();
 	}
 
 	debug("%s: Timeout (reg=0x%x mask=%08x wait_set=%i)\n", prefix, reg,

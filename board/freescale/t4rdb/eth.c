@@ -7,6 +7,8 @@
 
 #include <common.h>
 #include <command.h>
+#include <fdt_support.h>
+#include <net.h>
 #include <netdev.h>
 #include <asm/mmu.h>
 #include <asm/processor.h>
@@ -34,14 +36,14 @@ void fdt_fixup_board_enet(void *fdt)
 	return;
 }
 
-int board_eth_init(bd_t *bis)
+int board_eth_init(struct bd_info *bis)
 {
 #if defined(CONFIG_FMAN_ENET)
 	int i, interface;
 	struct memac_mdio_info dtsec_mdio_info;
 	struct memac_mdio_info tgec_mdio_info;
 	struct mii_dev *dev;
-	ccsr_gur_t *gur = (void *)(CONFIG_SYS_MPC85xx_GUTS_ADDR);
+	ccsr_gur_t *gur = (void *)(CFG_SYS_MPC85xx_GUTS_ADDR);
 	u32 srds_prtcl_s1, srds_prtcl_s2;
 
 	srds_prtcl_s1 = in_be32(&gur->rcwsr[4]) &
@@ -104,7 +106,7 @@ int board_eth_init(bd_t *bis)
 
 #if (CONFIG_SYS_NUM_FMAN == 2)
 	if ((srds_prtcl_s2 == 56) || (srds_prtcl_s2 == 55)) {
-		/* SGMII && XFI */
+		/* SGMII && 10GBase-R */
 		fm_info_set_phy_address(FM2_DTSEC1, SGMII_PHY_ADDR5);
 		fm_info_set_phy_address(FM2_DTSEC2, SGMII_PHY_ADDR6);
 		fm_info_set_phy_address(FM2_DTSEC3, SGMII_PHY_ADDR7);

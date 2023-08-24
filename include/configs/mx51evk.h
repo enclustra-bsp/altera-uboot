@@ -12,31 +12,16 @@
 
  /* High Level Configuration Options */
 
-#define CONFIG_SYS_FSL_CLK
-
 #include <asm/arch/imx-regs.h>
-
-#define CONFIG_CMDLINE_TAG			/* enable passing of ATAGs */
-#define CONFIG_SETUP_MEMORY_TAGS
-#define CONFIG_INITRD_TAG
-#define CONFIG_REVISION_TAG
-
-#define CONFIG_MACH_TYPE	MACH_TYPE_MX51_BABBAGE
-/*
- * Size of malloc() pool
- */
-#define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
 
 /*
  * Hardware drivers
  */
 #define CONFIG_FSL_IIM
 
-#define CONFIG_MXC_UART
 #define CONFIG_MXC_UART_BASE	UART1_BASE
 
 /* PMIC Controller */
-#define CONFIG_POWER
 #define CONFIG_POWER_SPI
 #define CONFIG_POWER_FSL
 #define CONFIG_FSL_PMIC_BUS	0
@@ -49,37 +34,14 @@
 /*
  * MMC Configs
  * */
-#define CONFIG_SYS_FSL_ESDHC_ADDR	MMC_SDHC1_BASE_ADDR
-#define CONFIG_SYS_FSL_ESDHC_NUM	2
-
-/*
- * Eth Configs
- */
-
-#define CONFIG_FEC_MXC
-#define IMX_FEC_BASE	FEC_BASE_ADDR
-#define CONFIG_FEC_MXC_PHYADDR	0x1F
+#define CFG_SYS_FSL_ESDHC_ADDR	MMC_SDHC1_BASE_ADDR
 
 /* USB Configs */
-#define CONFIG_USB_EHCI_MX5
 #define CONFIG_MXC_USB_PORT	1
 #define CONFIG_MXC_USB_PORTSC	PORT_PTS_ULPI
 #define CONFIG_MXC_USB_FLAGS	MXC_EHCI_POWER_PINS_ENABLED
 
 /* Framebuffer and LCD */
-#define CONFIG_PREBOOT
-#define CONFIG_VIDEO_IPUV3
-#define CONFIG_VIDEO_BMP_RLE8
-#define CONFIG_SPLASH_SCREEN
-#define CONFIG_BMP_16BPP
-#define CONFIG_VIDEO_LOGO
-
-/* allow to overwrite serial and ethaddr */
-#define CONFIG_ENV_OVERWRITE
-
-#define CONFIG_ETHPRIME		"FEC0"
-
-#define CONFIG_LOADADDR		0x92000000	/* loadaddr env var */
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"script=boot.scr\0" \
@@ -140,28 +102,9 @@
 			"bootz; " \
 		"fi;\0"
 
-#define CONFIG_BOOTCOMMAND \
-	"mmc dev ${mmcdev}; if mmc rescan; then " \
-		"if run loadbootscript; then " \
-			"run bootscript; " \
-		"else " \
-			"if run loadimage; then " \
-				"run mmcboot; " \
-			"else run netboot; " \
-			"fi; " \
-		"fi; " \
-	"else run netboot; fi"
-
-#define CONFIG_ARP_TIMEOUT	200UL
-
 /*
  * Miscellaneous configurable options
  */
-
-#define CONFIG_SYS_MEMTEST_START       0x90000000
-#define CONFIG_SYS_MEMTEST_END         0x90010000
-
-#define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
 
 /*-----------------------------------------------------------------------
  * Physical Memory Map
@@ -173,11 +116,6 @@
 #define CONFIG_SYS_INIT_RAM_ADDR	(IRAM_BASE_ADDR)
 #define CONFIG_SYS_INIT_RAM_SIZE	(IRAM_SIZE)
 
-#define CONFIG_SYS_INIT_SP_OFFSET \
-	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
-#define CONFIG_SYS_INIT_SP_ADDR \
-	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
-
 #define CONFIG_SYS_DDR_CLKSEL	0
 #define CONFIG_SYS_CLKTL_CBCDR	0x59E35100
 #define CONFIG_SYS_MAIN_PWR_ON
@@ -185,8 +123,5 @@
 /*-----------------------------------------------------------------------
  * environment organization
  */
-#define CONFIG_ENV_OFFSET      (6 * 64 * 1024)
-#define CONFIG_ENV_SIZE        (8 * 1024)
-#define CONFIG_SYS_MMC_ENV_DEV 0
 
 #endif

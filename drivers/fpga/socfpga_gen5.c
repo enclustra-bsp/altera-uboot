@@ -8,6 +8,7 @@
 #include <asm/io.h>
 #include <linux/errno.h>
 #include <asm/arch/fpga_manager.h>
+#include <asm/arch/misc.h>
 #include <asm/arch/reset_manager.h>
 #include <asm/arch/system_manager.h>
 
@@ -15,8 +16,6 @@
 
 static struct socfpga_fpga_manager *fpgamgr_regs =
 	(struct socfpga_fpga_manager *)SOCFPGA_FPGAMGRREGS_ADDRESS;
-static struct socfpga_system_manager *sysmgr_regs =
-	(struct socfpga_system_manager *)SOCFPGA_SYSMGR_ADDRESS;
 
 /* Set CD ratio */
 static void fpgamgr_set_cd_ratio(unsigned long ratio)
@@ -214,11 +213,12 @@ int socfpga_load(Altera_desc *desc, const void *rbf_data, size_t rbf_size)
 	/* Prior programming the FPGA, all bridges need to be shut off */
 
 	/* Disable all signals from hps peripheral controller to fpga */
-	writel(0, &sysmgr_regs->fpgaintfgrp_module);
+	writel(0, socfpga_get_sysmgr_addr() + SYSMGR_GEN5_FPGAINFGRP_MODULE);
 
 	/* Disable all signals from FPGA to HPS SDRAM */
 #define SDR_CTRLGRP_FPGAPORTRST_ADDRESS	0x5080
 	writel(0, SOCFPGA_SDR_ADDRESS + SDR_CTRLGRP_FPGAPORTRST_ADDRESS);
+	socfpga_sdram_apply_static_cfg();
 
 	/* Disable all axi bridge (hps2fpga, lwhps2fpga & fpga2hps) */
 	socfpga_bridges_reset(1);

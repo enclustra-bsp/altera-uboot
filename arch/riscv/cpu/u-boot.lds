@@ -32,7 +32,6 @@ SECTIONS
 
 	. = ALIGN(4);
 	.data : {
-		__global_pointer$ = . + 0x800;
 		*(.data*)
 	}
 	. = ALIGN(4);
@@ -45,8 +44,8 @@ SECTIONS
 
 	. = ALIGN(4);
 
-	.u_boot_list : {
-		KEEP(*(SORT(.u_boot_list*)));
+	__u_boot_list : {
+		KEEP(*(SORT(__u_boot_list*)));
 	}
 
 	. = ALIGN(4);
@@ -82,7 +81,7 @@ SECTIONS
 	.bss : {
 		__bss_start = .;
 		*(.bss*)
-		. = ALIGN(4);
+		. = ALIGN(8);
 		__bss_end = .;
 	}
 }

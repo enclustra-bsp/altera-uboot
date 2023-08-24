@@ -1,12 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2017 NXP
+ * Copyright 2017-2021 NXP
  * Copyright 2014-2015 Freescale Semiconductor, Inc.
  */
 
 #include <common.h>
-#include <fsl_ddr_sdram.h>
+#include <clock_legacy.h>
+#include <cpu_func.h>
+#include <env.h>
+#include <init.h>
+#include <hang.h>
+#include <log.h>
+#include <net.h>
+#include <vsprintf.h>
+#include <asm/cache.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
+#include <asm/ptrace.h>
+#include <linux/arm-smccc.h>
 #include <linux/errno.h>
 #include <asm/system.h>
 #include <fm_eth.h>
@@ -25,6 +36,7 @@
 #endif
 #include <asm/armv8/sec_firmware.h>
 #ifdef CONFIG_SYS_FSL_DDR
+#include <fsl_ddr_sdram.h>
 #include <fsl_ddr.h>
 #endif
 #include <asm/arch/clock.h>
@@ -32,11 +44,13 @@
 #include <fsl_qbman.h>
 
 #ifdef CONFIG_TFABOOT
-#include <environment.h>
+#include <env_internal.h>
 #ifdef CONFIG_CHAIN_OF_TRUST
 #include <fsl_validate.h>
 #endif
 #endif
+#include <linux/mii.h>
+#include <dm.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -58,6 +72,10 @@ static struct cpu_type cpu_type_list[] = {
 	CPU_TYPE_ENTRY(LS1026A, LS1026A, 2),
 	CPU_TYPE_ENTRY(LS2040A, LS2040A, 4),
 	CPU_TYPE_ENTRY(LS1012A, LS1012A, 1),
+	CPU_TYPE_ENTRY(LS1017A, LS1017A, 1),
+	CPU_TYPE_ENTRY(LS1018A, LS1018A, 1),
+	CPU_TYPE_ENTRY(LS1027A, LS1027A, 2),
+	CPU_TYPE_ENTRY(LS1028A, LS1028A, 2),
 	CPU_TYPE_ENTRY(LS1088A, LS1088A, 8),
 	CPU_TYPE_ENTRY(LS1084A, LS1084A, 8),
 	CPU_TYPE_ENTRY(LS1048A, LS1048A, 4),
@@ -65,6 +83,9 @@ static struct cpu_type cpu_type_list[] = {
 	CPU_TYPE_ENTRY(LX2160A, LX2160A, 16),
 	CPU_TYPE_ENTRY(LX2120A, LX2120A, 12),
 	CPU_TYPE_ENTRY(LX2080A, LX2080A, 8),
+	CPU_TYPE_ENTRY(LX2162A, LX2162A, 16),
+	CPU_TYPE_ENTRY(LX2122A, LX2122A, 12),
+	CPU_TYPE_ENTRY(LX2082A, LX2082A, 8),
 };
 
 #define EARLY_PGTABLE_SIZE 0x5000
@@ -75,11 +96,11 @@ static struct mm_region early_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-	{ CONFIG_SYS_FSL_OCRAM_BASE, CONFIG_SYS_FSL_OCRAM_BASE,
+	{ CFG_SYS_FSL_OCRAM_BASE, CFG_SYS_FSL_OCRAM_BASE,
 	  SYS_FSL_OCRAM_SPACE_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_NON_SHARE
 	},
-	{ CONFIG_SYS_FSL_QSPI_BASE1, CONFIG_SYS_FSL_QSPI_BASE1,
+	{ CFG_SYS_FSL_QSPI_BASE1, CFG_SYS_FSL_QSPI_BASE1,
 	  CONFIG_SYS_FSL_QSPI_SIZE1,
 	  PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_NON_SHARE},
 #ifdef CONFIG_FSL_IFC
@@ -138,7 +159,7 @@ static struct mm_region early_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-	{ CONFIG_SYS_FSL_OCRAM_BASE, CONFIG_SYS_FSL_OCRAM_BASE,
+	{ CFG_SYS_FSL_OCRAM_BASE, CFG_SYS_FSL_OCRAM_BASE,
 	  SYS_FSL_OCRAM_SPACE_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_NON_SHARE
 	},
@@ -147,7 +168,7 @@ static struct mm_region early_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-	{ CONFIG_SYS_FSL_QSPI_BASE, CONFIG_SYS_FSL_QSPI_BASE,
+	{ CFG_SYS_FSL_QSPI_BASE, CFG_SYS_FSL_QSPI_BASE,
 	  CONFIG_SYS_FSL_QSPI_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) | PTE_BLOCK_NON_SHARE
 	},
@@ -183,7 +204,7 @@ static struct mm_region final_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-	{ CONFIG_SYS_FSL_OCRAM_BASE, CONFIG_SYS_FSL_OCRAM_BASE,
+	{ CFG_SYS_FSL_OCRAM_BASE, CFG_SYS_FSL_OCRAM_BASE,
 	  SYS_FSL_OCRAM_SPACE_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_NON_SHARE
 	},
@@ -192,12 +213,12 @@ static struct mm_region final_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_NORMAL) |
 	  PTE_BLOCK_OUTER_SHARE | PTE_BLOCK_NS
 	},
-	{ CONFIG_SYS_FSL_QSPI_BASE1, CONFIG_SYS_FSL_QSPI_BASE1,
+	{ CFG_SYS_FSL_QSPI_BASE1, CFG_SYS_FSL_QSPI_BASE1,
 	  CONFIG_SYS_FSL_QSPI_SIZE1,
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-	{ CONFIG_SYS_FSL_QSPI_BASE2, CONFIG_SYS_FSL_QSPI_BASE2,
+	{ CFG_SYS_FSL_QSPI_BASE2, CFG_SYS_FSL_QSPI_BASE2,
 	  CONFIG_SYS_FSL_QSPI_SIZE2,
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
@@ -246,14 +267,30 @@ static struct mm_region final_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
+#ifdef CONFIG_SYS_PCIE3_PHYS_ADDR
 	{ CONFIG_SYS_PCIE3_PHYS_ADDR, CONFIG_SYS_PCIE3_PHYS_ADDR,
 	  CONFIG_SYS_PCIE3_PHYS_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-#if defined(CONFIG_ARCH_LS2080A) || defined(CONFIG_ARCH_LX2160A)
+#endif
+#ifdef CONFIG_SYS_PCIE4_PHYS_ADDR
 	{ CONFIG_SYS_PCIE4_PHYS_ADDR, CONFIG_SYS_PCIE4_PHYS_ADDR,
 	  CONFIG_SYS_PCIE4_PHYS_SIZE,
+	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
+	},
+#endif
+#ifdef SYS_PCIE5_PHYS_ADDR
+	{ SYS_PCIE5_PHYS_ADDR, SYS_PCIE5_PHYS_ADDR,
+	  SYS_PCIE5_PHYS_SIZE,
+	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
+	},
+#endif
+#ifdef SYS_PCIE6_PHYS_ADDR
+	{ SYS_PCIE6_PHYS_ADDR, SYS_PCIE6_PHYS_ADDR,
+	  SYS_PCIE6_PHYS_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
@@ -296,7 +333,7 @@ static struct mm_region final_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-	{ CONFIG_SYS_FSL_OCRAM_BASE, CONFIG_SYS_FSL_OCRAM_BASE,
+	{ CFG_SYS_FSL_OCRAM_BASE, CFG_SYS_FSL_OCRAM_BASE,
 	  SYS_FSL_OCRAM_SPACE_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_NON_SHARE
 	},
@@ -305,7 +342,7 @@ static struct mm_region final_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
-	{ CONFIG_SYS_FSL_QSPI_BASE, CONFIG_SYS_FSL_QSPI_BASE,
+	{ CFG_SYS_FSL_QSPI_BASE, CFG_SYS_FSL_QSPI_BASE,
 	  CONFIG_SYS_FSL_QSPI_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
@@ -341,11 +378,13 @@ static struct mm_region final_map[] = {
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
+#ifdef CONFIG_SYS_PCIE3_PHYS_ADDR
 	{ CONFIG_SYS_PCIE3_PHYS_ADDR, CONFIG_SYS_PCIE3_PHYS_ADDR,
 	  CONFIG_SYS_PCIE3_PHYS_SIZE,
 	  PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
 	  PTE_BLOCK_NON_SHARE | PTE_BLOCK_PXN | PTE_BLOCK_UXN
 	},
+#endif
 	{ CONFIG_SYS_FSL_DRAM_BASE3, CONFIG_SYS_FSL_DRAM_BASE3,
 	  CONFIG_SYS_FSL_DRAM_SIZE3,
 	  PTE_BLOCK_MEMTYPE(MT_NORMAL) |
@@ -362,7 +401,7 @@ struct mm_region *mem_map = early_map;
 
 void cpu_name(char *name)
 {
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 	unsigned int i, svr, ver;
 
 	svr = gur_in32(&gur->svr);
@@ -371,7 +410,7 @@ void cpu_name(char *name)
 	for (i = 0; i < ARRAY_SIZE(cpu_type_list); i++)
 		if ((cpu_type_list[i].soc_ver & SVR_WO_E) == ver) {
 			strcpy(name, cpu_type_list[i].name);
-#ifdef CONFIG_ARCH_LX2160A
+#if defined(CONFIG_ARCH_LX2160A) || defined(CONFIG_ARCH_LX2162A)
 			if (IS_C_PROCESSOR(svr))
 				strcat(name, "C");
 #endif
@@ -388,10 +427,10 @@ void cpu_name(char *name)
 		strcpy(name, "unknown");
 }
 
-#ifndef CONFIG_SYS_DCACHE_OFF
+#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
 /*
  * To start MMU before DDR is available, we create MMU table in SRAM.
- * The base address of SRAM is CONFIG_SYS_FSL_OCRAM_BASE. We use three
+ * The base address of SRAM is CFG_SYS_FSL_OCRAM_BASE. We use three
  * levels of translation tables here to cover 40-bit address space.
  * We use 4KB granule size, with 40 bits physical address, T0SZ=24
  * Address above EARLY_PGTABLE_SIZE (0x5000) is free for other purpose.
@@ -404,7 +443,7 @@ static inline void early_mmu_setup(void)
 
 	/* global data is already setup, no allocation yet */
 	if (el == 3)
-		gd->arch.tlb_addr = CONFIG_SYS_FSL_OCRAM_BASE;
+		gd->arch.tlb_addr = CFG_SYS_FSL_OCRAM_BASE;
 	else
 		gd->arch.tlb_addr = CONFIG_SYS_DDR_SDRAM_BASE;
 	gd->arch.tlb_fillptr = gd->arch.tlb_addr;
@@ -415,7 +454,7 @@ static inline void early_mmu_setup(void)
 
 	/* point TTBR to the new table */
 	set_ttbr_tcr_mair(el, gd->arch.tlb_addr,
-			  get_tcr(el, NULL, NULL) &
+			  get_tcr(NULL, NULL) &
 			  ~(TCR_ORGN_MASK | TCR_IRGN_MASK),
 			  MEMORY_ATTRIBUTES);
 
@@ -427,7 +466,7 @@ static void fix_pcie_mmu_map(void)
 #ifdef CONFIG_ARCH_LS2080A
 	unsigned int i;
 	u32 svr, ver;
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 
 	svr = gur_in32(&gur->svr);
 	ver = SVR_SOC_VER(svr);
@@ -448,16 +487,20 @@ static void fix_pcie_mmu_map(void)
 				final_map[i].virt = 0x2800000000ULL;
 				final_map[i].size = 0x800000000ULL;
 				break;
+#ifdef CONFIG_SYS_PCIE3_PHYS_ADDR
 			case CONFIG_SYS_PCIE3_PHYS_ADDR:
 				final_map[i].phys = 0x3000000000ULL;
 				final_map[i].virt = 0x3000000000ULL;
 				final_map[i].size = 0x800000000ULL;
 				break;
+#endif
+#ifdef CONFIG_SYS_PCIE4_PHYS_ADDR
 			case CONFIG_SYS_PCIE4_PHYS_ADDR:
 				final_map[i].phys = 0x3800000000ULL;
 				final_map[i].virt = 0x3800000000ULL;
 				final_map[i].size = 0x800000000ULL;
 				break;
+#endif
 			default:
 				break;
 			}
@@ -566,7 +609,7 @@ static inline void final_mmu_setup(void)
 	invalidate_icache_all();
 
 	/* point TTBR to the new table */
-	set_ttbr_tcr_mair(el, gd->arch.tlb_addr, get_tcr(el, NULL, NULL),
+	set_ttbr_tcr_mair(el, gd->arch.tlb_addr, get_tcr(NULL, NULL),
 			  MEMORY_ATTRIBUTES);
 
 	set_sctlr(get_sctlr() | CR_M);
@@ -611,7 +654,7 @@ void enable_caches(void)
 	icache_enable();
 	dcache_enable();
 }
-#endif	/* CONFIG_SYS_DCACHE_OFF */
+#endif	/* !CONFIG_IS_ENABLED(SYS_DCACHE_OFF) */
 
 #ifdef CONFIG_TFABOOT
 enum boot_src __get_boot_src(u32 porsr1)
@@ -726,21 +769,19 @@ enum boot_src __get_boot_src(u32 porsr1)
 
 enum boot_src get_boot_src(void)
 {
-	struct pt_regs regs;
+	struct arm_smccc_res res;
 	u32 porsr1 = 0;
 
 #if defined(CONFIG_FSL_LSCH3)
 	u32 __iomem *dcfg_ccsr = (u32 __iomem *)DCFG_BASE;
 #elif defined(CONFIG_FSL_LSCH2)
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 #endif
 
 	if (current_el() == 2) {
-		regs.regs[0] = SIP_SVC_RCW;
-
-		smc_call(&regs);
-		if (!regs.regs[0])
-			porsr1 = regs.regs[1];
+		arm_smccc_smc(SIP_SVC_RCW, 0, 0, 0, 0, 0, 0, 0, &res);
+		if (!res.a0)
+			porsr1 = res.a1;
 	}
 
 	if (current_el() == 3 || !porsr1) {
@@ -777,7 +818,7 @@ int mmc_get_env_dev(void)
 }
 #endif
 
-enum env_location env_get_location(enum env_operation op, int prio)
+enum env_location arch_env_get_location(enum env_operation op, int prio)
 {
 	enum boot_src src = get_boot_src();
 	enum env_location env_loc = ENVL_NOWHERE;
@@ -785,12 +826,8 @@ enum env_location env_get_location(enum env_operation op, int prio)
 	if (prio)
 		return ENVL_UNKNOWN;
 
-#ifdef CONFIG_CHAIN_OF_TRUST
-	/* Check Boot Mode
-	 * If Boot Mode is Secure, return ENVL_NOWHERE
-	 */
-	if (fsl_check_boot_mode_secure() == 1)
-		goto done;
+#ifdef	CONFIG_ENV_IS_NOWHERE
+	return env_loc;
 #endif
 
 	switch (src) {
@@ -820,16 +857,13 @@ enum env_location env_get_location(enum env_operation op, int prio)
 		break;
 	}
 
-#ifdef CONFIG_CHAIN_OF_TRUST
-done:
-#endif
 	return env_loc;
 }
 #endif	/* CONFIG_TFABOOT */
 
 u32 initiator_type(u32 cluster, int init_id)
 {
-	struct ccsr_gur *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 	u32 idx = (cluster >> (init_id * 8)) & TP_CLUSTER_INIT_MASK;
 	u32 type = 0;
 
@@ -842,7 +876,7 @@ u32 initiator_type(u32 cluster, int init_id)
 
 u32 cpu_pos_mask(void)
 {
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 	int i = 0;
 	u32 cluster, type, mask = 0;
 
@@ -863,7 +897,7 @@ u32 cpu_pos_mask(void)
 
 u32 cpu_mask(void)
 {
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 	int i = 0, count = 0;
 	u32 cluster, type, mask = 0;
 
@@ -896,7 +930,7 @@ int cpu_numcores(void)
 int fsl_qoriq_core_to_cluster(unsigned int core)
 {
 	struct ccsr_gur __iomem *gur =
-		(void __iomem *)(CONFIG_SYS_FSL_GUTS_ADDR);
+		(void __iomem *)(CFG_SYS_FSL_GUTS_ADDR);
 	int i = 0, count = 0;
 	u32 cluster;
 
@@ -920,7 +954,7 @@ int fsl_qoriq_core_to_cluster(unsigned int core)
 u32 fsl_qoriq_core_to_type(unsigned int core)
 {
 	struct ccsr_gur __iomem *gur =
-		(void __iomem *)(CONFIG_SYS_FSL_GUTS_ADDR);
+		(void __iomem *)(CFG_SYS_FSL_GUTS_ADDR);
 	int i = 0, count = 0;
 	u32 cluster, type;
 
@@ -945,7 +979,7 @@ u32 fsl_qoriq_core_to_type(unsigned int core)
 #ifndef CONFIG_FSL_LSCH3
 uint get_svr(void)
 {
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 
 	return gur_in32(&gur->svr);
 }
@@ -954,7 +988,7 @@ uint get_svr(void)
 #ifdef CONFIG_DISPLAY_CPUINFO
 int print_cpuinfo(void)
 {
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 	struct sys_info sysinfo;
 	char buf[32];
 	unsigned int i, core;
@@ -1011,13 +1045,13 @@ int print_cpuinfo(void)
 #endif
 
 #ifdef CONFIG_FSL_ESDHC
-int cpu_mmc_init(bd_t *bis)
+int cpu_mmc_init(struct bd_info *bis)
 {
 	return fsl_esdhc_mmc_init(bis);
 }
 #endif
 
-int cpu_eth_init(bd_t *bis)
+int cpu_eth_init(struct bd_info *bis)
 {
 	int error = 0;
 
@@ -1030,7 +1064,7 @@ int cpu_eth_init(bd_t *bis)
 	return error;
 }
 
-static inline int check_psci(void)
+int check_psci(void)
 {
 	unsigned int psci_ver;
 
@@ -1046,12 +1080,14 @@ static void config_core_prefetch(void)
 	char *buf = NULL;
 	char buffer[HWCONFIG_BUFFER_SIZE];
 	const char *prefetch_arg = NULL;
+	struct arm_smccc_res res;
 	size_t arglen;
 	unsigned int mask;
-	struct pt_regs regs;
 
 	if (env_get_f("hwconfig", buffer, sizeof(buffer)) > 0)
 		buf = buffer;
+	else
+		return;
 
 	prefetch_arg = hwconfig_subarg_f("core_prefetch", "disable",
 					 &arglen, buf);
@@ -1064,17 +1100,22 @@ static void config_core_prefetch(void)
 		}
 
 #define SIP_PREFETCH_DISABLE_64 0xC200FF13
-		regs.regs[0] = SIP_PREFETCH_DISABLE_64;
-		regs.regs[1] = mask;
-		smc_call(&regs);
+		arm_smccc_smc(SIP_PREFETCH_DISABLE_64, mask, 0, 0, 0, 0, 0, 0,
+			      &res);
 
-		if (regs.regs[0])
+		if (res.a0)
 			printf("Prefetch disable config failed for mask ");
 		else
 			printf("Prefetch disable config passed for mask ");
 		printf("0x%x\n", mask);
 	}
 }
+
+#ifdef CONFIG_PCIE_ECAM_GENERIC
+__weak void set_ecam_icids(void)
+{
+}
+#endif
 
 int arch_early_init_r(void)
 {
@@ -1106,38 +1147,44 @@ int arch_early_init_r(void)
 #endif
 #ifdef CONFIG_SYS_FSL_HAS_RGMII
 	/* some dpmacs in armv8a based freescale layerscape SOCs can be
-	 * configured via both serdes(sgmii, xfi, xlaui etc) bits and via
+	 * configured via both serdes(sgmii, 10gbase-r, xlaui etc) bits and via
 	 * EC*_PMUX(rgmii) bits in RCW.
 	 * e.g. dpmac 17 and 18 in LX2160A can be configured as SGMII from
 	 * serdes bits and as RGMII via EC1_PMUX/EC2_PMUX bits
-	 * Now if a dpmac is enabled by serdes bits then it takes precedence
-	 * over EC*_PMUX bits. i.e. in LX2160A if we select serdes protocol
-	 * that configures dpmac17 as SGMII and set the EC1_PMUX as RGMII,
-	 * then the dpmac is SGMII and not RGMII.
+	 * Now if a dpmac is enabled as RGMII through ECx_PMUX then it takes
+	 * precedence over SerDes protocol. i.e. in LX2160A if we select serdes
+	 * protocol that configures dpmac17 as SGMII and set the EC1_PMUX as
+	 * RGMII, then the dpmac is RGMII and not SGMII.
 	 *
-	 * Therefore, move the fsl_rgmii_init after fsl_serdes_init. in
-	 * fsl_rgmii_init function of SOC, we will check if the dpmac is enabled
-	 * or not? if it is (fsl_serdes_init has already enabled the dpmac),
-	 * then don't enable it.
+	 * Therefore, even thought fsl_rgmii_init is after fsl_serdes_init
+	 * function of SOC, the dpmac will be enabled as RGMII even if it was
+	 * also enabled before as SGMII. If ECx_PMUX is not configured for
+	 * RGMII, DPMAC will remain configured as SGMII from fsl_serdes_init().
 	 */
 	fsl_rgmii_init();
 #endif
 #ifdef CONFIG_FMAN_ENET
+#ifndef CONFIG_DM_ETH
 	fman_enet_init();
+#endif
 #endif
 #ifdef CONFIG_SYS_DPAA_QBMAN
 	setup_qbman_portals();
+#endif
+#ifdef CONFIG_PCIE_ECAM_GENERIC
+	set_ecam_icids();
 #endif
 	return 0;
 }
 
 int timer_init(void)
 {
-	u32 __iomem *cntcr = (u32 *)CONFIG_SYS_FSL_TIMER_ADDR;
+	u32 __iomem *cntcr = (u32 *)CFG_SYS_FSL_TIMER_ADDR;
 #ifdef CONFIG_FSL_LSCH3
-	u32 __iomem *cltbenr = (u32 *)CONFIG_SYS_FSL_PMU_CLTBENR;
+	u32 __iomem *cltbenr = (u32 *)CFG_SYS_FSL_PMU_CLTBENR;
 #endif
-#if defined(CONFIG_ARCH_LS2080A) || defined(CONFIG_ARCH_LS1088A)
+#if defined(CONFIG_ARCH_LS2080A) || defined(CONFIG_ARCH_LS1088A) || \
+	defined(CONFIG_ARCH_LS1028A)
 	u32 __iomem *pctbenr = (u32 *)FSL_PMU_PCTBENR_OFFSET;
 	u32 svr_dev_id;
 #endif
@@ -1156,7 +1203,8 @@ int timer_init(void)
 	out_le32(cltbenr, 0xf);
 #endif
 
-#if defined(CONFIG_ARCH_LS2080A) || defined(CONFIG_ARCH_LS1088A)
+#if defined(CONFIG_ARCH_LS2080A) || defined(CONFIG_ARCH_LS1088A) || \
+	defined(CONFIG_ARCH_LS1028A)
 	/*
 	 * In certain Layerscape SoCs, the clock for each core's
 	 * has an enable bit in the PMU Physical Core Time Base Enable
@@ -1181,25 +1229,29 @@ int timer_init(void)
 	return 0;
 }
 
-__efi_runtime_data u32 __iomem *rstcr = (u32 *)CONFIG_SYS_FSL_RST_ADDR;
+#if !CONFIG_IS_ENABLED(SYSRESET)
+__efi_runtime_data u32 __iomem *rstcr = (u32 *)CFG_SYS_FSL_RST_ADDR;
 
-void __efi_runtime reset_cpu(ulong addr)
+void __efi_runtime reset_cpu(void)
 {
+#if defined(CONFIG_ARCH_LX2160A) || defined(CONFIG_ARCH_LX2162A)
+	/* clear the RST_REQ_MSK and SW_RST_REQ */
+	out_le32(rstcr, 0x0);
+
+	/* initiate the sw reset request */
+	out_le32(rstcr, 0x1);
+#else
 	u32 val;
 
-#ifdef CONFIG_ARCH_LX2160A
-	val = in_le32(rstcr);
-	val |= 0x01;
-	out_le32(rstcr, val);
-#else
 	/* Raise RESET_REQ_B */
 	val = scfg_in32(rstcr);
 	val |= 0x02;
 	scfg_out32(rstcr, val);
 #endif
 }
+#endif
 
-#ifdef CONFIG_EFI_LOADER
+#if defined(CONFIG_EFI_LOADER) && !defined(CONFIG_PSCI_RESET)
 
 void __efi_runtime EFIAPI efi_reset_system(
 		       enum efi_reset_type reset_type,
@@ -1210,7 +1262,7 @@ void __efi_runtime EFIAPI efi_reset_system(
 	case EFI_RESET_COLD:
 	case EFI_RESET_WARM:
 	case EFI_RESET_PLATFORM_SPECIFIC:
-		reset_cpu(0);
+		reset_cpu();
 		break;
 	case EFI_RESET_SHUTDOWN:
 		/* Nothing we can do */
@@ -1293,25 +1345,20 @@ phys_size_t get_effective_memsize(void)
 #ifdef CONFIG_TFABOOT
 phys_size_t tfa_get_dram_size(void)
 {
-	struct pt_regs regs;
-	phys_size_t dram_size = 0;
+	struct arm_smccc_res res;
 
-	regs.regs[0] = SMC_DRAM_BANK_INFO;
-	regs.regs[1] = -1;
-
-	smc_call(&regs);
-	if (regs.regs[0])
+	arm_smccc_smc(SMC_DRAM_BANK_INFO, -1, 0, 0, 0, 0, 0, 0, &res);
+	if (res.a0)
 		return 0;
 
-	dram_size = regs.regs[1];
-	return dram_size;
+	return res.a1;
 }
 
 static int tfa_dram_init_banksize(void)
 {
 	int i = 0, ret = 0;
-	struct pt_regs regs;
 	phys_size_t dram_size = tfa_get_dram_size();
+	struct arm_smccc_res res;
 
 	debug("dram_size %llx\n", dram_size);
 
@@ -1319,19 +1366,15 @@ static int tfa_dram_init_banksize(void)
 		return -EINVAL;
 
 	do {
-		regs.regs[0] = SMC_DRAM_BANK_INFO;
-		regs.regs[1] = i;
-
-		smc_call(&regs);
-		if (regs.regs[0]) {
+		arm_smccc_smc(SMC_DRAM_BANK_INFO, i, 0, 0, 0, 0, 0, 0, &res);
+		if (res.a0) {
 			ret = -EINVAL;
 			break;
 		}
 
-		debug("bank[%d]: start %lx, size %lx\n", i, regs.regs[1],
-		      regs.regs[2]);
-		gd->bd->bi_dram[i].start = regs.regs[1];
-		gd->bd->bi_dram[i].size = regs.regs[2];
+		debug("bank[%d]: start %lx, size %lx\n", i, res.a1, res.a2);
+		gd->bd->bi_dram[i].start = res.a1;
+		gd->bd->bi_dram[i].size = res.a2;
 
 		dram_size -= gd->bd->bi_dram[i].size;
 
@@ -1341,7 +1384,7 @@ static int tfa_dram_init_banksize(void)
 	if (i > 0)
 		ret = 0;
 
-#if defined(CONFIG_FSL_MC_ENET) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_RESV_RAM) && !defined(CONFIG_SPL_BUILD)
 	/* Assign memory for MC */
 #ifdef CONFIG_SYS_DDR_BLOCK3_BASE
 	if (gd->bd->bi_dram[2].size >=
@@ -1364,7 +1407,7 @@ static int tfa_dram_init_banksize(void)
 				board_reserve_ram_top(gd->bd->bi_dram[0].size);
 		}
 	}
-#endif	/* CONFIG_FSL_MC_ENET */
+#endif	/* CONFIG_RESV_RAM */
 
 	return ret;
 }
@@ -1427,7 +1470,7 @@ int dram_init_banksize(void)
 	}
 #endif	/* CONFIG_SYS_MEM_RESERVE_SECURE */
 
-#if defined(CONFIG_FSL_MC_ENET) && !defined(CONFIG_SPL_BUILD)
+#if defined(CONFIG_RESV_RAM) && !defined(CONFIG_SPL_BUILD)
 	/* Assign memory for MC */
 #ifdef CONFIG_SYS_DDR_BLOCK3_BASE
 	if (gd->bd->bi_dram[2].size >=
@@ -1450,7 +1493,7 @@ int dram_init_banksize(void)
 				board_reserve_ram_top(gd->bd->bi_dram[0].size);
 		}
 	}
-#endif	/* CONFIG_FSL_MC_ENET */
+#endif	/* CONFIG_RESV_RAM */
 
 #ifdef CONFIG_SYS_DP_DDR_BASE_PHY
 #ifdef CONFIG_SYS_DDR_BLOCK3_BASE
@@ -1489,9 +1532,8 @@ int dram_init_banksize(void)
 void efi_add_known_memory(void)
 {
 	int i;
-	phys_addr_t ram_start, start;
+	phys_addr_t ram_start;
 	phys_size_t ram_size;
-	u64 pages;
 
 	/* Add RAM */
 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
@@ -1509,11 +1551,8 @@ void efi_add_known_memory(void)
 		    gd->arch.resv_ram < ram_start + ram_size)
 			ram_size = gd->arch.resv_ram - ram_start;
 #endif
-		start = (ram_start + EFI_PAGE_MASK) & ~EFI_PAGE_MASK;
-		pages = (ram_size + EFI_PAGE_MASK) >> EFI_PAGE_SHIFT;
-
-		efi_add_memory_map(start, pages, EFI_CONVENTIONAL_MEMORY,
-				   false);
+		efi_add_memory_map(ram_start, ram_size,
+				   EFI_CONVENTIONAL_MEMORY);
 	}
 }
 #endif
@@ -1585,12 +1624,36 @@ void update_early_mmu_table(void)
 
 __weak int dram_init(void)
 {
+#ifdef CONFIG_SYS_FSL_DDR
 	fsl_initdram();
 #if (!defined(CONFIG_SPL) && !defined(CONFIG_TFABOOT)) || \
 	defined(CONFIG_SPL_BUILD)
 	/* This will break-before-make MMU for DDR */
 	update_early_mmu_table();
 #endif
+#endif
 
 	return 0;
 }
+
+#ifdef CONFIG_ARCH_MISC_INIT
+__weak int serdes_misc_init(void)
+{
+	return 0;
+}
+
+int arch_misc_init(void)
+{
+	if (IS_ENABLED(CONFIG_FSL_CAAM)) {
+		struct udevice *dev;
+		int ret;
+
+		ret = uclass_get_device_by_driver(UCLASS_MISC, DM_DRIVER_GET(caam_jr), &dev);
+		if (ret)
+			printf("Failed to initialize caam_jr: %d\n", ret);
+	}
+	serdes_misc_init();
+
+	return 0;
+}
+#endif

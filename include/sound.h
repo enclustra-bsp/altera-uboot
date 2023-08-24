@@ -69,6 +69,18 @@ struct sound_ops {
 	int (*play)(struct udevice *dev, void *data, uint data_size);
 
 	/**
+	 * stop_play() - Indicate that there is no more data coming
+	 *
+	 * This is called once play() has finished sending all the data to the
+	 * output device. This may be used to tell the hardware to turn off the
+	 * codec, for example.
+	 *
+	 * @dev: Sound device
+	 * @return 0 if OK, -ve on error
+	 */
+	int (*stop_play)(struct udevice *dev);
+
+	/**
 	 * start_beep() - Start beeping (optional)
 	 *
 	 * This tells the sound hardware to start a beep. It will continue until
@@ -104,7 +116,7 @@ int sound_setup(struct udevice *dev);
  * @dev: Sound device
  * @msecs: Duration of beep in milliseconds
  * @frequency_hz: Frequency of the beep in Hertz
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int sound_beep(struct udevice *dev, int msecs, int frequency_hz);
 
@@ -116,7 +128,7 @@ int sound_beep(struct udevice *dev, int msecs, int frequency_hz);
  *
  * @dev: Sound device
  * @frequency_hz: Beep frequency in hertz
- * @return if OK, -ve on error
+ * Return: if OK, -ve on error
  */
 int sound_start_beep(struct udevice *dev, int frequency_hz);
 
@@ -126,7 +138,7 @@ int sound_start_beep(struct udevice *dev, int frequency_hz);
  * This tells the sound hardware to stop a previously started beep.
  *
  * @dev: Sound device
- * @return if OK, -ve on error
+ * Return: if OK, -ve on error
  */
 int sound_stop_beep(struct udevice *dev);
 

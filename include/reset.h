@@ -6,7 +6,8 @@
 #ifndef _RESET_H
 #define _RESET_H
 
-#include <linux/errno.h>
+#include <dm/ofnode.h>
+#include <linux/err.h>
 
 /**
  * A reset is a hardware signal indicating that a HW module (or IP block, or
@@ -43,6 +44,8 @@ struct udevice;
  * @data: An optional data field for scenarios where a single integer ID is not
  *	  sufficient. If used, it can be populated through an .of_xlate op and
  *	  processed during the various reset ops.
+ * @polarity: An optional polarity field for drivers that support
+ *	  different reset polarities.
  *
  * Should additional information to identify and configure any reset signal
  * for any provider be required in the future, the struct could be expanded to
@@ -59,6 +62,7 @@ struct reset_ctl {
 	 */
 	unsigned long id;
 	unsigned long data;
+	unsigned long polarity;
 };
 
 /**
@@ -80,6 +84,98 @@ struct reset_ctl_bulk {
 };
 
 #if CONFIG_IS_ENABLED(DM_RESET)
+
+/**
+ * devm_reset_control_get - resource managed reset_get_by_name()
+ * @dev: device to be reset by the controller
+ * @id: reset line name
+ *
+ * Managed reset_get_by_name(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or IS_ERR() condition containing errno.
+ */
+struct reset_ctl *devm_reset_control_get(struct udevice *dev, const char *id);
+
+/**
+ * devm_reset_control_get_optional - resource managed reset_get_by_name() that
+ *                                   can fail
+ * @dev:	The client device.
+ * @id:		reset line name
+ *
+ * Managed reset_get_by_name(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or a dummy reset controller if it failed.
+ */
+struct reset_ctl *devm_reset_control_get_optional(struct udevice *dev,
+						  const char *id);
+
+/**
+ * devm_reset_control_get - resource managed reset_get_by_index()
+ * @dev:	The client device.
+ * @index:	The index of the reset signal to request, within the client's
+ *		list of reset signals.
+ *
+ * Managed reset_get_by_index(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or IS_ERR() condition containing errno.
+ */
+struct reset_ctl *devm_reset_control_get_by_index(struct udevice *dev,
+						  int index);
+
+/**
+ * devm_reset_bulk_get - resource managed reset_get_bulk()
+ * @dev: device to be reset by the controller
+ *
+ * Managed reset_get_bulk(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or IS_ERR() condition containing errno.
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get(struct udevice *dev);
+
+/**
+ * devm_reset_bulk_get_optional - resource managed reset_get_bulk() that
+ *                                can fail
+ * @dev:	The client device.
+ *
+ * Managed reset_get_bulk(). For reset controllers returned
+ * from this function, reset_free() is called automatically on driver
+ * detach.
+ *
+ * Returns a struct reset_ctl or NULL if it failed.
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get_optional(struct udevice *dev);
+
+/**
+ * devm_reset_bulk_get_by_node - resource managed reset_get_bulk()
+ * @dev: device to be reset by the controller
+ * @node: ofnode where the "resets" property is. Usually a sub-node of
+ *        the dev's node.
+ *
+ * see devm_reset_bulk_get()
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get_by_node(struct udevice *dev,
+						   ofnode node);
+
+/**
+ * devm_reset_bulk_get_optional_by_node - resource managed reset_get_bulk()
+ *                                        that can fail
+ * @dev: device to be reset by the controller
+ * @node: ofnode where the "resets" property is. Usually a sub-node of
+ *        the dev's node.
+ *
+ * see devm_reset_bulk_get_optional()
+ */
+struct reset_ctl_bulk *devm_reset_bulk_get_optional_by_node(struct udevice *dev,
+							    ofnode node);
+
 /**
  * reset_get_by_index - Get/request a reset signal by integer index.
  *
@@ -94,10 +190,25 @@ struct reset_ctl_bulk {
  * @index:	The index of the reset signal to request, within the client's
  *		list of reset signals.
  * @reset_ctl	A pointer to a reset control struct to initialize.
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_get_by_index(struct udevice *dev, int index,
 		       struct reset_ctl *reset_ctl);
+
+/**
+ * reset_get_by_index_nodev - Get/request a reset signal by integer index
+ * without a device.
+ *
+ * This is a version of reset_get_by_index() that does not use a device.
+ *
+ * @node:	The client ofnode.
+ * @index:	The index of the reset signal to request, within the client's
+ *		list of reset signals.
+ * @reset_ctl	A pointer to a reset control struct to initialize.
+ * Return: 0 if OK, or a negative error code.
+ */
+int reset_get_by_index_nodev(ofnode node, int index,
+			     struct reset_ctl *reset_ctl);
 
 /**
  * reset_get_bulk - Get/request all reset signals of a device.
@@ -111,7 +222,7 @@ int reset_get_by_index(struct udevice *dev, int index,
  *
  * @dev:	The client device.
  * @bulk	A pointer to a reset control bulk struct to initialize.
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_get_bulk(struct udevice *dev, struct reset_ctl_bulk *bulk);
 
@@ -129,7 +240,7 @@ int reset_get_bulk(struct udevice *dev, struct reset_ctl_bulk *bulk);
  * @name:	The name of the reset signal to request, within the client's
  *		list of reset signals.
  * @reset_ctl:	A pointer to a reset control struct to initialize.
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_get_by_name(struct udevice *dev, const char *name,
 		      struct reset_ctl *reset_ctl);
@@ -139,7 +250,7 @@ int reset_get_by_name(struct udevice *dev, const char *name,
  *
  * @reset_ctl:	A reset control struct.
  *
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_request(struct reset_ctl *reset_ctl);
 
@@ -148,7 +259,7 @@ int reset_request(struct reset_ctl *reset_ctl);
  *
  * @reset_ctl:	A reset control struct that was previously successfully
  *		requested by reset_get_by_*().
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_free(struct reset_ctl *reset_ctl);
 
@@ -162,7 +273,7 @@ int reset_free(struct reset_ctl *reset_ctl);
  *
  * @reset_ctl:	A reset control struct that was previously successfully
  *		requested by reset_get_by_*().
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_assert(struct reset_ctl *reset_ctl);
 
@@ -177,7 +288,7 @@ int reset_assert(struct reset_ctl *reset_ctl);
  *
  * @bulk:	A reset control bulk struct that was previously successfully
  *		requested by reset_get_bulk().
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_assert_bulk(struct reset_ctl_bulk *bulk);
 
@@ -190,7 +301,7 @@ int reset_assert_bulk(struct reset_ctl_bulk *bulk);
  *
  * @reset_ctl:	A reset control struct that was previously successfully
  *		requested by reset_get_by_*().
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_deassert(struct reset_ctl *reset_ctl);
 
@@ -204,7 +315,7 @@ int reset_deassert(struct reset_ctl *reset_ctl);
  *
  * @bulk:	A reset control bulk struct that was previously successfully
  *		requested by reset_get_bulk().
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_deassert_bulk(struct reset_ctl_bulk *bulk);
 
@@ -212,7 +323,7 @@ int reset_deassert_bulk(struct reset_ctl_bulk *bulk);
  * rst_status - Check reset signal status.
  *
  * @reset_ctl:	The reset signal to check.
- * @return 0 if deasserted, positive if asserted, or a negative
+ * Return: 0 if deasserted, positive if asserted, or a negative
  *           error code.
  */
 int reset_status(struct reset_ctl *reset_ctl);
@@ -226,7 +337,7 @@ int reset_status(struct reset_ctl *reset_ctl);
  * @reset_ctl:	A reset struct array that was previously successfully
  *		requested by reset_get_by_*().
  * @count	Number of reset contained in the array
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 int reset_release_all(struct reset_ctl *reset_ctl, int count);
 
@@ -240,13 +351,54 @@ int reset_release_all(struct reset_ctl *reset_ctl, int count);
  *
  * @bulk:	A reset control bulk struct that was previously successfully
  *		requested by reset_get_bulk().
- * @return 0 if OK, or a negative error code.
+ * Return: 0 if OK, or a negative error code.
  */
 static inline int reset_release_bulk(struct reset_ctl_bulk *bulk)
 {
 	return reset_release_all(bulk->resets, bulk->count);
 }
+
 #else
+static inline struct reset_ctl *devm_reset_control_get(struct udevice *dev,
+						       const char *id)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl *devm_reset_control_get_optional(struct udevice *dev,
+								const char *id)
+{
+	return NULL;
+}
+
+static inline struct reset_ctl *devm_reset_control_get_by_index(struct udevice *dev,
+								int index)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get(struct udevice *dev)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get_optional(struct udevice *dev)
+{
+	return NULL;
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get_by_node(struct udevice *dev,
+								 ofnode node)
+{
+	return ERR_PTR(-ENOTSUPP);
+}
+
+static inline struct reset_ctl_bulk *devm_reset_bulk_get_optional_by_node(struct udevice *dev,
+									  ofnode node)
+{
+	return NULL;
+}
+
 static inline int reset_get_by_index(struct udevice *dev, int index,
 				     struct reset_ctl *reset_ctl)
 {
@@ -310,7 +462,7 @@ static inline int reset_release_bulk(struct reset_ctl_bulk *bulk)
  * reset_valid() - check if reset is valid
  *
  * @reset_ctl:		the reset to check
- * @return TRUE if valid, or FALSE
+ * Return: TRUE if valid, or FALSE
  */
 static inline bool reset_valid(struct reset_ctl *reset_ctl)
 {

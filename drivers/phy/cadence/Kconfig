@@ -1,0 +1,20 @@
+config PHY_CADENCE_COMBOPHY
+	tristate "Cadence ComboPhy PHY Driver"
+	depends on MMC_SDHCI_CADENCE
+	help
+	  Enable this to support the Cadence ComboPhy PHY driver
+	  A single module that encapsulates all functionality required to interface
+	  to external NAND Flash, eMMC devices, and SD cards for command and data
+	  transfer.
+
+config PHY_CADENCE_SIERRA
+	tristate "Cadence Sierra PHY Driver"
+	depends on DM_RESET
+	help
+	  Enable this to support the Cadence Sierra PHY driver
+
+config PHY_CADENCE_TORRENT
+	tristate "Cadence Torrent PHY Driver"
+	depends on DM_RESET
+	help
+	  Enable this to support the Cadence Torrent PHY driver

@@ -3,9 +3,12 @@
  * Copyright 2016 NXP Semiconductor, Inc.
  */
 #include <common.h>
+#include <log.h>
 #include <malloc.h>
 #include <config.h>
 #include <errno.h>
+#include <asm/cache.h>
+#include <asm/global_data.h>
 #include <asm/system.h>
 #include <asm/types.h>
 #include <asm/arch/soc.h>
@@ -14,7 +17,7 @@
 #elif defined(CONFIG_FSL_LSCH2)
 #include <asm/arch/immap_lsch2.h>
 #endif
-#ifdef CONFIG_ARMV8_SEC_FIRMWARE_SUPPORT
+#if CONFIG_IS_ENABLED(ARMV8_SEC_FIRMWARE_SUPPORT)
 #include <asm/armv8/sec_firmware.h>
 #endif
 #ifdef CONFIG_CHAIN_OF_TRUST
@@ -250,7 +253,7 @@ int ppa_init(void)
 #endif
 
 #ifdef CONFIG_FSL_LSCH3
-	struct ccsr_gur __iomem *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur __iomem *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 	boot_loc_ptr_l = &gur->bootlocptrl;
 	boot_loc_ptr_h = &gur->bootlocptrh;
 
@@ -258,7 +261,7 @@ int ppa_init(void)
 	loadable_l = &gur->scratchrw[4];
 	loadable_h = &gur->scratchrw[5];
 #elif defined(CONFIG_FSL_LSCH2)
-	struct ccsr_scfg __iomem *scfg = (void *)(CONFIG_SYS_FSL_SCFG_ADDR);
+	struct ccsr_scfg __iomem *scfg = (void *)(CFG_SYS_FSL_SCFG_ADDR);
 	boot_loc_ptr_l = &scfg->scratchrw[1];
 	boot_loc_ptr_h = &scfg->scratchrw[0];
 

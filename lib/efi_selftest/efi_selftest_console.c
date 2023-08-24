@@ -6,6 +6,7 @@
  */
 
 #include <efi_selftest.h>
+#include <net.h>
 #include <vsprintf.h>
 
 struct efi_simple_text_output_protocol *con_out;
@@ -43,28 +44,52 @@ static void mac(void *pointer, u16 **buf)
 }
 
 /*
- * Print a pointer to an u16 string
+ * printx() - print hexadecimal number to an u16 string
  *
- * @pointer: pointer
- * @buf: pointer to buffer address
- * on return position of terminating zero word
+ * @p:		value to print
+ * @prec:	minimum number of digits to print
+ * @buf:	pointer to buffer address,
+ *		on return position of terminating zero word
  */
-static void pointer(void *pointer, u16 **buf)
+static void printx(u64 p, int prec, u16 **buf)
 {
 	int i;
 	u16 c;
-	uintptr_t p = (uintptr_t)pointer;
 	u16 *pos = *buf;
 
-	for (i = 8 * sizeof(p) - 4; i >= 0; i -= 4) {
-		c = (p >> i) & 0x0f;
-		c += '0';
-		if (c > '9')
-			c += 'a' - '9' - 1;
-		*pos++ = c;
+	for (i = 2 * sizeof(p) - 1; i >= 0; --i) {
+		c = (p >> (4 * i)) & 0x0f;
+		if (c || pos != *buf || !i || i < prec) {
+			c += '0';
+			if (c > '9')
+				c += 'a' - '9' - 1;
+			*pos++ = c;
+		}
 	}
 	*pos = 0;
 	*buf = pos;
+}
+
+/**
+ * print_guid() - print GUID to an u16 string
+ *
+ * @p:		GUID to print
+ * @buf:	pointer to buffer address,
+ *		on return position of terminating zero word
+ */
+static void print_uuid(u8 *p, u16 **buf)
+{
+	int i;
+	const u8 seq[] = {
+		3, 2, 1, 0, '-', 5, 4, '-', 7, 6, '-',
+		8, 9, 10, 11, 12, 13, 14, 15 };
+
+	for (i = 0; i < sizeof(seq); ++i) {
+		if (seq[i] == '-')
+			*(*buf)++ = u'-';
+		else
+			printx(p[seq[i]], 2, buf);
+	}
 }
 
 /*
@@ -209,9 +234,14 @@ void efi_st_printc(int color, const char *fmt, ...)
 					con_out->output_string(con_out, u);
 					pos = buf;
 					break;
+				case 'U':
+					print_uuid(va_arg(args, void*), &pos);
+					break;
 				default:
 					--c;
-					pointer(va_arg(args, void*), &pos);
+					printx((uintptr_t)va_arg(args, void *),
+					       2 * sizeof(void *), &pos);
+					break;
 				}
 				break;
 			case 's':
@@ -221,6 +251,10 @@ void efi_st_printc(int color, const char *fmt, ...)
 				break;
 			case 'u':
 				uint2dec(va_arg(args, u32), prec, &pos);
+				break;
+			case 'x':
+				printx((u64)va_arg(args, unsigned int),
+				       prec, &pos);
 				break;
 			default:
 				break;
@@ -240,7 +274,7 @@ void efi_st_printc(int color, const char *fmt, ...)
 /*
  * Reads an Unicode character from the input device.
  *
- * @return: Unicode character
+ * Return: Unicode character
  */
 u16 efi_st_get_key(void)
 {

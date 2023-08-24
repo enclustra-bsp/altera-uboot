@@ -4,8 +4,12 @@
  */
 
 #include <common.h>
+#include <image.h>
+#include <init.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <led.h>
+#include <miiphy.h>
 
 enum {
 	BOARD_TYPE_PCB106 = 0xAABBCD00,
@@ -20,10 +24,17 @@ int board_early_init_r(void)
 	/* Address of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE;
 
-	/* LED setup */
-	if (IS_ENABLED(CONFIG_LED))
-		led_default_state();
+	return 0;
+}
 
+int board_phy_config(struct phy_device *phydev)
+{
+	phy_write(phydev, 0, 31, 0x10);
+	phy_write(phydev, 0, 18, 0x80F0);
+	while (phy_read(phydev, 0, 18) & 0x8000)
+		;
+	phy_write(phydev, 0, 14, 0x800);
+	phy_write(phydev, 0, 31, 0);
 	return 0;
 }
 
@@ -42,10 +53,10 @@ static void do_board_detect(void)
 			gd->board_type = BOARD_TYPE_PCB106;
 		else
 			gd->board_type = BOARD_TYPE_PCB105;
-		mscc_phy_wr(1, 16, 15, 0);
 	} else {
 		gd->board_type = BOARD_TYPE_PCB105;
 	}
+	mscc_phy_wr(1, 16, 31, 0x0);
 }
 
 #if defined(CONFIG_MULTI_DTB_FIT)

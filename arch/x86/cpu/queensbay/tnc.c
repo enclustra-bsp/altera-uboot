@@ -5,6 +5,7 @@
 
 #include <common.h>
 #include <dm.h>
+#include <init.h>
 #include <dm/device-internal.h>
 #include <pci.h>
 #include <asm/io.h>
@@ -12,24 +13,22 @@
 #include <asm/post.h>
 #include <asm/arch/device.h>
 #include <asm/arch/tnc.h>
-#include <asm/fsp/fsp_support.h>
+#include <asm/fsp1/fsp_support.h>
 #include <asm/processor.h>
 
 static int __maybe_unused disable_igd(void)
 {
-	struct udevice *igd, *sdvo;
+	struct udevice *igd = NULL;
+	struct udevice *sdvo = NULL;
 	int ret;
 
-	ret = dm_pci_bus_find_bdf(TNC_IGD, &igd);
-	if (ret)
-		return ret;
-	if (!igd)
-		return 0;
-
-	ret = dm_pci_bus_find_bdf(TNC_SDVO, &sdvo);
-	if (ret)
-		return ret;
-	if (!sdvo)
+	/*
+	 * In case the IGD and SDVO devices were already in disabled state,
+	 * we should return and not proceed any further.
+	 */
+	dm_pci_bus_find_bdf(TNC_IGD, &igd);
+	dm_pci_bus_find_bdf(TNC_SDVO, &sdvo);
+	if (!igd || !sdvo)
 		return 0;
 
 	/*

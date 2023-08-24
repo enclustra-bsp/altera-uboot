@@ -5,9 +5,12 @@
 
 #include <common.h>
 #include <config.h>
+#include <log.h>
+#include <time.h>
 #include <asm/fsl_law.h>
 #include <asm/fsl_serdes.h>
 #include <asm/fsl_srio.h>
+#include <linux/delay.h>
 #include <linux/errno.h>
 
 #ifdef CONFIG_SRIO_PCIE_BOOT_MASTER
@@ -30,12 +33,12 @@
 	#define _DEVDISR_SRIO2 FSL_CORENET_DEVDISR_SRIO2
 #endif
 	#define _DEVDISR_RMU   FSL_CORENET_DEVDISR_RMU
-	#define CONFIG_SYS_MPC8xxx_GUTS_ADDR CONFIG_SYS_MPC85xx_GUTS_ADDR
+	#define CONFIG_SYS_MPC8xxx_GUTS_ADDR CFG_SYS_MPC85xx_GUTS_ADDR
 #elif defined(CONFIG_MPC85xx)
 	#define _DEVDISR_SRIO1 MPC85xx_DEVDISR_SRIO
 	#define _DEVDISR_SRIO2 MPC85xx_DEVDISR_SRIO
 	#define _DEVDISR_RMU   MPC85xx_DEVDISR_RMSG
-	#define CONFIG_SYS_MPC8xxx_GUTS_ADDR CONFIG_SYS_MPC85xx_GUTS_ADDR
+	#define CONFIG_SYS_MPC8xxx_GUTS_ADDR CFG_SYS_MPC85xx_GUTS_ADDR
 #elif defined(CONFIG_MPC86xx)
 	#define _DEVDISR_SRIO1 MPC86xx_DEVDISR_SRIO
 	#define _DEVDISR_SRIO2 MPC86xx_DEVDISR_SRIO
@@ -76,9 +79,9 @@ static int srio_erratum_a004034(u8 port)
 	int idx, first, last;
 	u32 i;
 	unsigned long long end_tick;
-	struct ccsr_rio *srio_regs = (void *)CONFIG_SYS_FSL_SRIO_ADDR;
+	struct ccsr_rio *srio_regs = (void *)CFG_SYS_FSL_SRIO_ADDR;
 
-	srds_regs = (void *)(CONFIG_SYS_FSL_CORENET_SERDES_ADDR);
+	srds_regs = (void *)(CFG_SYS_FSL_CORENET_SERDES_ADDR);
 	conf_lane = (in_be32((void *)&srds_regs->srdspccr0)
 			>> (12 - port * 4)) & 0x3;
 	init_lane = (in_be32((void *)&srio_regs->lp_serial
@@ -288,7 +291,7 @@ void srio_init(void)
 #ifdef CONFIG_SRIO_PCIE_BOOT_MASTER
 void srio_boot_master(int port)
 {
-	struct ccsr_rio *srio = (void *)CONFIG_SYS_FSL_SRIO_ADDR;
+	struct ccsr_rio *srio = (void *)CFG_SYS_FSL_SRIO_ADDR;
 
 	/* set port accept-all */
 	out_be32((void *)&srio->impl.port[port - 1].ptaacr,
@@ -340,7 +343,7 @@ void srio_boot_master(int port)
 
 void srio_boot_master_release_slave(int port)
 {
-	struct ccsr_rio *srio = (void *)CONFIG_SYS_FSL_SRIO_ADDR;
+	struct ccsr_rio *srio = (void *)CFG_SYS_FSL_SRIO_ADDR;
 	u32 escsr;
 	debug("SRIOBOOT - MASTER: "
 			"Check the port status and release slave core ...\n");

@@ -4,6 +4,7 @@
  */
 
 #include "omap5-u-boot.dtsi"
+#include "dra7-ipu-common-early-boot.dtsi"
 
 &pcf_gpio_21{
 	u-boot,i2c-offset-len = <0>;
@@ -42,5 +43,22 @@
 };
 
 &mmc2_iodelay_hs200_rev20_conf {
+	u-boot,dm-spl;
+};
+
+&omap_dwc3_1 {
+	u-boot,dm-spl;
+};
+
+&usb1 {
+	u-boot,dm-spl;
+	dr_mode = "peripheral";
+};
+
+&usb2_phy1 {
+	u-boot,dm-spl;
+};
+
+&usb3_phy1 {
 	u-boot,dm-spl;
 };

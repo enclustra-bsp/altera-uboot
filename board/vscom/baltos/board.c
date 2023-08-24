@@ -8,7 +8,12 @@
  */
 
 #include <common.h>
+#include <env.h>
 #include <errno.h>
+#include <init.h>
+#include <net.h>
+#include <serial.h>
+#include <asm/global_data.h>
 #include <linux/libfdt.h>
 #include <spl.h>
 #include <asm/arch/cpu.h>
@@ -28,7 +33,6 @@
 #include <miiphy.h>
 #include <cpsw.h>
 #include <power/tps65910.h>
-#include <environment.h>
 #include <watchdog.h>
 #include "board.h"
 
@@ -183,7 +187,7 @@ void am33xx_spl_board_init(void)
 	 */
 	i2c_set_bus_num(1);
 
-	printf("I2C speed: %d Hz\n", CONFIG_SYS_OMAP24_I2C_SPEED);
+	printf("I2C speed: %d Hz\n", CONFIG_SYS_I2C_SPEED);
 
 	if (i2c_probe(TPS65910_CTRL_I2C_ADDR)) {
 		puts("i2c: cannot access TPS65910\n");
@@ -263,13 +267,13 @@ int board_init(void)
 #endif
 
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
-#if defined(CONFIG_NOR) || defined(CONFIG_NAND)
+#if defined(CONFIG_NOR) || defined(CONFIG_MTD_RAW_NAND)
 	gpmc_init();
 #endif
 	return 0;
 }
 
-int ft_board_setup(void *blob, bd_t *bd)
+int ft_board_setup(void *blob, struct bd_info *bd)
 {
 	int node, ret;
 	unsigned char mac_addr[6];
@@ -288,15 +292,15 @@ int ft_board_setup(void *blob, bd_t *bd)
 	mac_addr[5] = header.MAC1[5];
 
 
-	node = fdt_path_offset(blob, "/ocp/ethernet/slave@4a100200");
+	node = fdt_path_offset(blob, "ethernet0");
 	if (node < 0) {
-		printf("no /soc/fman/ethernet path offset\n");
+		printf("no ethernet0 path offset\n");
 		return -ENODEV;
 	}
 
 	ret = fdt_setprop(blob, node, "mac-address", &mac_addr, 6);
 	if (ret) {
-		printf("error setting local-mac-address property\n");
+		printf("error setting mac-address property\n");
 		return -ENODEV;
 	}
 
@@ -308,15 +312,15 @@ int ft_board_setup(void *blob, bd_t *bd)
 	mac_addr[4] = header.MAC2[4];
 	mac_addr[5] = header.MAC2[5];
 
-	node = fdt_path_offset(blob, "/ocp/ethernet/slave@4a100300");
+	node = fdt_path_offset(blob, "ethernet1");
 	if (node < 0) {
-		printf("no /soc/fman/ethernet path offset\n");
+		printf("no ethernet1 path offset\n");
 		return -ENODEV;
 	}
 
 	ret = fdt_setprop(blob, node, "mac-address", &mac_addr, 6);
 	if (ret) {
-		printf("error setting local-mac-address property\n");
+		printf("error setting mac-address property\n");
 		return -ENODEV;
 	}
 
@@ -375,7 +379,7 @@ int board_late_init(void)
 #endif
 
 #if (defined(CONFIG_DRIVER_TI_CPSW) && !defined(CONFIG_SPL_BUILD)) || \
-	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
+	(defined(CONFIG_SPL_ETH) && defined(CONFIG_SPL_BUILD))
 static void cpsw_control(int enabled)
 {
 	/* VTP can be added here */
@@ -417,12 +421,12 @@ static struct cpsw_platform_data cpsw_data = {
 };
 #endif
 
-#if ((defined(CONFIG_SPL_ETH_SUPPORT) || defined(CONFIG_SPL_USB_ETHER)) \
+#if ((defined(CONFIG_SPL_ETH) || defined(CONFIG_SPL_USB_ETHER)) \
 		&& defined(CONFIG_SPL_BUILD)) || \
 	((defined(CONFIG_DRIVER_TI_CPSW) || \
 	  defined(CONFIG_USB_ETHER) && defined(CONFIG_USB_MUSB_GADGET)) && \
 	 !defined(CONFIG_SPL_BUILD))
-int board_eth_init(bd_t *bis)
+int board_eth_init(struct bd_info *bis)
 {
 	int rv, n = 0;
 	uint8_t mac_addr[6];
@@ -446,7 +450,7 @@ int board_eth_init(bd_t *bis)
 	mac_addr[5] = (mac_lo & 0xFF00) >> 8;
 
 #if (defined(CONFIG_DRIVER_TI_CPSW) && !defined(CONFIG_SPL_BUILD)) || \
-	(defined(CONFIG_SPL_ETH_SUPPORT) && defined(CONFIG_SPL_BUILD))
+	(defined(CONFIG_SPL_ETH) && defined(CONFIG_SPL_BUILD))
 	if (!env_get("ethaddr")) {
 		printf("<ethaddr> not set. Validating first E-fuse MAC\n");
 

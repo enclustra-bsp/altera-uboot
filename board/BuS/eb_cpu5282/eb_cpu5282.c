@@ -9,8 +9,11 @@
 
 #include <common.h>
 #include <command.h>
+#include <asm/global_data.h>
 #include "asm/m5282.h"
 #include <bmp_layout.h>
+#include <env.h>
+#include <init.h>
 #include <status_led.h>
 #include <bus_vcxk.h>
 
@@ -18,17 +21,12 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifdef CONFIG_VIDEO
-unsigned long display_width;
-unsigned long display_height;
-#endif
-
 /*---------------------------------------------------------------------------*/
 
 int checkboard (void)
 {
 	puts("Board: EB+CPU5282 (BuS Elektronik GmbH & Co. KG)\n");
-#if (CONFIG_SYS_TEXT_BASE ==  CONFIG_SYS_INT_FLASH_BASE)
+#if (CONFIG_TEXT_BASE ==  CONFIG_SYS_INT_FLASH_BASE)
 	puts("       Boot from Internal FLASH\n");
 #endif
 	return 0;
@@ -97,7 +95,7 @@ int dram_init(void)
 }
 
 #if defined(CONFIG_SYS_DRAM_TEST)
-int testdram (void)
+int testdram(void)
 {
 	uint *pstart = (uint *) CONFIG_SYS_MEMTEST_START;
 	uint *pend = (uint *) CONFIG_SYS_MEMTEST_END;
@@ -181,85 +179,7 @@ void __led_set(led_id_t mask, int state)
 		MCFGPTA_GPTPORT &= ~(1 << 3);
 }
 
-#if defined(CONFIG_VIDEO)
-
-int drv_video_init(void)
-{
-	char *s;
-#ifdef CONFIG_SPLASH_SCREEN
-	unsigned long splash;
-#endif
-	printf("Init Video as ");
-	s = env_get("displaywidth");
-	if (s != NULL)
-		display_width = simple_strtoul(s, NULL, 10);
-	else
-		display_width = 256;
-
-	s = env_get("displayheight");
-	if (s != NULL)
-		display_height = simple_strtoul(s, NULL, 10);
-	else
-		display_height = 256;
-
-	printf("%lu x %lu pixel matrix\n", display_width, display_height);
-
-	MCFCCM_CCR &= ~MCFCCM_CCR_SZEN;
-	MCFGPIO_PEPAR &= ~MCFGPIO_PEPAR_PEPA2;
-
-	vcxk_init(display_width, display_height);
-
-#ifdef CONFIG_SPLASH_SCREEN
-	s = env_get("splashimage");
-	if (s != NULL) {
-		splash = simple_strtoul(s, NULL, 16);
-		vcxk_acknowledge_wait();
-		video_display_bitmap(splash, 0, 0);
-	}
-#endif
-	return 0;
-}
-#endif
-
 /*---------------------------------------------------------------------------*/
 
-#ifdef CONFIG_VIDEO
-int do_brightness(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	int rcode = 0;
-	ulong side;
-	ulong bright;
-
-	switch (argc) {
-	case 3:
-		side = simple_strtoul(argv[1], NULL, 10);
-		bright = simple_strtoul(argv[2], NULL, 10);
-		if ((side >= 0) && (side <= 3) &&
-			(bright >= 0) && (bright <= 1000)) {
-			vcxk_setbrightness(side, bright);
-			rcode = 0;
-		} else {
-			printf("parameters out of range\n");
-			printf("Usage:\n%s\n", cmdtp->usage);
-			rcode = 1;
-		}
-		break;
-	default:
-		printf("Usage:\n%s\n", cmdtp->usage);
-		rcode = 1;
-		break;
-	}
-	return rcode;
-}
-
-/*---------------------------------------------------------------------------*/
-
-U_BOOT_CMD(
-	bright,	3,	0,	do_brightness,
-	"sets the display brightness\n",
-	" <side> <0..1000>\n        side: 0/3=both; 1=first; 2=second\n"
-);
-
-#endif
 
 /* EOF EB+MCF-EV123.c */

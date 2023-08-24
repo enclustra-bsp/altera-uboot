@@ -14,6 +14,8 @@
 #include <malloc.h>
 #include <mapmem.h>
 #include <mtd.h>
+#include <dm/devres.h>
+#include <linux/err.h>
 
 #include <linux/ctype.h>
 
@@ -124,6 +126,13 @@ static void mtd_show_device(struct mtd_info *mtd)
 		printf("  - driver: %s\n", mtd->dev->driver->name);
 	}
 #endif
+	if (IS_ENABLED(CONFIG_OF_CONTROL) && mtd->dev) {
+		char buf[256];
+		int res;
+
+		res = ofnode_get_path(mtd_get_ofnode(mtd), buf, 256);
+		printf("  - path: %s\n", res == 0 ? buf : "unavailable");
+	}
 
 	/* MTD device information */
 	printf("  - type: ");
@@ -193,8 +202,8 @@ static bool mtd_oob_write_is_empty(struct mtd_oob_ops *op)
 	return true;
 }
 
-static int do_mtd_list(cmd_tbl_t *cmdtp, int flag, int argc,
-		       char * const argv[])
+static int do_mtd_list(struct cmd_tbl *cmdtp, int flag, int argc,
+		       char *const argv[])
 {
 	struct mtd_info *mtd;
 	int dev_nb = 0;
@@ -238,7 +247,8 @@ static int mtd_special_write_oob(struct mtd_info *mtd, u64 off,
 	return ret;
 }
 
-static int do_mtd_io(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_mtd_io(struct cmd_tbl *cmdtp, int flag, int argc,
+		     char *const argv[])
 {
 	bool dump, read, raw, woob, write_empty_pages, has_pages = false;
 	u64 start_off, off, len, remaining, default_len;
@@ -275,12 +285,12 @@ static int do_mtd_io(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			goto out_put_mtd;
 		}
 
-		user_addr = simple_strtoul(argv[0], NULL, 16);
+		user_addr = hextoul(argv[0], NULL);
 		argc--;
 		argv++;
 	}
 
-	start_off = argc > 0 ? simple_strtoul(argv[0], NULL, 16) : 0;
+	start_off = argc > 0 ? hextoul(argv[0], NULL) : 0;
 	if (!mtd_is_aligned_with_min_io_size(mtd, start_off)) {
 		printf("Offset not aligned with a page (0x%x)\n",
 		       mtd->writesize);
@@ -289,7 +299,7 @@ static int do_mtd_io(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	default_len = dump ? mtd->writesize : mtd->size;
-	len = argc > 1 ? simple_strtoul(argv[1], NULL, 16) : default_len;
+	len = argc > 1 ? hextoul(argv[1], NULL) : default_len;
 	if (!mtd_is_aligned_with_min_io_size(mtd, len)) {
 		len = round_up(len, mtd->writesize);
 		printf("Size not on a page boundary (0x%x), rounding to 0x%llx\n",
@@ -380,14 +390,14 @@ out_put_mtd:
 	return ret;
 }
 
-static int do_mtd_erase(cmd_tbl_t *cmdtp, int flag, int argc,
-			char * const argv[])
+static int do_mtd_erase(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
 {
 	struct erase_info erase_op = {};
 	struct mtd_info *mtd;
 	u64 off, len;
 	bool scrub;
-	int ret;
+	int ret = 0;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
@@ -401,8 +411,8 @@ static int do_mtd_erase(cmd_tbl_t *cmdtp, int flag, int argc,
 	argc -= 2;
 	argv += 2;
 
-	off = argc > 0 ? simple_strtoul(argv[0], NULL, 16) : 0;
-	len = argc > 1 ? simple_strtoul(argv[1], NULL, 16) : mtd->size;
+	off = argc > 0 ? hextoul(argv[0], NULL) : 0;
+	len = argc > 1 ? hextoul(argv[1], NULL) : mtd->size;
 
 	if (!mtd_is_aligned_with_block_size(mtd, off)) {
 		printf("Offset not aligned with a block (0x%x)\n",
@@ -423,22 +433,34 @@ static int do_mtd_erase(cmd_tbl_t *cmdtp, int flag, int argc,
 
 	erase_op.mtd = mtd;
 	erase_op.addr = off;
-	erase_op.len = len;
-	erase_op.scrub = scrub;
+	erase_op.len = mtd->erasesize;
 
-	while (erase_op.len) {
+	while (len) {
+		if (!scrub) {
+			ret = mtd_block_isbad(mtd, erase_op.addr);
+			if (ret < 0) {
+				printf("Failed to get bad block at 0x%08llx\n",
+				       erase_op.addr);
+				ret = CMD_RET_FAILURE;
+				goto out_put_mtd;
+			}
+
+			if (ret > 0) {
+				printf("Skipping bad block at 0x%08llx\n",
+				       erase_op.addr);
+				ret = 0;
+				len -= mtd->erasesize;
+				erase_op.addr += mtd->erasesize;
+				continue;
+			}
+		}
+
 		ret = mtd_erase(mtd, &erase_op);
-
-		/* Abort if its not a bad block error */
-		if (ret != -EIO)
+		if (ret && ret != -EIO)
 			break;
 
-		printf("Skipping bad block at 0x%08llx\n", erase_op.fail_addr);
-
-		/* Skip bad block and continue behind it */
-		erase_op.len -= erase_op.fail_addr - erase_op.addr;
-		erase_op.len -= mtd->erasesize;
-		erase_op.addr = erase_op.fail_addr + mtd->erasesize;
+		len -= mtd->erasesize;
+		erase_op.addr += mtd->erasesize;
 	}
 
 	if (ret && ret != -EIO)
@@ -452,8 +474,8 @@ out_put_mtd:
 	return ret;
 }
 
-static int do_mtd_bad(cmd_tbl_t *cmdtp, int flag, int argc,
-		      char * const argv[])
+static int do_mtd_bad(struct cmd_tbl *cmdtp, int flag, int argc,
+		      char *const argv[])
 {
 	struct mtd_info *mtd;
 	loff_t off;
@@ -483,7 +505,7 @@ out_put_mtd:
 }
 
 #ifdef CONFIG_AUTO_COMPLETE
-static int mtd_name_complete(int argc, char * const argv[], char last_char,
+static int mtd_name_complete(int argc, char *const argv[], char last_char,
 			     int maxv, char *cmdv[])
 {
 	int len = 0, n_found = 0;
@@ -532,7 +554,7 @@ static char mtd_help_text[] =
 	"mtd bad                               <name>\n"
 	"\n"
 	"With:\n"
-	"\t<name>: NAND partition/chip name\n"
+	"\t<name>: NAND partition/chip name (or corresponding DM device name or OF path)\n"
 	"\t<addr>: user address from/to which data will be retrieved/stored\n"
 	"\t<off>: offset in <name> in bytes (default: start of the part)\n"
 	"\t\t* must be block-aligned for erase\n"

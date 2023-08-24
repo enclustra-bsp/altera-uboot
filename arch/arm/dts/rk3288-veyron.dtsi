@@ -18,11 +18,6 @@
 		stdout-path = &uart2;
 	};
 
-	config {
-		u-boot,dm-pre-reloc;
-		u-boot,boot0 = &spi_flash;
-	};
-
 	firmware {
 		chromeos {
 			pinctrl-names = "default";
@@ -224,26 +219,6 @@
 	cpu0-supply = <&vdd_cpu>;
 };
 
-&dmc {
-	logic-supply = <&vdd_logic>;
-	rockchip,odt-disable-freq = <333000000>;
-	rockchip,dll-disable-freq = <333000000>;
-	rockchip,sr-enable-freq = <333000000>;
-	rockchip,pd-enable-freq = <666000000>;
-	rockchip,auto-self-refresh-cnt = <0>;
-	rockchip,auto-power-down-cnt = <64>;
-	rockchip,ddr-speed-bin = <21>;
-	rockchip,trcd = <10>;
-	rockchip,trp = <10>;
-	operating-points = <
-		/* KHz    uV */
-		200000 1050000
-		333000 1100000
-		533000 1150000
-		666000 1200000
-	>;
-};
-
 &efuse {
 	status = "okay";
 };
@@ -303,11 +278,9 @@
 
 &spi2 {
 	status = "okay";
-	u-boot,dm-pre-reloc;
 
 	spi_flash: spiflash@0 {
-		u-boot,dm-pre-reloc;
-		compatible = "spidev", "spi-flash";
+		compatible = "spidev", "jedec,spi-nor";
 		spi-max-frequency = <20000000>; /* Reduce for Dediprog em100 pro */
 		reg = <0>;
 	};
@@ -319,7 +292,6 @@
 	clock-frequency = <400000>;
 	i2c-scl-falling-time-ns = <50>;		/* 2.5ns measured */
 	i2c-scl-rising-time-ns = <100>;		/* 45ns measured */
-	u-boot,dm-pre-reloc;
 
 	rk808: pmic@1b {
 		compatible = "rockchip,rk808";
@@ -332,7 +304,6 @@
 		rockchip,system-power-controller;
 		wakeup-source;
 		#clock-cells = <1>;
-		u-boot,dm-pre-reloc;
 
 		vcc1-supply = <&vcc33_sys>;
 		vcc2-supply = <&vcc33_sys>;
@@ -561,7 +532,6 @@
 
 &uart2 {
 	status = "okay";
-	u-boot,dm-pre-reloc;
 	reg-shift = <2>;
 };
 
@@ -590,10 +560,6 @@
 	status = "okay";
 };
 
-&hdmi_audio {
-	status = "okay";
-};
-
 &gpu {
 	status = "okay";
 };
@@ -605,7 +571,6 @@
 };
 
 &pinctrl {
-	u-boot,dm-pre-reloc;
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <
 		/* Common for sleep and wake, but no owners */
@@ -829,16 +794,4 @@
 	status = "okay";
 	assigned-clocks = <&cru SCLK_USBPHY480M_SRC>;
 	assigned-clock-parents = <&cru SCLK_OTGPHY0>;
-};
-
-&sdmmc {
-	u-boot,dm-pre-reloc;
-};
-
-&gpio3 {
-	u-boot,dm-pre-reloc;
-};
-
-&gpio8 {
-	u-boot,dm-pre-reloc;
 };

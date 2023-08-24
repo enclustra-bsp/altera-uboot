@@ -21,25 +21,11 @@ config SYS_CONFIG_NAME
 	  Based on this option include/configs/<CONFIG_SYS_CONFIG_NAME>.h header
 	  will be used for board configuration.
 
-config GICV3
-	def_bool y
-
 config SYS_MALLOC_LEN
 	default 0x2000000
 
-config COUNTER_FREQUENCY
-	int "Timer clock frequency"
-	default 0
-	help
-	  Setup time clock frequency for certain platform
-
 config ZYNQ_SDHCI_MAX_FREQ
 	default 200000000
-
-config VERSAL_OF_BOARD_DTB_ADDR
-	hex
-	default 0x1000
-	depends on OF_BOARD
 
 config IOU_SWITCH_DIVISOR0
 	hex "IOU switch divisor0"
@@ -53,5 +39,21 @@ config SYS_MEM_RSVD_FOR_MMU
 	  If defined this option is used to setup different space for
 	  MMU table than the one which will be allocated during
 	  relocation.
+
+config DEFINE_TCM_OCM_MMAP
+	bool "Define TCM and OCM memory in MMU Table"
+	default y if MP
+	help
+	  This option if enabled defines the TCM and OCM memory and its
+	  memory attributes in MMU table entry.
+
+config VERSAL_NO_DDR
+	bool "Disable DDR MMU mapping"
+	help
+	  This option configures MMU with no DDR to avoid speculative
+	  access to DDR memory where DDR is not present.
+
+source "board/xilinx/Kconfig"
+source "board/xilinx/versal/Kconfig"
 
 endif

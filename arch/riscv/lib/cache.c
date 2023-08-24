@@ -5,6 +5,7 @@
  */
 
 #include <common.h>
+#include <cpu_func.h>
 
 void invalidate_icache_all(void)
 {
@@ -68,4 +69,8 @@ __weak void dcache_disable(void)
 __weak int dcache_status(void)
 {
 	return 0;
+}
+
+__weak void enable_caches(void)
+{
 }

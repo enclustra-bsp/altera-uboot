@@ -20,12 +20,17 @@
 #ifndef __VIRTIO_H__
 #define __VIRTIO_H__
 
+#include <virtio_types.h>
+#include <linux/bitops.h>
+#include <linux/bug.h>
 #define VIRTIO_ID_NET		1 /* virtio net */
 #define VIRTIO_ID_BLOCK		2 /* virtio block */
-#define VIRTIO_ID_MAX_NUM	3
+#define VIRTIO_ID_RNG		4 /* virtio rng */
+#define VIRTIO_ID_MAX_NUM	5
 
 #define VIRTIO_NET_DRV_NAME	"virtio-net"
 #define VIRTIO_BLK_DRV_NAME	"virtio-blk"
+#define VIRTIO_RNG_DRV_NAME	"virtio-rng"
 
 /* Status byte for guest to report progress, and synchronize features */
 
@@ -223,7 +228,7 @@ struct virtio_dev_priv {
  * @offset:	the offset of the configuration field
  * @buf:	the buffer to write the field value into
  * @len:	the length of the buffer
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_get_config(struct udevice *vdev, unsigned int offset,
 		      void *buf, unsigned int len);
@@ -235,7 +240,7 @@ int virtio_get_config(struct udevice *vdev, unsigned int offset,
  * @offset:	the offset of the configuration field
  * @buf:	the buffer to read the field value from
  * @len:	the length of the buffer
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_set_config(struct udevice *vdev, unsigned int offset,
 		      void *buf, unsigned int len);
@@ -245,7 +250,7 @@ int virtio_set_config(struct udevice *vdev, unsigned int offset,
  *
  * @vdev:	the real virtio device
  * @counter:	the returned config generation counter
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_generation(struct udevice *vdev, u32 *counter);
 
@@ -254,7 +259,7 @@ int virtio_generation(struct udevice *vdev, u32 *counter);
  *
  * @vdev:	the real virtio device
  * @status:	the returned status byte
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_get_status(struct udevice *vdev, u8 *status);
 
@@ -263,7 +268,7 @@ int virtio_get_status(struct udevice *vdev, u8 *status);
  *
  * @vdev:	the real virtio device
  * @status:	the new status byte
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_set_status(struct udevice *vdev, u8 status);
 
@@ -271,7 +276,7 @@ int virtio_set_status(struct udevice *vdev, u8 status);
  * virtio_reset() - reset the device
  *
  * @vdev:	the real virtio device
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_reset(struct udevice *vdev);
 
@@ -280,7 +285,7 @@ int virtio_reset(struct udevice *vdev);
  *
  * @vdev:	the real virtio device
  * @features:	the first 32 feature bits (all we currently need)
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_get_features(struct udevice *vdev, u64 *features);
 
@@ -288,7 +293,7 @@ int virtio_get_features(struct udevice *vdev, u64 *features);
  * virtio_set_features() - confirm what device features we'll be using
  *
  * @vdev:	the real virtio device
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_set_features(struct udevice *vdev);
 
@@ -298,7 +303,7 @@ int virtio_set_features(struct udevice *vdev);
  * @vdev:	the real virtio device
  * @nvqs:	the number of virtqueues to find
  * @vqs:	on success, includes new virtqueues
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_find_vqs(struct udevice *vdev, unsigned int nvqs,
 		    struct virtqueue *vqs[]);
@@ -307,7 +312,7 @@ int virtio_find_vqs(struct udevice *vdev, unsigned int nvqs,
  * virtio_del_vqs() - free virtqueues found by find_vqs()
  *
  * @vdev:	the real virtio device
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_del_vqs(struct udevice *vdev);
 
@@ -316,7 +321,7 @@ int virtio_del_vqs(struct udevice *vdev);
  *
  * @vdev:	the real virtio device
  * @vq:		virtqueue to process
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_notify(struct udevice *vdev, struct virtqueue *vq);
 
@@ -332,7 +337,7 @@ void virtio_add_status(struct udevice *vdev, u8 status);
  * virtio_finalize_features() - helper to finalize features
  *
  * @vdev:	the real virtio device
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_finalize_features(struct udevice *vdev);
 
@@ -361,7 +366,7 @@ void virtio_driver_features_init(struct virtio_dev_priv *priv,
 /**
  * virtio_init() - helper to enumerate all known virtio devices
  *
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int virtio_init(void);
 
@@ -488,7 +493,7 @@ static inline void __virtio_clear_bit(struct udevice *udev, unsigned int fbit)
  */
 static inline bool virtio_has_feature(struct udevice *vdev, unsigned int fbit)
 {
-	if (!(vdev->flags & DM_FLAG_BOUND))
+	if (!(dev_get_flags(vdev) & DM_FLAG_BOUND))
 		WARN_ON(true);
 
 	return __virtio_test_bit(vdev->parent, fbit);

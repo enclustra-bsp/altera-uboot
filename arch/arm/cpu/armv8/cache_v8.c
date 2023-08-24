@@ -8,12 +8,17 @@
  */
 
 #include <common.h>
+#include <cpu_func.h>
+#include <hang.h>
+#include <log.h>
+#include <asm/cache.h>
+#include <asm/global_data.h>
 #include <asm/system.h>
 #include <asm/armv8/mmu.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#ifndef CONFIG_SYS_DCACHE_OFF
+#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
 
 /*
  *  With 4k page granule, a virtual address is split into 4 lookup parts
@@ -34,8 +39,28 @@ DECLARE_GLOBAL_DATA_PTR;
  *    off:          FFF
  */
 
-u64 get_tcr(int el, u64 *pips, u64 *pva_bits)
+static int get_effective_el(void)
 {
+	int el = current_el();
+
+	if (el == 2) {
+		u64 hcr_el2;
+
+		/*
+		 * If we are using the EL2&0 translation regime, the TCR_EL2
+		 * looks like the EL1 version, even though we are in EL2.
+		 */
+		__asm__ ("mrs %0, HCR_EL2\n" : "=r" (hcr_el2));
+		if (hcr_el2 & BIT(HCR_EL2_E2H_BIT))
+			return 1;
+	}
+
+	return el;
+}
+
+u64 get_tcr(u64 *pips, u64 *pva_bits)
+{
+	int el = get_effective_el();
 	u64 max_addr = 0;
 	u64 ips, va_bits;
 	u64 tcr;
@@ -110,7 +135,7 @@ static u64 *find_pte(u64 addr, int level)
 
 	debug("addr=%llx level=%d\n", addr, level);
 
-	get_tcr(0, NULL, &va_bits);
+	get_tcr(NULL, &va_bits);
 	if (va_bits < 39)
 		start_level = 1;
 
@@ -338,7 +363,7 @@ __weak u64 get_page_table_size(void)
 	u64 va_bits;
 	int start_level = 0;
 
-	get_tcr(0, NULL, &va_bits);
+	get_tcr(NULL, &va_bits);
 	if (va_bits < 39)
 		start_level = 1;
 
@@ -410,7 +435,7 @@ __weak void mmu_setup(void)
 		setup_all_pgtables();
 
 	el = current_el();
-	set_ttbr_tcr_mair(el, gd->arch.tlb_addr, get_tcr(el, NULL, NULL),
+	set_ttbr_tcr_mair(el, gd->arch.tlb_addr, get_tcr(NULL, NULL),
 			  MEMORY_ATTRIBUTES);
 
 	/* enable the mmu */
@@ -443,6 +468,17 @@ inline void flush_dcache_all(void)
 		debug("flushing dcache successfully.\n");
 }
 
+#if CONFIG_IS_ENABLED(SYS_DISABLE_DCACHE_OPS) || \
+	CONFIG_IS_ENABLED(SPL_SYS_DISABLE_DCACHE_OPS) && \
+	CONFIG_IS_ENABLED(SPL_BUILD)
+void invalidate_dcache_range(unsigned long start, unsigned long stop)
+{
+}
+
+void flush_dcache_range(unsigned long start, unsigned long stop)
+{
+}
+#else
 /*
  * Invalidates range in all levels of D-cache/unified cache
  */
@@ -458,6 +494,7 @@ void flush_dcache_range(unsigned long start, unsigned long stop)
 {
 	__asm_flush_dcache_range(start, stop);
 }
+#endif /* CONFIG_SYS_DISABLE_DCACHE_OPS */
 
 void dcache_enable(void)
 {
@@ -467,6 +504,10 @@ void dcache_enable(void)
 		__asm_invalidate_tlb_all();
 		mmu_setup();
 	}
+
+	/* Set up page tables only once (it is done also by mmu_setup()) */
+	if (!gd->arch.tlb_fillptr)
+		setup_all_pgtables();
 
 	set_sctlr(get_sctlr() | CR_C);
 }
@@ -543,7 +584,7 @@ static u64 set_one_region(u64 start, u64 size, u64 attrs, bool flag, int level)
 void mmu_set_region_dcache_behaviour(phys_addr_t start, size_t size,
 				     enum dcache_option option)
 {
-	u64 attrs = PMD_ATTRINDX(option);
+	u64 attrs = PMD_ATTRINDX(option >> 2);
 	u64 real_start = start;
 	u64 real_size = size;
 
@@ -647,7 +688,7 @@ void mmu_change_region_attr(phys_addr_t addr, size_t siz, u64 attrs)
 	__asm_invalidate_tlb_all();
 }
 
-#else	/* CONFIG_SYS_DCACHE_OFF */
+#else	/* !CONFIG_IS_ENABLED(SYS_DCACHE_OFF) */
 
 /*
  * For SPL builds, we may want to not have dcache enabled. Any real U-Boot
@@ -684,9 +725,9 @@ void mmu_set_region_dcache_behaviour(phys_addr_t start, size_t size,
 {
 }
 
-#endif	/* CONFIG_SYS_DCACHE_OFF */
+#endif	/* !CONFIG_IS_ENABLED(SYS_DCACHE_OFF) */
 
-#ifndef CONFIG_SYS_ICACHE_OFF
+#if !CONFIG_IS_ENABLED(SYS_ICACHE_OFF)
 
 void icache_enable(void)
 {
@@ -704,13 +745,18 @@ int icache_status(void)
 	return (get_sctlr() & CR_I) != 0;
 }
 
+int mmu_status(void)
+{
+	return (get_sctlr() & CR_M) != 0;
+}
+
 void invalidate_icache_all(void)
 {
 	__asm_invalidate_icache_all();
 	__asm_invalidate_l3_icache();
 }
 
-#else	/* CONFIG_SYS_ICACHE_OFF */
+#else	/* !CONFIG_IS_ENABLED(SYS_ICACHE_OFF) */
 
 void icache_enable(void)
 {
@@ -725,11 +771,16 @@ int icache_status(void)
 	return 0;
 }
 
+int mmu_status(void)
+{
+	return 0;
+}
+
 void invalidate_icache_all(void)
 {
 }
 
-#endif	/* CONFIG_SYS_ICACHE_OFF */
+#endif	/* !CONFIG_IS_ENABLED(SYS_ICACHE_OFF) */
 
 /*
  * Enable dCache & iCache, whether cache is actually enabled

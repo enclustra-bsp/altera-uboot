@@ -11,9 +11,6 @@
 
 #include <environment/ti/spi.h>
 
-/* Platform type */
-#define CONFIG_SOC_K2L
-
 #ifdef CONFIG_TI_SECURE_DEVICE
 #define DEFAULT_SEC_BOOT_ENV						\
 	DEFAULT_FIT_TI_ARGS						\
@@ -23,7 +20,7 @@
 #endif
 
 /* U-Boot general configuration */
-#define CONFIG_EXTRA_ENV_KS2_BOARD_SETTINGS				\
+#define ENV_KS2_BOARD_SETTINGS						\
 	DEFAULT_FW_INITRAMFS_BOOT_ENV					\
 	DEFAULT_SEC_BOOT_ENV						\
 	"boot=ubi\0"							\
@@ -35,13 +32,7 @@
 	"name_uboot=u-boot-spi-k2l-evm.gph\0"				\
 	"name_fs=arago-console-image-k2l-evm.cpio.gz\0"
 
-#define CONFIG_ENV_SIZE				(256 << 10)  /* 256 KiB */
-#define CONFIG_ENV_OFFSET			0x100000
-
 #include <configs/ti_armv7_keystone2.h>
-
-/* SPL SPI Loader Configuration */
-#define CONFIG_SPL_TEXT_BASE		0x0c100000
 
 #define SPI_MTD_PARTS KEYSTONE_SPI0_MTD_PARTS
 

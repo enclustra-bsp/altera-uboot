@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright 2010-2011 Calxeda, Inc.
+ * Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
  */
 
+#include <ansi.h>
 #include <common.h>
 #include <cli.h>
 #include <malloc.h>
 #include <errno.h>
+#include <linux/delay.h>
 #include <linux/list.h>
+#include <watchdog.h>
 
 #include "menu.h"
 
@@ -35,10 +39,12 @@ struct menu {
 	int timeout;
 	char *title;
 	int prompt;
+	void (*display_statusline)(struct menu *);
 	void (*item_data_print)(void *);
 	char *(*item_choice)(void *);
 	void *item_choice_data;
 	struct list_head items;
+	int item_cnt;
 };
 
 /*
@@ -104,10 +110,6 @@ static inline void *menu_item_destroy(struct menu *m,
 	return NULL;
 }
 
-__weak void menu_display_statusline(struct menu *m)
-{
-}
-
 /*
  * Display a menu so the user can make a choice of an item. First display its
  * title, if any, and then each item in the menu.
@@ -118,7 +120,8 @@ static inline void menu_display(struct menu *m)
 		puts(m->title);
 		putc('\n');
 	}
-	menu_display_statusline(m);
+	if (m->display_statusline)
+		m->display_statusline(m);
 
 	menu_items_iter(m, menu_item_print, NULL);
 }
@@ -271,6 +274,9 @@ int menu_get_choice(struct menu *m, void **choice)
 	if (!m || !choice)
 		return -EINVAL;
 
+	if (!m->item_cnt)
+		return -ENOENT;
+
 	if (!m->prompt)
 		return menu_default_choice(m, choice);
 
@@ -323,6 +329,7 @@ int menu_item_add(struct menu *m, char *item_key, void *item_data)
 	item->data = item_data;
 
 	list_add_tail(&item->list, &m->items);
+	m->item_cnt++;
 
 	return 1;
 }
@@ -341,6 +348,9 @@ int menu_item_add(struct menu *m, char *item_key, void *item_data)
  * timeout. If 1, the user will be prompted for input regardless of the value
  * of timeout.
  *
+ * display_statusline - If not NULL, will be called to show a statusline when
+ * the menu is displayed.
+ *
  * item_data_print - If not NULL, will be called for each item when the menu
  * is displayed, with the pointer to the item's data passed as the argument.
  * If NULL, each item's key will be printed instead.  Since an item's key is
@@ -357,6 +367,7 @@ int menu_item_add(struct menu *m, char *item_key, void *item_data)
  * insufficient memory available to create the menu.
  */
 struct menu *menu_create(char *title, int timeout, int prompt,
+				void (*display_statusline)(struct menu *),
 				void (*item_data_print)(void *),
 				char *(*item_choice)(void *),
 				void *item_choice_data)
@@ -371,9 +382,11 @@ struct menu *menu_create(char *title, int timeout, int prompt,
 	m->default_item = NULL;
 	m->prompt = prompt;
 	m->timeout = timeout;
+	m->display_statusline = display_statusline;
 	m->item_data_print = item_data_print;
 	m->item_choice = item_choice;
 	m->item_choice_data = item_choice_data;
+	m->item_cnt = 0;
 
 	if (title) {
 		m->title = strdup(title);
@@ -410,4 +423,138 @@ int menu_destroy(struct menu *m)
 	free(m);
 
 	return 1;
+}
+
+void bootmenu_autoboot_loop(struct bootmenu_data *menu,
+			    enum bootmenu_key *key, int *esc)
+{
+	int i, c;
+
+	while (menu->delay > 0) {
+		printf(ANSI_CURSOR_POSITION, menu->count + 5, 3);
+		printf("Hit any key to stop autoboot: %d ", menu->delay);
+		for (i = 0; i < 100; ++i) {
+			if (!tstc()) {
+				schedule();
+				mdelay(10);
+				continue;
+			}
+
+			menu->delay = -1;
+			c = getchar();
+
+			switch (c) {
+			case '\e':
+				*esc = 1;
+				*key = KEY_NONE;
+				break;
+			case '\r':
+				*key = KEY_SELECT;
+				break;
+			case 0x3: /* ^C */
+				*key = KEY_QUIT;
+				break;
+			default:
+				*key = KEY_NONE;
+				break;
+			}
+
+			break;
+		}
+
+		if (menu->delay < 0)
+			break;
+
+		--menu->delay;
+	}
+
+	printf(ANSI_CURSOR_POSITION ANSI_CLEAR_LINE, menu->count + 5, 1);
+
+	if (menu->delay == 0)
+		*key = KEY_SELECT;
+}
+
+void bootmenu_loop(struct bootmenu_data *menu,
+		   enum bootmenu_key *key, int *esc)
+{
+	int c;
+
+	if (*esc == 1) {
+		if (tstc()) {
+			c = getchar();
+		} else {
+			schedule();
+			mdelay(10);
+			if (tstc())
+				c = getchar();
+			else
+				c = '\e';
+		}
+	} else {
+		while (!tstc()) {
+			schedule();
+			mdelay(10);
+		}
+		c = getchar();
+	}
+
+	switch (*esc) {
+	case 0:
+		/* First char of ANSI escape sequence '\e' */
+		if (c == '\e') {
+			*esc = 1;
+			*key = KEY_NONE;
+		}
+		break;
+	case 1:
+		/* Second char of ANSI '[' */
+		if (c == '[') {
+			*esc = 2;
+			*key = KEY_NONE;
+		} else {
+		/* Alone ESC key was pressed */
+			*key = KEY_QUIT;
+			*esc = (c == '\e') ? 1 : 0;
+		}
+		break;
+	case 2:
+	case 3:
+		/* Third char of ANSI (number '1') - optional */
+		if (*esc == 2 && c == '1') {
+			*esc = 3;
+			*key = KEY_NONE;
+			break;
+		}
+
+		*esc = 0;
+
+		/* ANSI 'A' - key up was pressed */
+		if (c == 'A')
+			*key = KEY_UP;
+		/* ANSI 'B' - key down was pressed */
+		else if (c == 'B')
+			*key = KEY_DOWN;
+		/* other key was pressed */
+		else
+			*key = KEY_NONE;
+
+		break;
+	}
+
+	/* enter key was pressed */
+	if (c == '\r')
+		*key = KEY_SELECT;
+
+	/* ^C was pressed */
+	if (c == 0x3)
+		*key = KEY_QUIT;
+
+	if (c == '+')
+		*key = KEY_PLUS;
+
+	if (c == '-')
+		*key = KEY_MINUS;
+
+	if (c == ' ')
+		*key = KEY_SPACE;
 }

@@ -11,7 +11,6 @@
 #include <image.h>
 #include <inttypes.h>
 #include "imagetool.h"
-#include "linux/kernel.h"
 
 #define __packed   __attribute__((packed))
 
@@ -166,6 +165,7 @@ enum imx8image_core_type {
 	CFG_M40,
 	CFG_M41,
 	CFG_A35,
+	CFG_A55,
 	CFG_A53,
 	CFG_A72
 };
@@ -181,7 +181,9 @@ enum imx8image_fld_types {
 typedef enum SOC_TYPE {
 	NONE = 0,
 	QX,
-	QM
+	QM,
+	ULP,
+	IMX9
 } soc_type_t;
 
 typedef enum option_type {
@@ -202,7 +204,9 @@ typedef enum option_type {
 	DATA,
 	PARTITION,
 	FILEOFF,
-	MSG_BLOCK
+	MSG_BLOCK,
+	SENTINEL,
+	UPOWER
 } option_type_t;
 
 typedef struct {
@@ -222,6 +226,11 @@ typedef struct {
 #define CORE_CA72       5
 #define CORE_SECO       6
 
+#define CORE_ULP_CM33		0x1
+#define CORE_ULP_CA35		0x2
+#define CORE_ULP_UPOWER 	0x4
+#define CORE_ULP_SENTINEL 	0x6
+
 #define SC_R_OTP	357U
 #define SC_R_DEBUG	354U
 #define SC_R_ROM_0	236U
@@ -236,6 +245,7 @@ typedef struct {
 #define IMG_TYPE_DATA    0x04   /* Data image type */
 #define IMG_TYPE_DCD_DDR 0x05   /* DCD/DDR image type */
 #define IMG_TYPE_SECO    0x06   /* SECO image type */
+#define IMG_TYPE_SENTINEL 0x06	/* SENTINEL image type */
 #define IMG_TYPE_PROV    0x07   /* Provisioning image type */
 #define IMG_TYPE_DEK     0x08   /* DEK validation type */
 

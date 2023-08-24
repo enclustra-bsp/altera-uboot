@@ -15,15 +15,21 @@
  * the VirtIO specification v1.0.
  */
 
+#define LOG_CATEGORY UCLASS_VIRTIO
+
 #include <common.h>
 #include <dm.h>
+#include <log.h>
+#include <malloc.h>
 #include <virtio_types.h>
 #include <virtio.h>
 #include <dm/lists.h>
+#include <linux/bug.h>
 
 static const char *const virtio_drv_name[VIRTIO_ID_MAX_NUM] = {
 	[VIRTIO_ID_NET]		= VIRTIO_NET_DRV_NAME,
 	[VIRTIO_ID_BLOCK]	= VIRTIO_BLK_DRV_NAME,
+	[VIRTIO_ID_RNG]		= VIRTIO_RNG_DRV_NAME,
 };
 
 int virtio_get_config(struct udevice *vdev, unsigned int offset,
@@ -177,21 +183,8 @@ void virtio_driver_features_init(struct virtio_dev_priv *priv,
 
 int virtio_init(void)
 {
-	struct udevice *bus;
-	int ret;
-
 	/* Enumerate all known virtio devices */
-	ret = uclass_first_device(UCLASS_VIRTIO, &bus);
-	if (ret)
-		return ret;
-
-	while (bus) {
-		ret = uclass_next_device(&bus);
-		if (ret)
-			break;
-	}
-
-	return ret;
+	return uclass_probe_all(UCLASS_VIRTIO);
 }
 
 static int virtio_uclass_pre_probe(struct udevice *udev)
@@ -223,7 +216,7 @@ static int virtio_uclass_post_probe(struct udevice *udev)
 	struct udevice *vdev;
 	int ret;
 
-	if (uc_priv->device > VIRTIO_ID_MAX_NUM) {
+	if (uc_priv->device >= VIRTIO_ID_MAX_NUM) {
 		debug("(%s): virtio device ID %d exceeds maximum num\n",
 		      udev->name, uc_priv->device);
 		return 0;
@@ -236,7 +229,7 @@ static int virtio_uclass_post_probe(struct udevice *udev)
 	}
 
 	snprintf(dev_name, sizeof(dev_name), "%s#%d",
-		 virtio_drv_name[uc_priv->device], udev->seq);
+		 virtio_drv_name[uc_priv->device], dev_seq(udev));
 	str = strdup(dev_name);
 	if (!str)
 		return -ENOMEM;
@@ -365,5 +358,5 @@ UCLASS_DRIVER(virtio) = {
 	.child_post_bind = virtio_uclass_child_post_bind,
 	.child_pre_probe = virtio_uclass_child_pre_probe,
 	.child_post_probe = virtio_uclass_child_post_probe,
-	.per_device_auto_alloc_size = sizeof(struct virtio_dev_priv),
+	.per_device_auto	= sizeof(struct virtio_dev_priv),
 };

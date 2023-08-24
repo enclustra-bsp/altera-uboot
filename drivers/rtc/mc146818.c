@@ -22,7 +22,7 @@
 /* Set this to 1 to clear the CMOS RAM */
 #define CLEAR_CMOS		0
 
-#define RTC_PORT_MC146818	CONFIG_SYS_ISA_IO_BASE_ADDRESS + 0x70
+#define RTC_PORT_MC146818	0x70
 #define RTC_SECONDS		0x00
 #define RTC_SECONDS_ALARM	0x01
 #define RTC_MINUTES		0x02
@@ -246,8 +246,8 @@ static const struct udevice_id rtc_mc146818_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(rtc_mc146818) = {
-	.name = "rtc_mc146818",
+U_BOOT_DRIVER(motorola_mc146818) = {
+	.name = "motorola_mc146818",
 	.id = UCLASS_RTC,
 	.of_match = rtc_mc146818_ids,
 	.probe = rtc_mc146818_probe,

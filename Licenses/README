@@ -139,6 +139,7 @@ License identifier syntax
 
 Full name					SPDX Identifier	OSI Approved	File name		URI
 =======================================================================================================================================
+bzip2 and libbzip2 License v1.0.6		bzip2-1.0.6			bzip2-1.0.6.txt		https://spdx.org/licenses/bzip2-1.0.6.html
 GNU General Public License v2.0 only		GPL-2.0		Y		gpl-2.0.txt		http://www.gnu.org/licenses/gpl-2.0.txt
 GNU General Public License v2.0 or later	GPL-2.0+	Y		gpl-2.0.txt		http://www.gnu.org/licenses/gpl-2.0.txt
 GNU Library General Public License v2 or later	LGPL-2.0+	Y		lgpl-2.0.txt		http://www.gnu.org/licenses/old-licenses/lgpl-2.0.txt
@@ -149,5 +150,6 @@ BSD 3-clause "New" or "Revised" License		BSD-3-Clause	Y		bsd-3-clause.txt	http:/
 IBM PIBS (PowerPC Initialization and		IBM-pibs			ibm-pibs.txt
 	Boot Software) license
 ISC License					ISC		Y		isc.txt			https://spdx.org/licenses/ISC
+MIT License					MIT		Y		mit.txt			https://spdx.org/licenses/MIT.html
 SIL OPEN FONT LICENSE (OFL-1.1)			OFL-1.1		Y		OFL.txt			https://spdx.org/licenses/OFL-1.1.html
 X11 License					X11				x11.txt			https://spdx.org/licenses/X11.html

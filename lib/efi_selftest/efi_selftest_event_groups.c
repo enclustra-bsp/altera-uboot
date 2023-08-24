@@ -38,7 +38,7 @@ static void EFIAPI notify(struct efi_event *event, void *context)
  *
  * @handle:	handle of the loaded image
  * @systable:	system table
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int setup(const efi_handle_t handle,
 		 const struct efi_system_table *systable)
@@ -54,7 +54,7 @@ static int setup(const efi_handle_t handle,
  * Create multiple events in an event group. Signal each event once and check
  * that all events are notified once in each round.
  *
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int execute(void)
 {
@@ -80,12 +80,11 @@ static int execute(void)
 			return EFI_ST_FAILURE;
 		}
 		for (j = 0; j < GROUP_SIZE; ++j) {
-			if (counter[j] != i) {
+			if (counter[j] != 2 * i + 1) {
 				efi_st_printf("i %u, j %u, count %u\n",
 					      (unsigned int)i, (unsigned int)j,
 					      (unsigned int)counter[j]);
-				efi_st_error(
-					"Notification function was called\n");
+				efi_st_error("Notification function was not called\n");
 				return EFI_ST_FAILURE;
 			}
 			/* Clear signaled state */
@@ -94,7 +93,7 @@ static int execute(void)
 				efi_st_error("Event was not signaled\n");
 				return EFI_ST_FAILURE;
 			}
-			if (counter[j] != i) {
+			if (counter[j] != 2 * i + 1) {
 				efi_st_printf("i %u, j %u, count %u\n",
 					      (unsigned int)i, (unsigned int)j,
 					      (unsigned int)counter[j]);
@@ -109,7 +108,7 @@ static int execute(void)
 					"Signaled state not cleared\n");
 				return EFI_ST_FAILURE;
 			}
-			if (counter[j] != i + 1) {
+			if (counter[j] != 2 * i + 2) {
 				efi_st_printf("i %u, j %u, count %u\n",
 					      (unsigned int)i, (unsigned int)j,
 					      (unsigned int)counter[j]);

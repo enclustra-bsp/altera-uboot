@@ -5,10 +5,16 @@
  */
 
 #include <common.h>
+#include <bootstage.h>
+#include <env.h>
+#include <log.h>
+#include <malloc.h>
 #include <stdio_dev.h>
+#include <time.h>
 #include <watchdog.h>
 #include <div64.h>
 #include <post.h>
+#include <asm/global_data.h>
 
 #ifdef CONFIG_SYS_POST_HOTKEYS_GPIO
 #include <asm/gpio.h>
@@ -123,7 +129,7 @@ static void post_log_mark_succ(unsigned long testid)
 }
 
 /* ... and the messages are output once we are relocated */
-void post_output_backlog(void)
+int post_output_backlog(void)
 {
 	int j;
 
@@ -138,6 +144,8 @@ void post_output_backlog(void)
 			}
 		}
 	}
+
+	return 0;
 }
 
 static void post_bootmode_test_on(unsigned int last_test)
@@ -184,7 +192,7 @@ static void post_get_env_flags(int *test_flags)
 		last = 0;
 		name = list;
 		while (!last) {
-			while (*name && *name == ' ')
+			while (*name == ' ')
 				name++;
 			if (*name == 0)
 				break;
@@ -237,7 +245,7 @@ static int post_run_single(struct post_test *test,
 {
 	if ((flags & test_flags & POST_ALWAYS) &&
 		(flags & test_flags & POST_MEM)) {
-		WATCHDOG_RESET();
+		schedule();
 
 		if (!(flags & POST_REBOOT)) {
 			if ((test_flags & POST_REBOOT) &&
@@ -342,7 +350,7 @@ int post_run(char *name, int flags)
 		}
 
 		if (i < post_list_size) {
-			WATCHDOG_RESET();
+			schedule();
 			return post_run_single(post_list + i,
 						test_flags[i],
 						flags, i);

@@ -5,10 +5,8 @@
 # Entry-type module for spl/u-boot-spl.bin
 #
 
-import elf
-
-from entry import Entry
-from blob import Entry_blob
+from binman.entry import Entry
+from binman.etype.blob import Entry_blob
 
 class Entry_u_boot_spl(Entry_blob):
     """U-Boot SPL binary
@@ -31,13 +29,14 @@ class Entry_u_boot_spl(Entry_blob):
 
     The ELF file 'spl/u-boot-spl' must also be available for this to work, since
     binman uses that to look up symbols to write into the SPL binary.
+
+    Note that this entry is automatically replaced with u-boot-spl-expanded
+    unless --no-expanded is used or the node has a 'no-expanded' property.
     """
     def __init__(self, section, etype, node):
-        Entry_blob.__init__(self, section, etype, node)
+        super().__init__(section, etype, node, auto_write_symbols=True)
         self.elf_fname = 'spl/u-boot-spl'
+        self.auto_write_symbols = True
 
     def GetDefaultFilename(self):
         return 'spl/u-boot-spl.bin'
-
-    def WriteSymbols(self, section):
-        elf.LookupAndWriteSymbols(self.elf_fname, self, section)

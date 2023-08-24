@@ -12,9 +12,7 @@
 static void usage(void);
 
 /* parameters initialized by core will be used by the image type code */
-static struct image_tool_params params = {
-	.type = IH_TYPE_KERNEL,
-};
+static struct image_tool_params params;
 
 /*
  * dumpimage_extract_subimage -
@@ -35,14 +33,23 @@ static int dumpimage_extract_subimage(struct image_type_params *tparams,
 	if (tparams->verify_header) {
 		retval = tparams->verify_header((unsigned char *)ptr,
 				sbuf->st_size, &params);
-		if (retval != 0)
+		if (retval != 0) {
+			fprintf(stderr, "%s: failed to verify header of %s\n",
+				params.cmdname, tparams->name);
 			return -1;
+		}
+
 		/*
 		 * Extract the file from the image
 		 * if verify is successful
 		 */
 		if (tparams->extract_subimage) {
 			retval = tparams->extract_subimage(ptr, &params);
+			if (retval != 0) {
+				fprintf(stderr, "%s: extract_subimage failed for %s\n",
+					params.cmdname, tparams->name);
+				return -3;
+			}
 		} else {
 			fprintf(stderr,
 				"%s: extract_subimage undefined for %s\n",
@@ -95,14 +102,13 @@ int main(int argc, char **argv)
 			printf("dumpimage version %s\n", PLAIN_VERSION);
 			exit(EXIT_SUCCESS);
 		case 'h':
-			usage();
 		default:
 			usage();
 			break;
 		}
 	}
 
-	if (argc < 2)
+	if (argc < 2 || (params.iflag && params.lflag))
 		usage();
 
 	if (optind >= argc) {
@@ -114,7 +120,7 @@ int main(int argc, char **argv)
 
 	/* set tparams as per input type_id */
 	tparams = imagetool_get_type(params.type);
-	if (tparams == NULL) {
+	if (!params.lflag && tparams == NULL) {
 		fprintf(stderr, "%s: unsupported type: %s\n",
 			params.cmdname, genimg_get_type_name(params.type));
 		exit(EXIT_FAILURE);
@@ -124,7 +130,7 @@ int main(int argc, char **argv)
 	 * check the passed arguments parameters meets the requirements
 	 * as per image type to be generated/listed
 	 */
-	if (tparams->check_params) {
+	if (tparams && tparams->check_params) {
 		if (tparams->check_params(&params)) {
 			fprintf(stderr, "%s: Parameter check failed\n",
 				params.cmdname);
@@ -151,7 +157,7 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if ((uint32_t)sbuf.st_size < tparams->header_size) {
+	if (tparams && (uint32_t)sbuf.st_size < tparams->header_size) {
 		fprintf(stderr, "%s: Bad size: \"%s\" is not valid image\n",
 			params.cmdname, params.imagefile);
 		exit(EXIT_FAILURE);
@@ -175,6 +181,9 @@ int main(int argc, char **argv)
 		 * image type. Returns the error code if not matched
 		 */
 		retval = dumpimage_extract_subimage(tparams, ptr, &sbuf);
+		if (retval)
+			fprintf(stderr, "%s: Can't extract subimage from %s\n",
+				params.cmdname, params.imagefile);
 	} else {
 		/*
 		 * Print the image information for matched image type
@@ -192,8 +201,9 @@ int main(int argc, char **argv)
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s -l image\n"
-		"          -l ==> list image header information\n",
+	fprintf(stderr, "Usage: %s [-T type] -l image\n"
+		"          -l ==> list image header information\n"
+		"          -T ==> parse image file as 'type'\n",
 		params.cmdname);
 	fprintf(stderr,
 		"       %s [-T type] [-p position] [-o outfile] image\n"

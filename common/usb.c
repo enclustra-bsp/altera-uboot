@@ -28,6 +28,8 @@
 #include <common.h>
 #include <command.h>
 #include <dm.h>
+#include <log.h>
+#include <malloc.h>
 #include <memalign.h>
 #include <asm/processor.h>
 #include <linux/compiler.h>
@@ -36,6 +38,7 @@
 #include <asm/unaligned.h>
 #include <errno.h>
 #include <usb.h>
+#include <linux/delay.h>
 
 #define USB_BUFSIZ	512
 
@@ -45,10 +48,6 @@ char usb_started; /* flag for the started/stopped USB status */
 #if !CONFIG_IS_ENABLED(DM_USB)
 static struct usb_device usb_dev[USB_MAX_DEVICE];
 static int dev_index;
-
-#ifndef CONFIG_USB_MAX_CONTROLLER_COUNT
-#define CONFIG_USB_MAX_CONTROLLER_COUNT 1
-#endif
 
 /***************************************************************************
  * Init USB Device
@@ -171,6 +170,12 @@ int usb_detect_change(void)
 	return change;
 }
 
+/* Lock or unlock async schedule on the controller */
+__weak int usb_lock_async(struct usb_device *dev, int lock)
+{
+	return 0;
+}
+
 /*
  * disables the asynch behaviour of the control message. This is used for data
  * transfers that uses the exclusiv access to the control and bulk messages.
@@ -192,12 +197,15 @@ int usb_disable_asynch(int disable)
  */
 
 /*
- * submits an Interrupt Message
+ * submits an Interrupt Message. Some drivers may implement non-blocking
+ * polling: when non-block is true and the device is not responding return
+ * -EAGAIN instead of waiting for device to respond.
  */
-int usb_submit_int_msg(struct usb_device *dev, unsigned long pipe,
-			void *buffer, int transfer_len, int interval)
+int usb_int_msg(struct usb_device *dev, unsigned long pipe,
+		void *buffer, int transfer_len, int interval, bool nonblock)
 {
-	return submit_int_msg(dev, pipe, buffer, transfer_len, interval);
+	return submit_int_msg(dev, pipe, buffer, transfer_len, interval,
+			      nonblock);
 }
 
 /*
@@ -991,6 +999,17 @@ static int usb_setup_descriptor(struct usb_device *dev, bool do_read)
 		err = get_descriptor_len(dev, 64, 8);
 		if (err)
 			return err;
+
+		/*
+		 * Logitech Unifying Receiver 046d:c52b bcdDevice 12.10 seems
+		 * sensitive about the first Get Descriptor request. If there
+		 * are any other requests in the same microframe, the device
+		 * reports bogus data, first of the descriptor parts is not
+		 * sent to the host. Wait over one microframe duration here
+		 * (1mS for USB 1.x , 125uS for USB 2.0) to avoid triggering
+		 * the issue.
+		 */
+		mdelay(1);
 	}
 
 	dev->epmaxpacketin[0] = dev->descriptor.bMaxPacketSize0;

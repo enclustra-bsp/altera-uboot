@@ -5,15 +5,24 @@
  */
 
 #include <clk.h>
+#include <cpu_func.h>
 #include <dm.h>
 #include <fdt_support.h>
-#include <linux/io.h>
-#include <linux/iopoll.h>
+#include <log.h>
+#include <malloc.h>
 #include <miiphy.h>
 #include <net.h>
 #include <regmap.h>
 #include <reset.h>
 #include <syscon.h>
+#include <asm/cache.h>
+#include <asm/global_data.h>
+#include <dm/device_compat.h>
+#include <linux/bitops.h>
+#include <linux/delay.h>
+#include <linux/err.h>
+#include <linux/io.h>
+#include <linux/iopoll.h>
 
 #define AVE_GRST_DELAY_MSEC	40
 #define AVE_MIN_XMITSIZE	60
@@ -291,7 +300,7 @@ static int ave_mdiobus_write(struct mii_dev *bus,
 static int ave_adjust_link(struct ave_private *priv)
 {
 	struct phy_device *phydev = priv->phydev;
-	struct eth_pdata *pdata = dev_get_platdata(phydev->dev);
+	struct eth_pdata *pdata = dev_get_plat(phydev->dev);
 	u32 val, txcr, rxcr, rxcr_org;
 	u16 rmt_adv = 0, lcl_adv = 0;
 	u8 cap;
@@ -384,11 +393,11 @@ static int ave_phy_init(struct ave_private *priv, void *dev)
 	struct phy_device *phydev;
 	int mask = GENMASK(31, 0), ret;
 
-	phydev = phy_find_by_mask(priv->bus, mask, priv->phy_mode);
+	phydev = phy_find_by_mask(priv->bus, mask);
 	if (!phydev)
 		return -ENODEV;
 
-	phy_connect_dev(phydev, dev);
+	phy_connect_dev(phydev, dev, priv->phy_mode);
 
 	phydev->supported &= PHY_GBIT_FEATURES;
 	if (priv->max_speed) {
@@ -474,7 +483,10 @@ static int ave_start(struct udevice *dev)
 	priv->rx_siz = (PKTSIZE_ALIGN - priv->rx_off);
 
 	val = 0;
-	if (priv->phy_mode != PHY_INTERFACE_MODE_RGMII)
+	if (priv->phy_mode != PHY_INTERFACE_MODE_RGMII &&
+	    priv->phy_mode != PHY_INTERFACE_MODE_RGMII_ID &&
+	    priv->phy_mode != PHY_INTERFACE_MODE_RGMII_RXID &&
+	    priv->phy_mode != PHY_INTERFACE_MODE_RGMII_TXID)
 		val |= AVE_CFGR_MII;
 	writel(val, priv->iobase + AVE_CFGR);
 
@@ -508,7 +520,7 @@ static int ave_start(struct udevice *dev)
 static int ave_write_hwaddr(struct udevice *dev)
 {
 	struct ave_private *priv = dev_get_priv(dev);
-	struct eth_pdata *pdata = dev_get_platdata(dev);
+	struct eth_pdata *pdata = dev_get_plat(dev);
 	u8 *mac = pdata->enetaddr;
 
 	writel(mac[0] | mac[1] << 8 | mac[2] << 16 | mac[3] << 24,
@@ -630,6 +642,9 @@ static int ave_pro4_get_pinmode(struct ave_private *priv)
 		break;
 	case PHY_INTERFACE_MODE_MII:
 	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
 		break;
 	default:
 		return -EINVAL;
@@ -684,6 +699,9 @@ static int ave_ld20_get_pinmode(struct ave_private *priv)
 		val  = SG_ETPINMODE_RMII(0);
 		break;
 	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
 		break;
 	default:
 		return -EINVAL;
@@ -711,6 +729,9 @@ static int ave_pxs3_get_pinmode(struct ave_private *priv)
 		val = SG_ETPINMODE_RMII(priv->regmap_arg);
 		break;
 	case PHY_INTERFACE_MODE_RGMII:
+	case PHY_INTERFACE_MODE_RGMII_ID:
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+	case PHY_INTERFACE_MODE_RGMII_TXID:
 		break;
 	default:
 		return -EINVAL;
@@ -724,12 +745,11 @@ static int ave_pxs3_get_pinmode(struct ave_private *priv)
 	return 0;
 }
 
-static int ave_ofdata_to_platdata(struct udevice *dev)
+static int ave_of_to_plat(struct udevice *dev)
 {
-	struct eth_pdata *pdata = dev_get_platdata(dev);
+	struct eth_pdata *pdata = dev_get_plat(dev);
 	struct ave_private *priv = dev_get_priv(dev);
 	struct ofnode_phandle_args args;
-	const char *phy_mode;
 	const u32 *valp;
 	int ret, nc, nr;
 	const char *name;
@@ -738,16 +758,11 @@ static int ave_ofdata_to_platdata(struct udevice *dev)
 	if (!priv->data)
 		return -EINVAL;
 
-	pdata->iobase = devfdt_get_addr(dev);
-	pdata->phy_interface = -1;
-	phy_mode = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "phy-mode",
-			       NULL);
-	if (phy_mode)
-		pdata->phy_interface = phy_get_interface_by_name(phy_mode);
-	if (pdata->phy_interface == -1) {
-		dev_err(dev, "Invalid PHY interface '%s'\n", phy_mode);
+	pdata->iobase = dev_read_addr(dev);
+
+	pdata->phy_interface = dev_read_phy_mode(dev);
+	if (pdata->phy_interface == PHY_INTERFACE_MODE_NA)
 		return -EINVAL;
-	}
 
 	pdata->max_speed = 0;
 	valp = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "max-speed",
@@ -818,7 +833,7 @@ out_clk_free:
 
 static int ave_probe(struct udevice *dev)
 {
-	struct eth_pdata *pdata = dev_get_platdata(dev);
+	struct eth_pdata *pdata = dev_get_plat(dev);
 	struct ave_private *priv = dev_get_priv(dev);
 	int ret, nc, nr;
 
@@ -988,8 +1003,8 @@ U_BOOT_DRIVER(ave) = {
 	.of_match = ave_ids,
 	.probe	  = ave_probe,
 	.remove	  = ave_remove,
-	.ofdata_to_platdata = ave_ofdata_to_platdata,
+	.of_to_plat = ave_of_to_plat,
 	.ops	  = &ave_ops,
-	.priv_auto_alloc_size = sizeof(struct ave_private),
-	.platdata_auto_alloc_size = sizeof(struct eth_pdata),
+	.priv_auto	= sizeof(struct ave_private),
+	.plat_auto	= sizeof(struct eth_pdata),
 };

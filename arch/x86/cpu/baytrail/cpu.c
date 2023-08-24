@@ -8,6 +8,9 @@
 #include <common.h>
 #include <cpu.h>
 #include <dm.h>
+#include <event.h>
+#include <init.h>
+#include <log.h>
 #include <pci.h>
 #include <asm/cpu.h>
 #include <asm/cpu_x86.h>
@@ -42,7 +45,7 @@ static void hsuart_clock_set(void *base)
  * Configure the internal clock of both SIO HS-UARTs, if they are enabled
  * via FSP
  */
-int arch_cpu_init_dm(void)
+static int baytrail_uart_init(void *ctx, struct event *event)
 {
 	struct udevice *dev;
 	void *base;
@@ -53,7 +56,7 @@ int arch_cpu_init_dm(void)
 	for (i = 0; i < 2; i++) {
 		ret = dm_pci_bus_find_bdf(PCI_BDF(0, 0x1e, 3 + i), &dev);
 		if (!ret) {
-			base = dm_pci_map_bar(dev, PCI_BASE_ADDRESS_0,
+			base = dm_pci_map_bar(dev, PCI_BASE_ADDRESS_0, 0, 0, PCI_REGION_TYPE,
 					      PCI_REGION_MEM);
 			hsuart_clock_set(base);
 		}
@@ -61,6 +64,7 @@ int arch_cpu_init_dm(void)
 
 	return 0;
 }
+EVENT_SPY(EVT_DM_POST_INIT, baytrail_uart_init);
 
 static void set_max_freq(void)
 {
@@ -68,9 +72,9 @@ static void set_max_freq(void)
 	msr_t msr;
 
 	/* Enable speed step */
-	msr = msr_read(MSR_IA32_MISC_ENABLES);
-	msr.lo |= (1 << 16);
-	msr_write(MSR_IA32_MISC_ENABLES, msr);
+	msr = msr_read(MSR_IA32_MISC_ENABLE);
+	msr.lo |= MISC_ENABLE_ENHANCED_SPEEDSTEP;
+	msr_write(MSR_IA32_MISC_ENABLE, msr);
 
 	/*
 	 * Set guaranteed ratio [21:16] from IACORE_RATIOS to bits [15:8] of
@@ -148,7 +152,7 @@ static unsigned long tsc_freq(void)
 	return bclk * ((platform_info.lo >> 8) & 0xff);
 }
 
-static int baytrail_get_info(struct udevice *dev, struct cpu_info *info)
+static int baytrail_get_info(const struct udevice *dev, struct cpu_info *info)
 {
 	info->cpu_freq = tsc_freq();
 	info->features = 1 << CPU_FEAT_L1_CACHE | 1 << CPU_FEAT_MMU;
@@ -156,7 +160,7 @@ static int baytrail_get_info(struct udevice *dev, struct cpu_info *info)
 	return 0;
 }
 
-static int baytrail_get_count(struct udevice *dev)
+static int baytrail_get_count(const struct udevice *dev)
 {
 	int ecx = 0;
 

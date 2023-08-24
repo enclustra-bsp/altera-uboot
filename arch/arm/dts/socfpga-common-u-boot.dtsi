@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * U-Boot additions
+ *
+ * Copyright (c) 2019 Simon Goldschmidt
+ */
+/{
+	memory {
+		u-boot,dm-pre-reloc;
+	};
+
+	soc {
+		u-boot,dm-pre-reloc;
+	};
+};
+
+&clkmgr {
+	u-boot,dm-pre-reloc;
+};
+
+&L2 {
+        u-boot,dm-pre-reloc;
+};
+
+&rst {
+	u-boot,dm-pre-reloc;
+};
+
+&sdr {
+	u-boot,dm-pre-reloc;
+};
+
+&sysmgr {
+	u-boot,dm-pre-reloc;
+};

@@ -9,10 +9,13 @@
 #include <clk.h>
 #include <dm.h>
 #include <errno.h>
+#include <malloc.h>
 #include <watchdog.h>
 #include <serial.h>
 #include <debug_uart.h>
+#include <asm/global_data.h>
 #include <linux/compiler.h>
+#include <linux/delay.h>
 
 #include <asm/io.h>
 #ifdef CONFIG_DM_SERIAL
@@ -100,7 +103,7 @@ static int atmel_serial_getc(void)
 	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_USART_BASE;
 
 	while (!(readl(&usart->csr) & USART3_BIT(RXRDY)))
-		 WATCHDOG_RESET();
+		 schedule();
 	return readl(&usart->rhr);
 }
 
@@ -218,6 +221,17 @@ static const struct dm_serial_ops atmel_serial_ops = {
 	.setbrg = atmel_serial_setbrg,
 };
 
+#if defined(CONFIG_SPL_BUILD) && !defined(CONFIG_SPL_CLK)
+static int atmel_serial_enable_clk(struct udevice *dev)
+{
+	struct atmel_serial_priv *priv = dev_get_priv(dev);
+
+	/* Use fixed clock value in SPL */
+	priv->usart_clk_rate = CONFIG_SPL_UART_CLOCK;
+
+	return 0;
+}
+#else
 static int atmel_serial_enable_clk(struct udevice *dev)
 {
 	struct atmel_serial_priv *priv = dev_get_priv(dev);
@@ -245,16 +259,17 @@ static int atmel_serial_enable_clk(struct udevice *dev)
 
 	return 0;
 }
+#endif
 
 static int atmel_serial_probe(struct udevice *dev)
 {
-	struct atmel_serial_platdata *plat = dev->platdata;
+	struct atmel_serial_plat *plat = dev_get_plat(dev);
 	struct atmel_serial_priv *priv = dev_get_priv(dev);
 	int ret;
 #if CONFIG_IS_ENABLED(OF_CONTROL)
 	fdt_addr_t addr_base;
 
-	addr_base = devfdt_get_addr(dev);
+	addr_base = dev_read_addr(dev);
 	if (addr_base == FDT_ADDR_T_NONE)
 		return -ENODEV;
 
@@ -290,28 +305,28 @@ U_BOOT_DRIVER(serial_atmel) = {
 	.id	= UCLASS_SERIAL,
 #if CONFIG_IS_ENABLED(OF_CONTROL)
 	.of_match = atmel_serial_ids,
-	.platdata_auto_alloc_size = sizeof(struct atmel_serial_platdata),
+	.plat_auto	= sizeof(struct atmel_serial_plat),
 #endif
 	.probe = atmel_serial_probe,
 	.ops	= &atmel_serial_ops,
 #if !CONFIG_IS_ENABLED(OF_CONTROL)
 	.flags = DM_FLAG_PRE_RELOC,
 #endif
-	.priv_auto_alloc_size	= sizeof(struct atmel_serial_priv),
+	.priv_auto	= sizeof(struct atmel_serial_priv),
 };
 #endif
 
 #ifdef CONFIG_DEBUG_UART_ATMEL
 static inline void _debug_uart_init(void)
 {
-	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_DEBUG_UART_BASE;
+	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_VAL(DEBUG_UART_BASE);
 
 	_atmel_serial_init(usart, CONFIG_DEBUG_UART_CLOCK, CONFIG_BAUDRATE);
 }
 
 static inline void _debug_uart_putc(int ch)
 {
-	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_DEBUG_UART_BASE;
+	atmel_usart3_t *usart = (atmel_usart3_t *)CONFIG_VAL(DEBUG_UART_BASE);
 
 	while (!(readl(&usart->csr) & USART3_BIT(TXRDY)))
 		;

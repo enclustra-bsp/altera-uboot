@@ -4,20 +4,51 @@
  * Logic PD - http://www.logicpd.com
  */
 
+#include "omap3-u-boot.dtsi"
+
 / {
-	chosen {
-		stdout-path = &uart3;
+	aliases {
+		/delete-property/ serial0;
+		/delete-property/ serial1;
+	};
+
+	ocp@68000000 {
+		/delete-node/ bandgap@48002524;
 	};
 };
 
+&gpio1 {
+	/delete-property/ u-boot,dm-spl;
+};
+
+&gpio2 {
+	/delete-property/ u-boot,dm-spl;
+};
+
+&gpio3 {
+	/delete-property/ u-boot,dm-spl;
+};
+
+&gpio5 {
+	/delete-property/ u-boot,dm-spl;
+};
+
+&gpio6 {
+	/delete-property/ u-boot,dm-spl;
+};
+
+&mmc2 {
+	/delete-property/ u-boot,dm-spl;
+};
+
+&mmc3 {
+	/delete-property/ u-boot,dm-spl;
+};
+
 &uart1 {
-	reg-shift = <2>;
+	/delete-property/ u-boot,dm-spl;
 };
 
 &uart2 {
-	reg-shift = <2>;
-};
-
-&uart3 {
-	reg-shift = <2>;
+	/delete-property/ u-boot,dm-spl;
 };

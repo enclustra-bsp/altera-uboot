@@ -32,7 +32,7 @@ lowlevel_init:
 POS1:
 	adr	r5, POS1	/* r5 = POS1 run time */
 	ldr	r0, =POS1	/* r0 = POS1 compile */
-	sub	r5, r5, r0	/* r0 = CONFIG_SYS_TEXT_BASE-1 */
+	sub	r5, r5, r0	/* r0 = CONFIG_TEXT_BASE-1 */
 
 	/* memory control configuration 1 */
 	ldr	r0, =SMRDATA
@@ -71,10 +71,10 @@ POS1:
 	str	r0, [r1]
 
 	/* Reading the PMC Status to detect when the Main Oscillator is enabled */
-	mov	r4, #AT91_PMC_IXR_MOSCS
+	mov	r6, #AT91_PMC_IXR_MOSCS
 MOSCS_Loop:
 	ldr	r3, [r2]
-	and	r3, r4, r3
+	and	r3, r6, r3
 	cmp	r3, #AT91_PMC_IXR_MOSCS
 	bne	MOSCS_Loop
 
@@ -89,10 +89,10 @@ MOSCS_Loop:
 	str	r0, [r1]
 
 	/* Reading the PMC Status register to detect when the PLLA is locked */
-	mov	r4, #AT91_PMC_IXR_LOCKA
+	mov	r6, #AT91_PMC_IXR_LOCKA
 MOSCS_Loop1:
 	ldr	r3, [r2]
-	and	r3, r4, r3
+	and	r3, r6, r3
 	cmp	r3, #AT91_PMC_IXR_LOCKA
 	bne	MOSCS_Loop1
 
@@ -109,10 +109,10 @@ MOSCS_Loop1:
 	str	r0, [r1]
 
 	/* Reading the PMC Status to detect when the Master clock is ready */
-	mov	r4, #AT91_PMC_IXR_MCKRDY
+	mov	r6, #AT91_PMC_IXR_MCKRDY
 MCKRDY_Loop:
 	ldr	r3, [r2]
-	and	r3, r4, r3
+	and	r3, r6, r3
 	cmp	r3, #AT91_PMC_IXR_MCKRDY
 	bne	MCKRDY_Loop
 
@@ -120,10 +120,10 @@ MCKRDY_Loop:
 	str	r0, [r1]
 
 	/* Reading the PMC Status to detect when the Master clock is ready */
-	mov	r4, #AT91_PMC_IXR_MCKRDY
+	mov	r6, #AT91_PMC_IXR_MCKRDY
 MCKRDY_Loop1:
 	ldr	r3, [r2]
-	and	r3, r4, r3
+	and	r3, r6, r3
 	cmp	r3, #AT91_PMC_IXR_MCKRDY
 	bne	MCKRDY_Loop1
 PLL_setup_end:

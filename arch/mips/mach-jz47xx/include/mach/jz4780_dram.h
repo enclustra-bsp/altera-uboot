@@ -12,6 +12,7 @@
 /*
  * DDR
  */
+#include <linux/bitops.h>
 #define DDRC_ST				0x0
 #define DDRC_CFG			0x4
 #define DDRC_CTRL			0x8
@@ -453,4 +454,3 @@ void pll_init(void);
 void sdram_init(void);
 
 #endif	/* __JZ4780_DRAM_H__ */
-

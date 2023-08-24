@@ -11,42 +11,43 @@ config OMAP34XX
 	select ARM_ERRATA_454179
 	select ARM_ERRATA_621766
 	select ARM_ERRATA_725233
-	select USE_TINY_PRINTF
+	select SPL_USE_TINY_PRINTF if SPL
 	imply NAND_OMAP_GPMC
 	imply SPL_FS_EXT4
 	imply SPL_FS_FAT
-	imply SPL_GPIO_SUPPORT
-	imply SPL_I2C_SUPPORT
+	imply SPL_GPIO
+	imply SPL_I2C
 	imply SPL_LIBCOMMON_SUPPORT
 	imply SPL_LIBDISK_SUPPORT
 	imply SPL_LIBGENERIC_SUPPORT
-	imply SPL_MMC_SUPPORT
+	imply SPL_MMC
 	imply SPL_NAND_SUPPORT
 	imply SPL_OMAP3_ID_NAND
-	imply SPL_POWER_SUPPORT
-	imply SPL_SERIAL_SUPPORT
+	imply SPL_POWER
+	imply SPL_SERIAL
 	imply SYS_I2C_OMAP24XX
 	imply SYS_THUMB_BUILD
 	imply TWL4030_POWER
 
 config OMAP44XX
 	bool "OMAP44XX SoC"
-	select USE_TINY_PRINTF
+	select SPL_USE_TINY_PRINTF
+	select SPL_SYS_NO_VECTOR_TABLE if SPL
 	imply NAND_OMAP_ELM
 	imply NAND_OMAP_GPMC
 	imply SPL_DISPLAY_PRINT
 	imply SPL_FS_EXT4
 	imply SPL_FS_FAT
-	imply SPL_GPIO_SUPPORT
-	imply SPL_I2C_SUPPORT
+	imply SPL_GPIO
+	imply SPL_I2C
 	imply SPL_LIBCOMMON_SUPPORT
 	imply SPL_LIBDISK_SUPPORT
 	imply SPL_LIBGENERIC_SUPPORT
-	imply SPL_MMC_SUPPORT
+	imply SPL_MMC
 	imply SPL_NAND_SIMPLE
 	imply SPL_NAND_SUPPORT
-	imply SPL_POWER_SUPPORT
-	imply SPL_SERIAL_SUPPORT
+	imply SPL_POWER
+	imply SPL_SERIAL
 	imply SYS_I2C_OMAP24XX
 	imply SYS_THUMB_BUILD
 
@@ -61,17 +62,17 @@ config OMAP54XX
 	imply SPL_ENV_SUPPORT
 	imply SPL_FS_EXT4
 	imply SPL_FS_FAT
-	imply SPL_GPIO_SUPPORT
-	imply SPL_I2C_SUPPORT
+	imply SPL_GPIO
+	imply SPL_I2C
 	imply SPL_LIBCOMMON_SUPPORT
 	imply SPL_LIBDISK_SUPPORT
 	imply SPL_LIBGENERIC_SUPPORT
-	imply SPL_MMC_SUPPORT
+	imply SPL_MMC
 	imply SPL_NAND_AM33XX_BCH
 	imply SPL_NAND_AM33XX_BCH
 	imply SPL_NAND_SUPPORT
-	imply SPL_POWER_SUPPORT
-	imply SPL_SERIAL_SUPPORT
+	imply SPL_POWER
+	imply SPL_SERIAL
 	imply SYS_I2C_OMAP24XX
 
 config TI814X
@@ -95,6 +96,7 @@ config TI816X
 config AM43XX
 	bool "AM43XX SoC"
 	select SPECIFY_CONSOLE_INDEX
+	select SYS_L2_PL310 if !SYS_L2CACHE_OFF
 	imply NAND_OMAP_ELM
 	imply NAND_OMAP_GPMC
 	imply SPL_DM
@@ -120,11 +122,12 @@ config AM33XX
 	select SPECIFY_CONSOLE_INDEX
 	imply NAND_OMAP_ELM
 	imply NAND_OMAP_GPMC
+	imply SKIP_LOWLEVEL_INIT
 	imply SPL_NAND_AM33XX_BCH
 	imply SPL_NAND_SUPPORT
 	imply SYS_I2C_OMAP24XX
 	imply SYS_THUMB_BUILD
-	imply USE_TINY_PRINTF
+	imply SPL_USE_TINY_PRINTF
 	help
 	  Support for AM335x SOC from Texas Instruments.
 	  The AM335x high performance SOC features a Cortex-A8
@@ -167,20 +170,26 @@ config TI_SECURE_EMIF_PROTECTED_REGION_SIZE
 	  using hardware memory firewalls. This value must be smaller than the
 	  TI_SECURE_EMIF_TOTAL_REGION_SIZE value.
 
-if AM43XX || AM33XX || OMAP54XX
-config ISW_ENTRY_ADDR
-	hex "Address in memory or XIP address of bootloader entry point"
-	default 0x402F4000 if AM43XX
-	default 0x402F0400 if AM33XX
-	default 0x40301350 if OMAP54XX
+config SYS_AUTOMATIC_SDRAM_DETECTION
+	bool
+
+choice
+	depends on OMAP44XX || OMAP54XX
+	prompt "Static or dynamic DDR timing calculations"
+	default SYS_EMIF_PRECALCULATED_TIMING_REGS
 	help
-	  After any reset, the boot ROM searches the boot media for a valid
-	  boot image. For non-XIP devices, the ROM then copies the image into
-	  internal memory. For all boot modes, after the ROM processes the
-	  boot image it eventually computes the entry point address depending
-	  on the device type (secure/non-secure), boot media (xip/non-xip) and
-	  image headers.
-endif
+	  For the DDR timing information we can either dynamically determine
+	  the timings to use or use pre-determined timings (based on using the
+	  dynamic method).  Default to the static timing information.
+
+config SYS_EMIF_PRECALCULATED_TIMING_REGS
+	bool "Use precalcualted timing values"
+
+config SYS_DEFAULT_LPDDR2_TIMINGS
+	bool "Use default LPDDR2 timing values"
+	select SYS_AUTOMATIC_SDRAM_DETECTION
+
+endchoice
 
 source "arch/arm/mach-omap2/omap3/Kconfig"
 
@@ -191,18 +200,15 @@ source "arch/arm/mach-omap2/omap5/Kconfig"
 source "arch/arm/mach-omap2/am33xx/Kconfig"
 
 source "board/BuR/brxre1/Kconfig"
+source "board/BuR/brsmarc1/Kconfig"
 source "board/BuR/brppt1/Kconfig"
 source "board/siemens/draco/Kconfig"
 source "board/siemens/pxm2/Kconfig"
 source "board/siemens/rut/Kconfig"
-source "board/ti/ti814x/Kconfig"
 source "board/ti/ti816x/Kconfig"
 source "board/ti/am43xx/Kconfig"
 source "board/ti/am335x/Kconfig"
-source "board/compulab/cm_t335/Kconfig"
 source "board/compulab/cm_t43/Kconfig"
-
-config SPL_LDSCRIPT
-        default "arch/arm/mach-omap2/u-boot-spl.lds"
+source "board/phytec/phycore_am335x_r2/Kconfig"
 
 endif

@@ -58,6 +58,10 @@ SECTIONS
 		AT(ADDR(.__secure_start) + SIZEOF(.__secure_start))
 	{
 		*(._secure.text)
+		. = ALIGN(8);
+		__secure_svc_tbl_start = .;
+		KEEP(*(._secure_svc_tbl_entries))
+		__secure_svc_tbl_end = .;
 	}
 
 	.secure_data : AT(LOADADDR(.secure_text) + SIZEOF(.secure_text))
@@ -105,8 +109,8 @@ SECTIONS
 	. = .;
 
 	. = ALIGN(8);
-	.u_boot_list : {
-		KEEP(*(SORT(.u_boot_list*)));
+	__u_boot_list : {
+		KEEP(*(SORT(__u_boot_list*)));
 	}
 
 	. = ALIGN(8);

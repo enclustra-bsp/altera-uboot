@@ -7,12 +7,13 @@
  */
 
 #include <common.h>
+#include <command.h>
 #include <thor.h>
 #include <dfu.h>
 #include <g_dnl.h>
 #include <usb.h>
 
-int do_thor_down(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_thor_down(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
 	if (argc < 4)
 		return CMD_RET_USAGE;
@@ -37,7 +38,12 @@ int do_thor_down(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		goto exit;
 	}
 
-	g_dnl_register("usb_dnl_thor");
+	ret = g_dnl_register("usb_dnl_thor");
+	if (ret) {
+		pr_err("g_dnl_register failed %d\n", ret);
+		ret = CMD_RET_FAILURE;
+		goto exit;
+	}
 
 	ret = thor_init();
 	if (ret) {
@@ -46,13 +52,18 @@ int do_thor_down(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		goto exit;
 	}
 
-	ret = thor_handle();
-	if (ret) {
-		pr_err("THOR failed: %d\n", ret);
-		ret = CMD_RET_FAILURE;
-		goto exit;
-	}
-
+	do {
+		ret = thor_handle();
+		if (ret == THOR_DFU_REINIT_NEEDED) {
+			dfu_free_entities();
+			ret = dfu_init_env_entities(interface, devstring);
+		}
+		if (ret) {
+			pr_err("THOR failed: %d\n", ret);
+			ret = CMD_RET_FAILURE;
+			goto exit;
+		}
+	} while (ret == 0);
 exit:
 	g_dnl_unregister();
 	usb_gadget_release(controller_index);
@@ -65,7 +76,7 @@ done:
 U_BOOT_CMD(thordown, CONFIG_SYS_MAXARGS, 1, do_thor_down,
 	   "TIZEN \"THOR\" downloader",
 	   "<USB_controller> <interface> <dev>\n"
-	   "  - device software upgrade via LTHOR TIZEN dowload\n"
+	   "  - device software upgrade via LTHOR TIZEN download\n"
 	   "    program via <USB_controller> on device <dev>,\n"
 	   "	attached to interface <interface>\n"
 );

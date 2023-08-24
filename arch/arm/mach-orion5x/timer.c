@@ -8,7 +8,11 @@
  */
 
 #include <common.h>
+#include <init.h>
+#include <time.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
+#include <linux/delay.h>
 
 #define UBOOT_CNTR	0	/* counter to use for uboot timer */
 
@@ -65,7 +69,7 @@ struct orion5x_tmr_registers *orion5x_tmr_regs =
 #define TVR_ARM_TIMER_OFFS		0
 #define TVR_ARM_TIMER_MASK		0xffffffff
 #define TVR_ARM_TIMER_MAX		0xffffffff
-#define TIMER_LOAD_VAL 			0xffffffff
+#define TIMER_LOAD_VAL			0xffffffff
 
 static inline ulong read_timer(void)
 {
@@ -164,7 +168,7 @@ unsigned long long get_ticks(void)
  * This function is derived from PowerPC code (timebase clock frequency).
  * On ARM it returns the number of timer ticks per second.
  */
-ulong get_tbclk (void)
+ulong get_tbclk(void)
 {
 	return (ulong)CONFIG_SYS_HZ;
 }

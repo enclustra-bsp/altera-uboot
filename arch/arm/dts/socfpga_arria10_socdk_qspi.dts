@@ -1,0 +1,14 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2022 Intel. All rights reserved.
+ */
+
+/dts-v1/;
+#include "socfpga_arria10_socdk.dtsi"
+#include "socfpga_arria10_socdk-u-boot.dtsi"
+
+&qspi {
+	status = "okay";
+
+};
+

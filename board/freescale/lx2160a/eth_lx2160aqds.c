@@ -1,28 +1,35 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2018-2019 NXP
+ * Copyright 2018-2020 NXP
  *
  */
 
 #include <common.h>
+#include <env.h>
+#include <fdt_support.h>
 #include <hwconfig.h>
 #include <command.h>
+#include <log.h>
+#include <net.h>
 #include <netdev.h>
 #include <malloc.h>
 #include <fsl_mdio.h>
 #include <miiphy.h>
 #include <phy.h>
 #include <fm_eth.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <exports.h>
 #include <asm/arch/fsl_serdes.h>
 #include <fsl-mc/fsl_mc.h>
 #include <fsl-mc/ldpaa_wriop.h>
+#include <linux/libfdt.h>
 
 #include "../common/qixis.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#ifndef CONFIG_DM_ETH
 #define EMI_NONE	0
 #define EMI1		1 /* Mdio Bus 1 */
 #define EMI2		2 /* Mdio Bus 2 */
@@ -104,6 +111,8 @@ static const struct serdes_phy_config serdes1_phy_config[] = {
 	       EMI1, IO_SLOT_1},
 	     {WRIOP1_DPMAC2, {INPHI_PHY_ADDR1, INPHI_PHY_ADDR2, -1},
 	      EMI1, IO_SLOT_2} } },
+	{14, {{WRIOP1_DPMAC1, {INPHI_PHY_ADDR1, INPHI_PHY_ADDR2, -1},
+	       EMI1, IO_SLOT_1} } },
 	{15, {{WRIOP1_DPMAC1, {INPHI_PHY_ADDR1, INPHI_PHY_ADDR2, -1},
 	       EMI1, IO_SLOT_1},
 	     {WRIOP1_DPMAC2, {INPHI_PHY_ADDR1, INPHI_PHY_ADDR2, -1},
@@ -407,7 +416,7 @@ static inline void do_dpmac_config(int dpmac, const char *arg_dpmacid,
 			       env_dpmac, phy_num + 1, arg_dpmacid);
 		else
 			wriop_set_phy_address(dpmac, phy_num,
-					      simple_strtoul(ret, NULL, 16));
+					      hextoul(ret, NULL));
 	}
 
 	/*search mdio in dpmac arg*/
@@ -435,9 +444,11 @@ static inline void do_dpmac_config(int dpmac, const char *arg_dpmacid,
 }
 
 #endif
+#endif /* !CONFIG_DM_ETH */
 
-int board_eth_init(bd_t *bis)
+int board_eth_init(struct bd_info *bis)
 {
+#ifndef CONFIG_DM_ETH
 #if defined(CONFIG_FSL_MC_ENET)
 	struct memac_mdio_info mdio_info;
 	struct memac_mdio_controller *regs;
@@ -448,7 +459,7 @@ int board_eth_init(bd_t *bis)
 	size_t len;
 	struct mii_dev *bus;
 	const struct phy_config *phy_config;
-	struct ccsr_gur *gur = (void *)(CONFIG_SYS_FSL_GUTS_ADDR);
+	struct ccsr_gur *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
 	u32 srds_s1, srds_s2, srds_s3;
 
 	srds_s1 = in_le32(&gur->rcwsr[28]) &
@@ -465,14 +476,14 @@ int board_eth_init(bd_t *bis)
 
 	sprintf(srds, "%d_%d_%d", srds_s1, srds_s2, srds_s3);
 
-	regs = (struct memac_mdio_controller *)CONFIG_SYS_FSL_WRIOP1_MDIO1;
+	regs = (struct memac_mdio_controller *)CFG_SYS_FSL_WRIOP1_MDIO1;
 	mdio_info.regs = regs;
 	mdio_info.name = DEFAULT_WRIOP_MDIO1_NAME;
 
 	/*Register the EMI 1*/
 	fm_memac_mdio_init(bis, &mdio_info);
 
-	regs = (struct memac_mdio_controller *)CONFIG_SYS_FSL_WRIOP1_MDIO2;
+	regs = (struct memac_mdio_controller *)CFG_SYS_FSL_WRIOP1_MDIO2;
 	mdio_info.regs = regs;
 	mdio_info.name = DEFAULT_WRIOP_MDIO2_NAME;
 
@@ -560,6 +571,7 @@ int board_eth_init(bd_t *bis)
 
 	cpu_eth_init(bis);
 #endif /* CONFIG_FMAN_ENET */
+#endif /* !CONFIG_DM_ETH */
 
 #ifdef CONFIG_PHY_AQUANTIA
 	/*
@@ -573,7 +585,12 @@ int board_eth_init(bd_t *bis)
 	gd->jt->mdio_phydev_for_ethname = mdio_phydev_for_ethname;
 	gd->jt->miiphy_set_current_dev = miiphy_set_current_dev;
 #endif
+
+#ifdef CONFIG_DM_ETH
+	return 0;
+#else
 	return pci_eth_init(bis);
+#endif
 }
 
 #if defined(CONFIG_RESET_PHY_R)
@@ -585,6 +602,7 @@ void reset_phy(void)
 }
 #endif /* CONFIG_RESET_PHY_R */
 
+#ifndef CONFIG_DM_ETH
 #if defined(CONFIG_FSL_MC_ENET)
 int fdt_fixup_dpmac_phy_handle(void *fdt, int dpmac_id, int node_phandle)
 {
@@ -612,6 +630,13 @@ int fdt_fixup_dpmac_phy_handle(void *fdt, int dpmac_id, int node_phandle)
 		return offset;
 	}
 
+	phy_string = fdt_getprop(fdt, offset, "phy-connection-type", NULL);
+	if (is_backplane_mode(phy_string)) {
+		/* Backplane KR mode: skip fixups */
+		printf("Interface %d in backplane KR mode\n", dpmac_id);
+		return 0;
+	}
+
 	ret = fdt_appendprop_cell(fdt, offset, "phy-handle", node_phandle);
 	if (ret)
 		printf("%d@%s %d\n", __LINE__, __func__, ret);
@@ -628,8 +653,9 @@ int fdt_fixup_dpmac_phy_handle(void *fdt, int dpmac_id, int node_phandle)
 int fdt_get_ioslot_offset(void *fdt, struct mii_dev *mii_dev, int fpga_offset)
 {
 	char mdio_ioslot_str[] = "mdio@00";
-	char mdio_mux_str[] = "mdio-mux-0";
 	struct lx2160a_qds_mdio *priv;
+	u64 reg;
+	u32 phandle;
 	int offset, mux_val;
 
 	/*Test if the MDIO bus is real mdio bus or muxing front end ?*/
@@ -643,15 +669,32 @@ int fdt_get_ioslot_offset(void *fdt, struct mii_dev *mii_dev, int fpga_offset)
 	debug("real_bus_num = %d, ioslot = %d\n",
 	      priv->realbusnum, priv->ioslot);
 
-	sprintf(mdio_mux_str, "mdio-mux-%1d", priv->realbusnum);
-	offset = fdt_subnode_offset(fdt, fpga_offset, mdio_mux_str);
+	if (priv->realbusnum == EMI1)
+		reg = CFG_SYS_FSL_WRIOP1_MDIO1;
+	else
+		reg = CFG_SYS_FSL_WRIOP1_MDIO2;
+
+	offset = fdt_node_offset_by_compat_reg(fdt, "fsl,fman-memac-mdio", reg);
 	if (offset < 0) {
-		printf("%s node not found under node %s in device tree\n",
-		       mdio_mux_str, fdt_get_name(fdt, fpga_offset, NULL));
+		printf("mdio@%llx node not found in device tree\n", reg);
+		return offset;
+	}
+
+	phandle = fdt_get_phandle(fdt, offset);
+	phandle = cpu_to_fdt32(phandle);
+	offset = fdt_node_offset_by_prop_value(fdt, -1, "mdio-parent-bus",
+					       &phandle, 4);
+	if (offset < 0) {
+		printf("mdio-mux-%d node not found in device tree\n",
+		       priv->realbusnum == EMI1 ? 1 : 2);
 		return offset;
 	}
 
 	mux_val = lx2160a_qds_get_mdio_mux_val(priv->realbusnum, priv->ioslot);
+	if (priv->realbusnum == EMI1)
+		mux_val >>= BRDCFG4_EMI1SEL_SHIFT;
+	else
+		mux_val >>= BRDCFG4_EMI2SEL_SHIFT;
 	sprintf(mdio_ioslot_str, "mdio@%x", (u8)mux_val);
 
 	offset = fdt_subnode_offset(fdt, offset, mdio_ioslot_str);
@@ -667,7 +710,7 @@ int fdt_create_phy_node(void *fdt, int offset, u8 phyaddr, int *subnodeoffset,
 			struct phy_device *phy_dev, int phandle)
 {
 	char phy_node_name[] = "ethernet-phy@00";
-	char phy_id_compatible_str[] = "ethernet-phy-id0000.0000";
+	char phy_id_compatible_str[] = "ethernet-phy-id0000.0000,";
 	int ret;
 
 	sprintf(phy_node_name, "ethernet-phy@%x", phyaddr);
@@ -675,11 +718,13 @@ int fdt_create_phy_node(void *fdt, int offset, u8 phyaddr, int *subnodeoffset,
 
 	*subnodeoffset = fdt_add_subnode(fdt, offset, phy_node_name);
 	if (*subnodeoffset <= 0) {
-		printf("Could not add subnode %s\n", phy_node_name);
+		printf("Could not add subnode %s inside node %s err = %s\n",
+		       phy_node_name, fdt_get_name(fdt, offset, NULL),
+		       fdt_strerror(*subnodeoffset));
 		return *subnodeoffset;
 	}
 
-	sprintf(phy_id_compatible_str, "ethernet-phy-id%04x.%04x",
+	sprintf(phy_id_compatible_str, "ethernet-phy-id%04x.%04x,",
 		phy_dev->phy_id >> 16, phy_dev->phy_id & 0xFFFF);
 	debug("phy_id_compatible_str %s\n", phy_id_compatible_str);
 
@@ -730,10 +775,11 @@ int fdt_fixup_board_phy(void *fdt)
 	int fpga_offset, offset, subnodeoffset;
 	struct mii_dev *mii_dev;
 	struct list_head *mii_devs, *entry;
-	int ret, dpmac_id, phandle, i;
+	int ret, dpmac_id, i;
 	struct phy_device *phy_dev;
 	char ethname[ETH_NAME_LEN];
 	phy_interface_t	phy_iface;
+	uint32_t phandle;
 
 	ret = 0;
 	/* we know FPGA is connected to i2c0, therefore search path directly,
@@ -749,7 +795,10 @@ int fdt_fixup_board_phy(void *fdt)
 		return fpga_offset;
 	}
 
-	phandle = fdt_alloc_phandle(fdt);
+	ret = fdt_generate_phandle(fdt, &phandle);
+	if (ret < 0)
+		return ret;
+
 	mii_devs = mdio_get_list_head();
 
 	list_for_each(entry, mii_devs) {
@@ -779,7 +828,6 @@ int fdt_fixup_board_phy(void *fdt)
 			}
 			if (dpmac_id == NUM_WRIOP_PORTS)
 				continue;
-
 			ret = fdt_create_phy_node(fdt, offset, i,
 						  &subnodeoffset,
 						  phy_dev, phandle);
@@ -792,6 +840,11 @@ int fdt_fixup_board_phy(void *fdt)
 				fdt_del_node(fdt, subnodeoffset);
 				break;
 			}
+			/* calculate offset again as new node addition may have
+			 * changed offset;
+			 */
+			offset = fdt_get_ioslot_offset(fdt, mii_dev,
+						       fpga_offset);
 			phandle++;
 		}
 
@@ -802,4 +855,113 @@ int fdt_fixup_board_phy(void *fdt)
 	return ret;
 }
 #endif // CONFIG_FSL_MC_ENET
+#endif
 
+#if defined(CONFIG_DM_ETH) && defined(CONFIG_MULTI_DTB_FIT)
+
+/* Structure to hold SERDES protocols supported in case of
+ * CONFIG_DM_ETH enabled (network interfaces are described in the DTS).
+ *
+ * @serdes_block: the index of the SERDES block
+ * @serdes_protocol: the decimal value of the protocol supported
+ * @dts_needed: DTS notes describing the current configuration are needed
+ *
+ * When dts_needed is true, the board_fit_config_name_match() function
+ * will try to exactly match the current configuration of the block with a DTS
+ * name provided.
+ */
+static struct serdes_configuration {
+	u8 serdes_block;
+	u32 serdes_protocol;
+	bool dts_needed;
+} supported_protocols[] = {
+	/* Serdes block #1 */
+	{1, 3, true},
+	{1, 7, true},
+	{1, 19, true},
+	{1, 20, true},
+
+	/* Serdes block #2 */
+	{2, 2, false},
+	{2, 3, false},
+	{2, 5, false},
+	{2, 11, true},
+
+	/* Serdes block #3 */
+	{3, 2, false},
+	{3, 3, false},
+};
+
+#define SUPPORTED_SERDES_PROTOCOLS ARRAY_SIZE(supported_protocols)
+
+static bool protocol_supported(u8 serdes_block, u32 protocol)
+{
+	struct serdes_configuration serdes_conf;
+	int i;
+
+	for (i = 0; i < SUPPORTED_SERDES_PROTOCOLS; i++) {
+		serdes_conf = supported_protocols[i];
+		if (serdes_conf.serdes_block == serdes_block &&
+		    serdes_conf.serdes_protocol == protocol)
+			return true;
+	}
+
+	return false;
+}
+
+static void get_str_protocol(u8 serdes_block, u32 protocol, char *str)
+{
+	struct serdes_configuration serdes_conf;
+	int i;
+
+	for (i = 0; i < SUPPORTED_SERDES_PROTOCOLS; i++) {
+		serdes_conf = supported_protocols[i];
+		if (serdes_conf.serdes_block == serdes_block &&
+		    serdes_conf.serdes_protocol == protocol) {
+			if (serdes_conf.dts_needed == true)
+				sprintf(str, "%u", protocol);
+			else
+				sprintf(str, "x");
+			return;
+		}
+	}
+}
+
+int board_fit_config_name_match(const char *name)
+{
+	struct ccsr_gur *gur = (void *)(CFG_SYS_FSL_GUTS_ADDR);
+	u32 rcw_status = in_le32(&gur->rcwsr[28]);
+	char srds_s1_str[2], srds_s2_str[2], srds_s3_str[2];
+	u32 srds_s1, srds_s2, srds_s3;
+	char expected_dts[100];
+
+	srds_s1 = rcw_status & FSL_CHASSIS3_RCWSR28_SRDS1_PRTCL_MASK;
+	srds_s1 >>= FSL_CHASSIS3_RCWSR28_SRDS1_PRTCL_SHIFT;
+
+	srds_s2 = rcw_status & FSL_CHASSIS3_RCWSR28_SRDS2_PRTCL_MASK;
+	srds_s2 >>= FSL_CHASSIS3_RCWSR28_SRDS2_PRTCL_SHIFT;
+
+	srds_s3 = rcw_status & FSL_CHASSIS3_RCWSR28_SRDS3_PRTCL_MASK;
+	srds_s3 >>= FSL_CHASSIS3_RCWSR28_SRDS3_PRTCL_SHIFT;
+
+	/* Check for supported protocols. The default DTS will be used
+	 * in this case
+	 */
+	if (!protocol_supported(1, srds_s1) ||
+	    !protocol_supported(2, srds_s2) ||
+	    !protocol_supported(3, srds_s3))
+		return -1;
+
+	get_str_protocol(1, srds_s1, srds_s1_str);
+	get_str_protocol(2, srds_s2, srds_s2_str);
+	get_str_protocol(3, srds_s3, srds_s3_str);
+
+	sprintf(expected_dts, "fsl-lx2160a-qds-%s-%s-%s",
+		srds_s1_str, srds_s2_str, srds_s3_str);
+
+	if (!strcmp(name, expected_dts))
+		return 0;
+
+	return -1;
+}
+#endif

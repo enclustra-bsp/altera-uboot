@@ -17,42 +17,16 @@
  * We are only ever GP parts and will utilize all of the "downloaded image"
  * area in SRAM which starts at 0x40200000 and ends at 0x4020FFFF (64KB).
  */
-#undef CONFIG_SPL_TEXT_BASE
-#define CONFIG_SPL_TEXT_BASE            0x40200000
-
-#define CONFIG_CMDLINE_TAG
-#define CONFIG_SETUP_MEMORY_TAGS
-#define CONFIG_INITRD_TAG
-#define CONFIG_REVISION_TAG
 
 /* NAND */
-#if defined(CONFIG_NAND)
+#if defined(CONFIG_MTD_RAW_NAND)
 #define CONFIG_SYS_FLASH_BASE		NAND_BASE
-#define CONFIG_SYS_MAX_NAND_DEVICE      1
-#define CONFIG_SYS_NAND_5_ADDR_CYCLE
-#define CONFIG_SYS_NAND_PAGE_COUNT      64
-#define CONFIG_SYS_NAND_PAGE_SIZE       2048
-#define CONFIG_SYS_NAND_OOBSIZE         64
-#define CONFIG_SYS_NAND_BLOCK_SIZE      (128*1024)
-#define CONFIG_SYS_NAND_BAD_BLOCK_POS   NAND_LARGE_BADBLOCK_POS
 #define CONFIG_SYS_NAND_ECCPOS          {2, 3, 4, 5, 6, 7, 8, 9,\
                                          10, 11, 12, 13}
 #define CONFIG_SYS_NAND_ECCSIZE         512
 #define CONFIG_SYS_NAND_ECCBYTES        3
-#define CONFIG_NAND_OMAP_ECCSCHEME      OMAP_ECC_BCH8_CODE_HW_DETECTION_SW
-#define CONFIG_SYS_NAND_U_BOOT_OFFS     0x80000
-#define CONFIG_SYS_ENV_SECT_SIZE        SZ_128K
-#define CONFIG_ENV_OFFSET               0x260000
-#define CONFIG_ENV_ADDR                 0x260000
-#define CONFIG_ENV_OVERWRITE
 /* NAND: SPL falcon mode configs */
-#if defined(CONFIG_SPL_OS_BOOT)
-#define CONFIG_SYS_NAND_SPL_KERNEL_OFFS 0x2a0000
-#endif /* CONFIG_SPL_OS_BOOT */
-#endif /* CONFIG_NAND */
-
-/* USB EHCI */
-#define CONFIG_OMAP_EHCI_PHY1_RESET_GPIO	147
+#endif /* CONFIG_MTD_RAW_NAND */
 
 /* Enable Multi Bus support for I2C */
 #define CONFIG_I2C_MULTI_BUS
@@ -60,11 +34,6 @@
 /* DSS Support */
 
 /* TWL4030 LED Support */
-
-/* Environment */
-#define CONFIG_ENV_SIZE                 SZ_128K
-
-#define CONFIG_PREBOOT                  "usb start"
 
 #define MEM_LAYOUT_ENV_SETTINGS \
 	DEFAULT_LINUX_BOOT_ENV
@@ -76,7 +45,7 @@
 #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
 	#devtypel #instance " "
 
-#if defined(CONFIG_NAND)
+#if defined(CONFIG_MTD_RAW_NAND)
 
 #define BOOTENV_DEV_NAND(devtypeu, devtypel, instance) \
 	"bootcmd_" #devtypel #instance "=" \
@@ -91,16 +60,16 @@
 #define BOOT_TARGET_DEVICES(func) \
 	func(MMC, mmc, 0) \
 	func(LEGACY_MMC, legacy_mmc, 0) \
-	func(UBIFS, ubifs, 0) \
+	func(UBIFS, ubifs, 0, rootfs, rootfs) \
 	func(NAND, nand, 0)
 
-#else /* !CONFIG_NAND */
+#else /* !CONFIG_MTD_RAW_NAND */
 
 #define BOOT_TARGET_DEVICES(func) \
 	func(MMC, mmc, 0) \
 	func(LEGACY_MMC, legacy_mmc, 0)
 
-#endif /* CONFIG_NAND */
+#endif /* CONFIG_MTD_RAW_NAND */
 
 #include <config_distro_bootcmd.h>
 
@@ -113,8 +82,6 @@
 	"bootenv=uEnv.txt\0" \
 	"bootfile=zImage\0" \
 	"bootpart=0:2\0" \
-	"bootubivol=rootfs\0" \
-	"bootubipart=rootfs\0" \
 	"usbtty=cdc_acm\0" \
 	"mpurate=auto\0" \
 	"buddy=none\0" \
@@ -221,7 +188,7 @@
 		"${defargs} " \
 		"${optargs} " \
 		"root=${ramroot} ramdisk_size=${ramdisk_size} " \
-	 	"rootfstype=${ramrootfstype}\0" \
+		"rootfstype=${ramrootfstype}\0" \
 	"ramboot=run mmcbootenv; " \
 		"if run loadimage && run loaddtb && run loadramdisk; then " \
 			"echo Booting ${bootdir}/${bootfile} from mmc ${bootpart} w/ramdisk ...; " \

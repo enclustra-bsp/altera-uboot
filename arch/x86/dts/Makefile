@@ -2,6 +2,7 @@
 
 dtb-y += bayleybay.dtb \
 	cherryhill.dtb \
+	chromebook_coral.dtb \
 	chromebook_link.dtb \
 	chromebox_panther.dtb \
 	chromebook_samus.dtb \
@@ -18,11 +19,14 @@ dtb-y += bayleybay.dtb \
 	qemu-x86_i440fx.dtb \
 	qemu-x86_q35.dtb \
 	theadorable-x86-dfi-bt700.dtb \
+	slimbootloader.dtb \
 	baytrail_som-db5800-som-6867.dtb
+
+include $(srctree)/scripts/Makefile.dts
 
 targets += $(dtb-y)
 
-DTC_FLAGS += -R 4 -p 0x1000
+DTC_FLAGS += -R 4 -p $(if $(CONFIG_EFI_APP),0x8000,0x1000)
 
 PHONY += dtbs
 dtbs: $(addprefix $(obj)/, $(dtb-y))

@@ -4,6 +4,8 @@
  * Written by Jean-Jacques Hiblot <jjhiblot@ti.com>
  */
 
+#define LOG_CATEGORY UCLASS_USB_GADGET_GENERIC
+
 #include <common.h>
 #include <dm.h>
 #include <dm/device-internal.h>
@@ -23,8 +25,11 @@ int usb_gadget_initialize(int index)
 		return 0;
 	ret = uclass_get_device_by_seq(UCLASS_USB_GADGET_GENERIC, index, &dev);
 	if (!dev || ret) {
-		pr_err("No USB device found\n");
-		return -ENODEV;
+		ret = uclass_get_device(UCLASS_USB_GADGET_GENERIC, index, &dev);
+		if (!dev || ret) {
+			pr_err("No USB device found\n");
+			return -ENODEV;
+		}
 	}
 	dev_array[index] = dev;
 	return 0;
@@ -42,7 +47,7 @@ int usb_gadget_release(int index)
 		dev_array[index] = NULL;
 	return ret;
 #else
-	return -ENOTSUPP;
+	return -ENOSYS;
 #endif
 }
 

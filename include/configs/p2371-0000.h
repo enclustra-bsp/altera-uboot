@@ -18,16 +18,10 @@
 #define CONFIG_TEGRA_ENABLE_UARTA
 
 /* Environment in eMMC, at the end of 2nd "boot sector" */
-#define CONFIG_SYS_MMC_ENV_DEV		0
-#define CONFIG_SYS_MMC_ENV_PART		2
-#define CONFIG_ENV_OFFSET		(-CONFIG_ENV_SIZE)
 
 /* SPI */
-#define CONFIG_SF_DEFAULT_MODE		SPI_MODE_0
-#define CONFIG_SF_DEFAULT_SPEED		24000000
 #define CONFIG_SPI_FLASH_SIZE		(4 << 20)
 
-#include "tegra-common-usb-gadget.h"
 #include "tegra-common-post.h"
 
 #endif /* _P2371_0000_H */

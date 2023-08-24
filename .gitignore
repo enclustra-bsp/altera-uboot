@@ -7,18 +7,23 @@
 #
 .*
 *.a
+*.asn1.[ch]
 *.bin
 *.cfgout
+*.cover
 *.dtb
+*.dtbo
 *.dtb.S
 *.elf
 *.exe
 *.gcda
 *.gcno
 *.i
+*.img
 *.lex.c
 *.lst
 *.mod.c
+*.mbx
 *.o
 *.o.*
 *.order
@@ -34,12 +39,13 @@
 #
 # Top-level generic files
 #
-fit-dtb.blob
+fit-dtb.blob*
 /MLO*
 /SPL*
 /System.map
 /u-boot*
 /boards.cfg
+/*.log
 
 #
 # git files that we don't want to ignore even it they are dot-files
@@ -89,11 +95,12 @@ GTAGS
 *~
 \#*#
 
-# Enclustra buildscripts related files
-postfetch.sh
-postbuild.sh
-*scr
+# Python cache
+__pycache__
 
-# gcc code coverage files
-*.gcda
-*.gcno
+# Python code coverage output (python3-coverage html)
+/htmlcov/
+
+# pylint files
+/pylint.cur
+/pylint.out/

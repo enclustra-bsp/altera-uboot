@@ -4,6 +4,7 @@
  */
 
 #include <common.h>
+#include <vsprintf.h>
 #include <asm/mmu.h>
 #include <asm/immap_85xx.h>
 #include <asm/processor.h>
@@ -13,9 +14,7 @@
 #include <asm/fsl_law.h>
 
 #ifdef CONFIG_SYS_DDR_RAW_TIMING
-#if	defined(CONFIG_P1020RDB_PROTO) || \
-	defined(CONFIG_TARGET_P1021RDB) || \
-	defined(CONFIG_TARGET_P1020UTM)
+#if	defined(CONFIG_P1020RDB_PROTO)
 /* Micron MT41J256M8_187E */
 dimm_params_t ddr_raw_timing = {
 	.n_ranks = 1,
@@ -145,8 +144,7 @@ dimm_params_t ddr_raw_timing = {
 	.refresh_rate_ps = 7800000,
 	.tfaw_ps = 37500,
 };
-#elif	defined(CONFIG_TARGET_P1024RDB) || \
-	defined(CONFIG_TARGET_P1025RDB)
+#elif	defined(CONFIG_TARGET_P1024RDB)
 /*
  * Samsung K4B2G0846C-HCH9
  * The following timing are for "downshift"
@@ -229,7 +227,7 @@ phys_size_t fixed_sdram(void)
 		.ddr_sdram_mode_2 = CONFIG_SYS_DDR_MODE_2,
 		.ddr_sdram_md_cntl = CONFIG_SYS_DDR_MODE_CONTROL,
 		.ddr_sdram_interval = CONFIG_SYS_DDR_INTERVAL,
-		.ddr_data_init = CONFIG_SYS_DDR_DATA_INIT,
+		.ddr_data_init = 0xdeadbeef, /* Poison value */
 		.ddr_sdram_clk_cntl = CONFIG_SYS_DDR_CLK_CTRL,
 		.ddr_init_addr = CONFIG_SYS_DDR_INIT_ADDR,
 		.ddr_init_ext_addr = CONFIG_SYS_DDR_INIT_EXT_ADDR,

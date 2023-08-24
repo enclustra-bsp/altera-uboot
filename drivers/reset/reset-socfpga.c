@@ -14,18 +14,62 @@
 
 #include <common.h>
 #include <dm.h>
+#include <log.h>
+#include <malloc.h>
+#include <dm/lists.h>
 #include <dm/of_access.h>
+#include <env.h>
 #include <reset-uclass.h>
+#include <wait_bit.h>
 #include <linux/bitops.h>
 #include <linux/io.h>
 #include <linux/sizes.h>
+#include <asm/arch/reset_manager.h>
 
-#define BANK_INCREMENT		4
-#define NR_BANKS		8
+#define BANK_INCREMENT					4
+#define NR_BANKS					8
+#define RSTMGR_PER0MODRST_USB31				BIT(4)
+#define RSTMGR_PER0MODRST_NAND				BIT(5)
+#define RSTMGR_PER0MODRST_DMA				BIT(16)
+#define RSTMGR_PER0MODRST_DMAIF				GENMASK(31,24)
+#define RSTMGR_PER0MODRST_USB31_NAND_DMA_DEASSERT	RSTMGR_PER0MODRST_USB31 \
+							| RSTMGR_PER0MODRST_NAND \
+							| RSTMGR_PER0MODRST_DMA \
+							| RSTMGR_PER0MODRST_DMAIF
 
 struct socfpga_reset_data {
-	void __iomem *membase;
+	void __iomem *modrst_base;
 };
+
+/*
+ * For compatibility with Kernels that don't support peripheral reset, this
+ * driver can keep the old behaviour of not asserting peripheral reset before
+ * starting the OS and deasserting all peripheral resets (enabling all
+ * peripherals).
+ *
+ * For that, the reset driver checks the environment variable
+ * "socfpga_legacy_reset_compat". If this variable is '1', perihperals are not
+ * reset again once taken out of reset and all peripherals in 'permodrst' are
+ * taken out of reset before booting into the OS.
+ * Note that this should be required for gen5 systems only that are running
+ * Linux kernels without proper peripheral reset support for all drivers used.
+ */
+static bool socfpga_reset_keep_enabled(void)
+{
+#if !defined(CONFIG_SPL_BUILD) || CONFIG_IS_ENABLED(ENV_SUPPORT)
+	const char *env_str;
+	long val;
+
+	env_str = env_get("socfpga_legacy_reset_compat");
+	if (env_str) {
+		val = simple_strtol(env_str, NULL, 0);
+		if (val == 1)
+			return true;
+	}
+#endif
+
+	return false;
+}
 
 static int socfpga_reset_assert(struct reset_ctl *reset_ctl)
 {
@@ -35,7 +79,7 @@ static int socfpga_reset_assert(struct reset_ctl *reset_ctl)
 	int bank = id / (reg_width * BITS_PER_BYTE);
 	int offset = id % (reg_width * BITS_PER_BYTE);
 
-	setbits_le32(data->membase + (bank * BANK_INCREMENT), BIT(offset));
+	setbits_le32(data->modrst_base + (bank * BANK_INCREMENT), BIT(offset));
 	return 0;
 }
 
@@ -47,29 +91,14 @@ static int socfpga_reset_deassert(struct reset_ctl *reset_ctl)
 	int bank = id / (reg_width * BITS_PER_BYTE);
 	int offset = id % (reg_width * BITS_PER_BYTE);
 
-	clrbits_le32(data->membase + (bank * BANK_INCREMENT), BIT(offset));
-	return 0;
-}
+	clrbits_le32(data->modrst_base + (bank * BANK_INCREMENT), BIT(offset));
 
-static int socfpga_reset_request(struct reset_ctl *reset_ctl)
-{
-	debug("%s(reset_ctl=%p) (dev=%p, id=%lu)\n", __func__,
-	      reset_ctl, reset_ctl->dev, reset_ctl->id);
-
-	return 0;
-}
-
-static int socfpga_reset_free(struct reset_ctl *reset_ctl)
-{
-	debug("%s(reset_ctl=%p) (dev=%p, id=%lu)\n", __func__, reset_ctl,
-	      reset_ctl->dev, reset_ctl->id);
-
-	return 0;
+	return wait_for_bit_le32(data->modrst_base + (bank * BANK_INCREMENT),
+				 BIT(offset),
+				 false, 500, false);
 }
 
 static const struct reset_ops socfpga_reset_ops = {
-	.request = socfpga_reset_request,
-	.free = socfpga_reset_free,
 	.rst_assert = socfpga_reset_assert,
 	.rst_deassert = socfpga_reset_deassert,
 };
@@ -77,14 +106,55 @@ static const struct reset_ops socfpga_reset_ops = {
 static int socfpga_reset_probe(struct udevice *dev)
 {
 	struct socfpga_reset_data *data = dev_get_priv(dev);
-	const void *blob = gd->fdt_blob;
-	int node = dev_of_offset(dev);
 	u32 modrst_offset;
+	void __iomem *membase;
 
-	data->membase = devfdt_get_addr_ptr(dev);
+	membase = dev_read_addr_ptr(dev);
 
-	modrst_offset = fdtdec_get_int(blob, node, "altr,modrst-offset", 0x10);
-	data->membase += modrst_offset;
+	modrst_offset = dev_read_u32_default(dev, "altr,modrst-offset", 0x10);
+	data->modrst_base = membase + modrst_offset;
+
+	return 0;
+}
+
+static int socfpga_reset_remove(struct udevice *dev)
+{
+	struct socfpga_reset_data *data = dev_get_priv(dev);
+
+/*
+ * TODO: This is temporary solution for NAND/DMA/USB3.1 deaasert.
+ * When NAND/DMA/USB3.1 driver is ready, the deassert shall be done
+ * from NAND/DMA/USB3.1 driver.
+ */
+#if defined(CONFIG_TARGET_SOCFPGA_AGILEX5)
+	clrbits_le32(socfpga_get_rstmgr_addr() + RSTMGR_SOC64_PER0MODRST, \
+		     RSTMGR_PER0MODRST_USB31_NAND_DMA_DEASSERT);
+#endif
+
+	if (socfpga_reset_keep_enabled()) {
+		puts("Deasserting all peripheral resets\n");
+		writel(0, data->modrst_base + 4);
+#if defined(CONFIG_TARGET_SOCFPGA_ARRIA10)
+		writel(0, data->modrst_base + 8);
+#endif
+	}
+
+	return 0;
+}
+
+static int socfpga_reset_bind(struct udevice *dev)
+{
+	int ret;
+	struct udevice *sys_child;
+
+	/*
+	 * The sysreset driver does not have a device node, so bind it here.
+	 * Bind it to the node, too, so that it can get its base address.
+	 */
+	ret = device_bind_driver_to_node(dev, "socfpga_sysreset", "sysreset",
+					 dev_ofnode(dev), &sys_child);
+	if (ret)
+		debug("Warning: No sysreset driver: ret=%d\n", ret);
 
 	return 0;
 }
@@ -98,7 +168,10 @@ U_BOOT_DRIVER(socfpga_reset) = {
 	.name = "socfpga-reset",
 	.id = UCLASS_RESET,
 	.of_match = socfpga_reset_match,
+	.bind = socfpga_reset_bind,
 	.probe = socfpga_reset_probe,
-	.priv_auto_alloc_size = sizeof(struct socfpga_reset_data),
+	.priv_auto	= sizeof(struct socfpga_reset_data),
 	.ops = &socfpga_reset_ops,
+	.remove = socfpga_reset_remove,
+	.flags	= DM_FLAG_OS_PREPARE,
 };

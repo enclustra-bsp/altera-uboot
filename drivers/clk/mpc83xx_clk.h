@@ -17,6 +17,7 @@
  * @RAT_2_5_TO_1: Ratio 2.5:1
  * @RAT_3_TO_1:   Ratio 3:1
  */
+#include <linux/bitops.h>
 enum ratio {
 	RAT_UNK,
 	RAT_BYP,
@@ -316,7 +317,7 @@ static inline u32 get_pci_sync_in(immap_t *im)
 	u8 clkin_div;
 
 	clkin_div = (get_spmr(im) & SPMR_CKID) >> SPMR_CKID_SHIFT;
-	return CONFIG_SYS_CLK_FREQ / (1 + clkin_div);
+	return get_board_sys_clk() / (1 + clkin_div);
 }
 
 /**
@@ -330,7 +331,7 @@ static inline u32 get_csb_clk(immap_t *im)
 	u8 spmf;
 
 	spmf = (get_spmr(im) & SPMR_SPMF) >> SPMR_SPMF_SHIFT;
-	return CONFIG_SYS_CLK_FREQ * spmf;
+	return get_board_sys_clk() * spmf;
 }
 
 /**

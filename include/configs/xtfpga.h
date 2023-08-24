@@ -16,15 +16,6 @@
  * differences.
  */
 
-/*=====================*/
-/* Board and Processor */
-/*=====================*/
-
-#define CONFIG_XTFPGA
-
-/* FPGA CPU freq after init */
-#define CONFIG_SYS_CLK_FREQ		(gd->cpu_clk)
-
 /*===================*/
 /* RAM Layout        */
 /*===================*/
@@ -59,20 +50,8 @@
 #define CONFIG_SYS_SDRAM_BASE		MEMADDR(0x00000000)
 
 /* Lx60 can only map 128kb memory (instead of 256kb) when running under OCD */
-#ifdef CONFIG_XTFPGA_LX60
-# define CONFIG_SYS_MONITOR_LEN		0x00020000	/* 128KB */
-#else
-# define CONFIG_SYS_MONITOR_LEN		0x00040000	/* 256KB */
-#endif
-
-#define CONFIG_SYS_MALLOC_LEN		(256 << 10)	/* heap  256KB */
-
-/* Linux boot param area in RAM (used only when booting linux) */
-#define CONFIG_SYS_BOOTPARAMS_LEN	(64  << 10)
 
 /* Memory test is destructive so default must not overlap vectors or U-Boot*/
-#define CONFIG_SYS_MEMTEST_START	MEMADDR(0x01000000)
-#define CONFIG_SYS_MEMTEST_END		MEMADDR(0x02000000)
 
 /* Load address for stand-alone applications.
  * MEMADDR cannot be used here, because the definition needs to be
@@ -92,35 +71,21 @@
 
 #if defined(CONFIG_MAX_MEM_MAPPED) && \
 	CONFIG_MAX_MEM_MAPPED < CONFIG_SYS_SDRAM_SIZE
-#define CONFIG_SYS_MEMORY_SIZE		CONFIG_MAX_MEM_MAPPED
-#else
-#define CONFIG_SYS_MEMORY_SIZE		CONFIG_SYS_SDRAM_SIZE
-#endif
-
 #define XTENSA_SYS_TEXT_ADDR		\
-	(MEMADDR(CONFIG_SYS_MEMORY_SIZE) - CONFIG_SYS_MONITOR_LEN)
-
-/* Used by tftpboot; env var 'loadaddr' */
-#define CONFIG_SYS_LOAD_ADDR		MEMADDR(0x02000000)
+	(MEMADDR(CONFIG_MAX_MEM_MAPPED) - CONFIG_SYS_MONITOR_LEN)
+#else
+#define XTENSA_SYS_TEXT_ADDR		\
+	(MEMADDR(CONFIG_SYS_SDRAM_SIZE) - CONFIG_SYS_MONITOR_LEN)
+#endif
 
 /*==============================*/
 /* U-Boot general configuration */
 /*==============================*/
 
-#define CONFIG_BOARD_POSTCLK_INIT
-
-#define CONFIG_BOOTFILE			"uImage"
 	/* Console I/O Buffer Size  */
-#define CONFIG_SYS_CBSIZE		1024
-	/* Boot Argument Buffer Size */
-#define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
-
 /*==============================*/
 /* U-Boot autoboot configuration */
 /*==============================*/
-
-#define CONFIG_MX_CYCLIC
-#define CONFIG_SHOW_BOOT_PROGRESS
 
 
 /*=========================================*/
@@ -133,18 +98,6 @@
  * Some of the FPGA registers are broken down into bitfields described by
  * SHIFT left amount and field WIDTH (bits), and also by a bitMASK.
  */
-
-/* Date of FPGA bitstream build in binary coded decimal (BCD) */
-#define CONFIG_SYS_FPGAREG_DATE		IOADDR(0x0D020000)
-#define FPGAREG_MTH_SHIFT		24		/* BCD month 1..12 */
-#define FPGAREG_MTH_WIDTH		8
-#define FPGAREG_MTH_MASK		0xFF000000
-#define FPGAREG_DAY_SHIFT		16		/* BCD day 1..31 */
-#define FPGAREG_DAY_WIDTH		8
-#define FPGAREG_DAY_MASK		0x00FF0000
-#define FPGAREG_YEAR_SHIFT		0		/* BCD year 2001..9999*/
-#define FPGAREG_YEAR_WIDTH		16
-#define FPGAREG_YEAR_MASK		0x0000FFFF
 
 /* FPGA core clock frequency in Hz (also input to UART) */
 #define CONFIG_SYS_FPGAREG_FREQ	IOADDR(0x0D020004)	/* CPU clock frequency*/
@@ -179,8 +132,7 @@
 #define CONFIG_SYS_NS16550_COM1		IOADDR(0x0D050020) /* Base address */
 
 /* Input clk to NS16550 (in Hz; the SYS_CLK_FREQ is in kHz) */
-#define CONFIG_SYS_NS16550_CLK		CONFIG_SYS_CLK_FREQ
-#define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
+#define CONFIG_SYS_NS16550_CLK		get_board_sys_clk()
 
 /*======================*/
 /* Ethernet Driver Info */
@@ -194,39 +146,25 @@
 /* Flash & Environment */
 /*=====================*/
 
-#define CONFIG_SYS_FLASH_CFI_WIDTH	FLASH_CFI_16BIT
-#define CONFIG_SYS_MAX_FLASH_BANKS	1
 #ifdef CONFIG_XTFPGA_LX60
 # define CONFIG_SYS_FLASH_SIZE		0x0040000	/* 4MB */
-# define CONFIG_SYS_FLASH_SECT_SZ	0x10000		/* block size 64KB */
 # define CONFIG_SYS_FLASH_PARMSECT_SZ	0x2000		/* param size  8KB */
 # define CONFIG_SYS_FLASH_BASE		IOADDR(0x08000000)
-# define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_FLASH_BASE
 #elif defined(CONFIG_XTFPGA_KC705)
 # define CONFIG_SYS_FLASH_SIZE		0x8000000	/* 128MB */
-# define CONFIG_SYS_FLASH_SECT_SZ	0x20000		/* block size 128KB */
 # define CONFIG_SYS_FLASH_PARMSECT_SZ	0x8000		/* param size 32KB */
 # define CONFIG_SYS_FLASH_BASE		IOADDR(0x00000000)
-# define CONFIG_SYS_MONITOR_BASE	IOADDR(0x06000000)
 #else
 # define CONFIG_SYS_FLASH_SIZE		0x1000000	/* 16MB */
-# define CONFIG_SYS_FLASH_SECT_SZ	0x20000		/* block size 128KB */
 # define CONFIG_SYS_FLASH_PARMSECT_SZ	0x8000		/* param size 32KB */
 # define CONFIG_SYS_FLASH_BASE		IOADDR(0x08000000)
-# define CONFIG_SYS_MONITOR_BASE	CONFIG_SYS_FLASH_BASE
 #endif
-#define CONFIG_SYS_MAX_FLASH_SECT	\
-	(CONFIG_SYS_FLASH_SECT_SZ/CONFIG_SYS_FLASH_PARMSECT_SZ + \
-	 CONFIG_SYS_FLASH_SIZE/CONFIG_SYS_FLASH_SECT_SZ - 1)
 
 /*
  * Put environment in top block (64kB)
  * Another option would be to put env. in 2nd param block offs 8KB, size 8KB
  */
-#define CONFIG_ENV_OFFSET    (CONFIG_SYS_FLASH_SIZE - CONFIG_SYS_FLASH_SECT_SZ)
-#define CONFIG_ENV_SIZE	     CONFIG_SYS_FLASH_SECT_SZ
 
 /* print 'E' for empty sector on flinfo */
-#define CONFIG_SYS_FLASH_EMPTY_INFO
 
 #endif /* __CONFIG_H */

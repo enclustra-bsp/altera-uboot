@@ -10,13 +10,14 @@
 
 #include <common.h>
 #include <dm.h>
-#include <environment.h>
+#include <env.h>
 #include <i2c.h>
+#include <init.h>
 #include <net.h>
-#include <netdev.h>
 #include <spi.h>
 #include <spi_flash.h>
 #include <asm/arch/hardware.h>
+#include <asm/global_data.h>
 #include <asm/ti-common/davinci_nand.h>
 #include <asm/arch/emac_defs.h>
 #include <asm/arch/pinmux_defs.h>
@@ -49,33 +50,6 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define CFG_MAC_ADDR_OFFSET	(flash->size - SZ_64K)
 
-#ifdef CONFIG_SPL_BUILD
-#include <ns16550.h>
-#include <dm/platform_data/spi_davinci.h>
-
-static const struct ns16550_platdata da850evm_serial = {
-	.base = DAVINCI_UART2_BASE,
-	.reg_shift = 2,
-	.clock = 150000000,
-	.fcr = UART_FCR_DEFVAL,
-};
-
-U_BOOT_DEVICE(da850evm_uart) = {
-	.name = "ns16550_serial",
-	.platdata = &da850evm_serial,
-};
-
-static const struct davinci_spi_platdata davinci_spi_data = {
-        .regs = (struct davinci_spi_regs *)0x01f0e000,
-        .num_cs = 4,
-};
-
-U_BOOT_DEVICE(davinci_spi) = {
-        .name = "davinci_spi",
-        .platdata = &davinci_spi_data,
-};
-#endif
-
 #ifdef CONFIG_MAC_ADDR_IN_SPIFLASH
 static int get_mac_addr(u8 *addr)
 {
@@ -89,7 +63,7 @@ static int get_mac_addr(u8 *addr)
 		return -1;
 	}
 
-	ret = spi_flash_read(flash, (CFG_MAC_ADDR_OFFSET) + 1, 7, addr);
+	ret = spi_flash_read(flash, (CFG_MAC_ADDR_OFFSET), 6, addr);
 	if (ret) {
 		printf("Error - unable to read MAC address from SPI flash.\n");
 		return -1;
@@ -155,18 +129,11 @@ int misc_init_r(void)
 {
 	dspwake();
 
-#if defined(CONFIG_MAC_ADDR_IN_SPIFLASH) || defined(CONFIG_MAC_ADDR_IN_EEPROM)
-
-	uchar env_enetaddr[6];
-	int enetaddr_found;
+#if defined(CONFIG_MAC_ADDR_IN_SPIFLASH)
+	uchar env_enetaddr[6], buff[6];
+	int enetaddr_found, spi_mac_read;
 
 	enetaddr_found = eth_env_get_enetaddr("ethaddr", env_enetaddr);
-
-#endif
-
-#ifdef CONFIG_MAC_ADDR_IN_SPIFLASH
-	int spi_mac_read;
-	uchar buff[6];
 
 	spi_mac_read = get_mac_addr(buff);
 	buff[0] = 0;
@@ -199,59 +166,12 @@ int misc_init_r(void)
 					"with the MAC address in the environment\n");
 		printf("Default using MAC address from environment\n");
 	}
-
-#elif defined(CONFIG_MAC_ADDR_IN_EEPROM)
-	uint8_t enetaddr[8];
-	int eeprom_mac_read;
-
-	/* Read Ethernet MAC address from EEPROM */
-	eeprom_mac_read = dvevm_read_mac_address(enetaddr);
-
-	/*
-	 * MAC address not present in the environment
-	 * try and read the MAC address from EEPROM flash
-	 * and set it.
-	 */
-	if (!enetaddr_found) {
-		if (eeprom_mac_read)
-			/* Set Ethernet MAC address from EEPROM */
-			davinci_sync_env_enetaddr(enetaddr);
-	} else {
-		/*
-		 * MAC address present in environment compare it with
-		 * the MAC address in EEPROM and warn on mismatch
-		 */
-		if (eeprom_mac_read && memcmp(enetaddr, env_enetaddr, 6))
-			printf("Warning: MAC address in EEPROM don't match "
-					"with the MAC address in the environment\n");
-		printf("Default using MAC address from environment\n");
-	}
-
 #endif
 	return 0;
 }
 
-#ifndef CONFIG_DM_MMC
-#ifdef CONFIG_MMC_DAVINCI
-static struct davinci_mmc mmc_sd0 = {
-	.reg_base = (struct davinci_mmc_regs *)DAVINCI_MMC_SD0_BASE,
-	.host_caps = MMC_MODE_4BIT,     /* DA850 supports only 4-bit SD/MMC */
-	.voltages = MMC_VDD_32_33 | MMC_VDD_33_34,
-	.version = MMC_CTLR_VERSION_2,
-};
-
-int board_mmc_init(bd_t *bis)
-{
-	mmc_sd0.input_clk = clk_get(DAVINCI_MMCSD_CLKID);
-
-	/* Add slot-0 to mmc subsystem */
-	return davinci_mmc_init(bis, &mmc_sd0);
-}
-#endif
-#endif
-
 static const struct pinmux_config gpio_pins[] = {
-#ifdef CONFIG_USE_NOR
+#ifdef CONFIG_MTD_NOR_FLASH
 	/* GP0[11] is required for NOR to work on Rev 3 EVMs */
 	{ pinmux(0), 8, 4 },	/* GP0[11] */
 #endif
@@ -281,7 +201,7 @@ const struct pinmux_resource pinmuxes[] = {
 	PINMUX_ITEM(emifa_pins_cs3),
 	PINMUX_ITEM(emifa_pins_cs4),
 	PINMUX_ITEM(emifa_pins_nand),
-#elif defined(CONFIG_USE_NOR)
+#elif defined(CONFIG_MTD_NOR_FLASH)
 	PINMUX_ITEM(emifa_pins_cs2),
 	PINMUX_ITEM(emifa_pins_nor),
 #endif
@@ -312,6 +232,7 @@ const int lpsc_size = ARRAY_SIZE(lpsc);
 
 #define REV_AM18X_EVM		0x100
 
+#ifdef CONFIG_REVISION_TAG
 /*
  * get_board_rev() - setup to pass kernel board revision information
  * Returns:
@@ -329,7 +250,7 @@ u32 get_board_rev(void)
 
 	s = env_get("maxcpuclk");
 	if (s)
-		maxcpuclk = simple_strtoul(s, NULL, 10);
+		maxcpuclk = dectoul(s, NULL);
 
 	if (maxcpuclk >= 456000000)
 		rev = 3;
@@ -337,11 +258,9 @@ u32 get_board_rev(void)
 		rev = 2;
 	else if (maxcpuclk >= 372000000)
 		rev = 1;
-#ifdef CONFIG_DA850_AM18X_EVM
-	rev |= REV_AM18X_EVM;
-#endif
 	return rev;
 }
+#endif
 
 int board_early_init_f(void)
 {
@@ -390,11 +309,7 @@ int board_init(void)
 		 DAVINCI_SYSCFG_SUSPSRC_UART2),
 	       &davinci_syscfg_regs->suspsrc);
 
-	/* configure pinmux settings */
-	if (davinci_configure_pin_mux_items(pinmuxes, ARRAY_SIZE(pinmuxes)))
-		return 1;
-
-#ifdef CONFIG_USE_NOR
+#ifdef CONFIG_MTD_NOR_FLASH
 	/* Set the GPIO direction as output */
 	clrbits_le32((u32 *)GPIO_BANK0_REG_DIR_ADDR, (0x01 << 11));
 
@@ -413,11 +328,6 @@ int board_init(void)
 #ifdef CONFIG_DRIVER_TI_EMAC
 	davinci_emac_mii_mode_sel(HAS_RMII);
 #endif /* CONFIG_DRIVER_TI_EMAC */
-
-	/* enable the console UART */
-	writel((DAVINCI_UART_PWREMU_MGMT_FREE | DAVINCI_UART_PWREMU_MGMT_URRST |
-		DAVINCI_UART_PWREMU_MGMT_UTRST),
-	       &davinci_uart2_ctrl_regs->pwremu_mgmt);
 
 	return 0;
 }
@@ -511,18 +421,13 @@ int rmii_hw_init(void)
 /*
  * Initializes on-board ethernet controllers.
  */
-int board_eth_init(bd_t *bis)
+int board_eth_init(struct bd_info *bis)
 {
 #ifdef CONFIG_DRIVER_TI_EMAC_USE_RMII
 	/* Select RMII fucntion through the expander */
 	if (rmii_hw_init())
 		printf("RMII hardware init failed!!!\n");
 #endif
-	if (!davinci_emac_initialize()) {
-		printf("Error: Ethernet init failed!\n");
-		return -1;
-	}
-
 	return 0;
 }
 #endif /* CONFIG_DRIVER_TI_EMAC */

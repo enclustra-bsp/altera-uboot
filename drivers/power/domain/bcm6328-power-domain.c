@@ -5,8 +5,10 @@
 
 #include <common.h>
 #include <dm.h>
+#include <malloc.h>
 #include <power-domain-uclass.h>
 #include <asm/io.h>
+#include <linux/bitops.h>
 
 #define MAX_DOMAINS	32
 
@@ -19,11 +21,6 @@ static int bcm6328_power_domain_request(struct power_domain *power_domain)
 	if (power_domain->id >= MAX_DOMAINS)
 		return -EINVAL;
 
-	return 0;
-}
-
-static int bcm6328_power_domain_free(struct power_domain *power_domain)
-{
 	return 0;
 }
 
@@ -62,7 +59,6 @@ static const struct udevice_id bcm6328_power_domain_ids[] = {
 };
 
 struct power_domain_ops bcm6328_power_domain_ops = {
-	.free = bcm6328_power_domain_free,
 	.off = bcm6328_power_domain_off,
 	.on = bcm6328_power_domain_on,
 	.request = bcm6328_power_domain_request,
@@ -73,6 +69,6 @@ U_BOOT_DRIVER(bcm6328_power_domain) = {
 	.id = UCLASS_POWER_DOMAIN,
 	.of_match = bcm6328_power_domain_ids,
 	.ops = &bcm6328_power_domain_ops,
-	.priv_auto_alloc_size = sizeof(struct bcm6328_power_domain),
+	.priv_auto	= sizeof(struct bcm6328_power_domain),
 	.probe = bcm6328_power_domain_probe,
 };

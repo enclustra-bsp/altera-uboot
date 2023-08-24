@@ -4,6 +4,8 @@
  */
 
 #include <common.h>
+#include <init.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/at91sam9x5_matrix.h>
 #include <asm/arch/at91sam9_smc.h>
@@ -85,7 +87,7 @@ static void at91sam9x5ek_nand_hw_init(void)
 #ifdef CONFIG_BOARD_LATE_INIT
 int board_late_init(void)
 {
-#ifdef CONFIG_DM_VIDEO
+#ifdef CONFIG_VIDEO
 	at91_video_show_board_info();
 #endif
 	at91_prepare_cpu_var();
@@ -103,9 +105,6 @@ void board_debug_uart_init(void)
 #ifdef CONFIG_BOARD_EARLY_INIT_F
 int board_early_init_f(void)
 {
-#ifdef CONFIG_DEBUG_UART
-	debug_uart_init();
-#endif
 	return 0;
 }
 #endif

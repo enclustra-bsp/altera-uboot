@@ -5,8 +5,10 @@
  */
 
 #include <common.h>
+#include <env.h>
 #include <hwconfig.h>
 #include <fsl_ddr_sdram.h>
+#include <log.h>
 
 #include <fsl_ddr.h>
 #if defined(CONFIG_FSL_LSCH2) || defined(CONFIG_FSL_LSCH3) || \
@@ -759,7 +761,9 @@ unsigned int populate_memctl_options(const common_timing_params_t *common_dimm,
 	 * Extract hwconfig from environment since we have not properly setup
 	 * the environment but need it for ddr config params
 	 */
+#if CONFIG_IS_ENABLED(ENV_SUPPORT)
 	if (env_get_f("hwconfig", buf, sizeof(buf)) < 0)
+#endif
 		buf[0] = '\0';
 
 #if defined(CONFIG_SYS_FSL_DDR3) || \
@@ -1406,7 +1410,9 @@ int fsl_use_spd(void)
 	 * Extract hwconfig from environment since we have not properly setup
 	 * the environment but need it for ddr config params
 	 */
+#if CONFIG_IS_ENABLED(ENV_SUPPORT)
 	if (env_get_f("hwconfig", buf, sizeof(buf)) < 0)
+#endif
 		buf[0] = '\0';
 
 	/* if hwconfig is not enabled, or "sdram" is not defined, use spd */

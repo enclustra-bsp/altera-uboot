@@ -6,17 +6,29 @@
 #include <common.h>
 #include <errno.h>
 #include <fdtdec.h>
+#include <init.h>
+#include <log.h>
+#include <hang.h>
 #include <malloc.h>
 #include <wait_bit.h>
 #include <watchdog.h>
+#include <asm/cache.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/fpga_manager.h>
 #include <asm/arch/misc.h>
 #include <asm/arch/reset_manager.h>
 #include <asm/arch/sdram.h>
+#include <linux/bitops.h>
+#include <linux/delay.h>
 #include <linux/kernel.h>
+#include <linux/sizes.h>
+
+#include "sdram_soc32.h"
 
 DECLARE_GLOBAL_DATA_PTR;
+
+#define PGTABLE_OFF	0x4000
 
 static void sdram_mmr_init(void);
 static u64 sdram_size_calc(void);
@@ -31,7 +43,6 @@ static u64 sdram_size_calc(void);
 #define DDR_REG_CORE2SEQ        0xFFD05078
 #define DDR_READ_LATENCY_DELAY	40
 #define DDR_SIZE_2GB_HEX	0x80000000
-#define DDR_MAX_TRIES		0x00100000
 
 #define IO48_MMR_DRAMSTS	0xFFCFA0EC
 #define IO48_MMR_NIOS2_RESERVE0	0xFFCFA110
@@ -41,6 +52,8 @@ static u64 sdram_size_calc(void);
 #define SEQ2CORE_MASK		0xF
 #define CORE2SEQ_INT_REQ	0xF
 #define SEQ2CORE_INT_RESP_BIT	3
+
+#define PGTABLE_OFF	0x4000
 
 static const struct socfpga_ecc_hmc *socfpga_ecc_hmc_base =
 		(void *)SOCFPGA_SDR_ADDRESS;
@@ -103,52 +116,18 @@ static int match_ddr_conf(u32 ddr_conf)
 	return 0;
 }
 
-/* Check whether SDRAM is successfully Calibrated */
-static int is_sdram_cal_success(void)
-{
-	return readl(&socfpga_ecc_hmc_base->ddrcalstat);
-}
-
-static unsigned char ddr_get_bit(u32 ereg, unsigned char bit)
-{
-	u32 reg = readl(ereg);
-
-	return (reg & BIT(bit)) ? 1 : 0;
-}
-
-static unsigned char ddr_wait_bit(u32 ereg, u32 bit,
-			   u32 expected, u32 timeout_usec)
-{
-	u32 tmr;
-
-	for (tmr = 0; tmr < timeout_usec; tmr += 100) {
-		udelay(100);
-		WATCHDOG_RESET();
-		if (ddr_get_bit(ereg, bit) == expected)
-			return 0;
-	}
-
-	return 1;
-}
-
 static int emif_clear(void)
 {
-	u32 i = DDR_MAX_TRIES;
-	u8 ret = 0;
-
 	writel(0, DDR_REG_CORE2SEQ);
 
-	do {
-		ret = !wait_for_bit_le32((u32 *)DDR_REG_SEQ2CORE,
-				   SEQ2CORE_MASK, 1, 50, 0);
-	} while (ret && (--i > 0));
-
-	return !i;
+	return wait_for_bit_le32((u32 *)DDR_REG_SEQ2CORE,
+				SEQ2CORE_MASK, 0, 1000, 0);
 }
 
 static int emif_reset(void)
 {
 	u32 c2s, s2c;
+	int ret;
 
 	c2s = readl(DDR_REG_CORE2SEQ);
 	s2c = readl(DDR_REG_SEQ2CORE);
@@ -159,21 +138,28 @@ static int emif_reset(void)
 	     readl(IO48_MMR_NIOS2_RESERVE2),
 	     readl(IO48_MMR_DRAMSTS));
 
-	if ((s2c & SEQ2CORE_MASK) && emif_clear()) {
-		debug("failed emif_clear()\n");
-		return -EPERM;
+	if (s2c & SEQ2CORE_MASK) {
+		ret = emif_clear();
+		if (ret) {
+			debug("failed emif_clear()\n");
+			return -EPERM;
+		}
 	}
 
 	writel(CORE2SEQ_INT_REQ, DDR_REG_CORE2SEQ);
 
-	if (ddr_wait_bit(DDR_REG_SEQ2CORE, SEQ2CORE_INT_RESP_BIT, 0, 1000000)) {
+	ret = wait_for_bit_le32((u32 *)DDR_REG_SEQ2CORE,
+				SEQ2CORE_INT_RESP_BIT, false, 1000, false);
+	if (ret) {
 		debug("emif_reset failed to see interrupt acknowledge\n");
-		return -EPERM;
-	} else {
-		debug("emif_reset interrupt acknowledged\n");
+		emif_clear();
+		return ret;
 	}
 
-	if (emif_clear()) {
+	mdelay(1);
+
+	ret = emif_clear();
+	if (ret) {
 		debug("emif_clear() failed\n");
 		return -EPERM;
 	}
@@ -189,54 +175,29 @@ static int emif_reset(void)
 
 static int ddr_setup(void)
 {
-	int i, j, ddr_setup_complete = 0;
+	int i, ret;
 
-	/* Try 3 times to do a calibration */
-	for (i = 0; (i < 3) && !ddr_setup_complete; i++) {
-		WATCHDOG_RESET();
+	/* Try 32 times to do a calibration */
+	for (i = 0; i < 32; i++) {
+		mdelay(500);
+		ret = wait_for_bit_le32(&socfpga_ecc_hmc_base->ddrcalstat,
+					BIT(0), true, 500, false);
+		if (!ret)
+			return 0;
 
-		/* A delay to wait for calibration bit to set */
-		for (j = 0; (j < 10) && !ddr_setup_complete; j++) {
-			mdelay(500);
-			ddr_setup_complete = is_sdram_cal_success();
-		}
-
-		if (!ddr_setup_complete)
-			if (emif_reset())
-				puts("Error: Failed to reset EMIF\n");
+		ret = emif_reset();
+		if (ret)
+			puts("Error: Failed to reset EMIF\n");
 	}
 
-	/* After 3 times trying calibration */
-	if (!ddr_setup_complete) {
-		puts("Error: Could Not Calibrate SDRAM\n");
-		return -EPERM;
-	}
-
-	return 0;
+	puts("Error: Could Not Calibrate SDRAM\n");
+	return -EPERM;
 }
 
 static int sdram_is_ecc_enabled(void)
 {
 	return !!(readl(&socfpga_ecc_hmc_base->eccctrl) &
 		  ALT_ECC_HMC_OCP_ECCCTL_ECC_EN_SET_MSK);
-}
-
-/* Initialize SDRAM ECC bits to avoid false DBE */
-static void sdram_init_ecc_bits(u32 size)
-{
-	icache_enable();
-
-	memset(0, 0, 0x8000);
-	gd->arch.tlb_addr = 0x4000;
-	gd->arch.tlb_size = PGTABLE_SIZE;
-
-	dcache_enable();
-
-	printf("DDRCAL: Scrubbing ECC RAM (%i MiB).\n", size >> 20);
-	memset((void *)0x8000, 0, size - 0x8000);
-	flush_dcache_all();
-	printf("DDRCAL: Scrubbing ECC RAM done.\n");
-	dcache_disable();
 }
 
 /* Function to startup the SDRAM*/
@@ -270,7 +231,7 @@ static u64 sdram_size_calc(void)
 	size *= (2 << (readl(&socfpga_ecc_hmc_base->ddrioctrl) &
 		       ALT_ECC_HMC_OCP_DDRIOCTRL_IO_SIZE_MSK));
 
-	debug("SDRAM size=%llu", size);
+	debug("SDRAM size=%llu\n", size);
 
 	return size;
 }
@@ -304,7 +265,7 @@ static void sdram_mmr_init(void)
 	 *	bit[9:6] = Minor Release #
 	 *	bit[14:10] = Major Release #
 	 */
-	if ((socfpga_io48_mmr_base->niosreserve1 >> 6) & 0x1FF) {
+	if ((readl(&socfpga_io48_mmr_base->niosreserve1) >> 6) & 0x1FF) {
 		update_value = readl(&socfpga_io48_mmr_base->niosreserve0);
 		writel(((update_value & 0xFF) >> 5),
 		       &socfpga_ecc_hmc_base->ddrioctrl);
@@ -394,7 +355,7 @@ static void sdram_mmr_init(void)
 			caltim0_cfg_act_to_rdwr -
 			(ctrlcfg0_cfg_ctrl_burst_len >> 2));
 
-	io48_value = ((((socfpga_io48_mmr_base->dramtiming0 &
+	io48_value = ((((readl(&socfpga_io48_mmr_base->dramtiming0) &
 		      ALT_IO48_DRAMTIME_MEM_READ_LATENCY_MASK) + 2 + 15 +
 		      (ctrlcfg0_cfg_ctrl_burst_len >> 1)) >> 1) -
 		      /* Up to here was in memory cycles so divide by 2 */
@@ -424,7 +385,7 @@ static void sdram_mmr_init(void)
 		&socfpga_noc_ddr_scheduler_base->ddr_t_main_scheduler_ddrmode);
 
 	/* Configure the read latency [0xFFD12414] */
-	writel(((socfpga_io48_mmr_base->dramtiming0 &
+	writel(((readl(&socfpga_io48_mmr_base->dramtiming0) &
 		ALT_IO48_DRAMTIME_MEM_READ_LATENCY_MASK) >> 1) +
 		DDR_READ_LATENCY_DELAY,
 		&socfpga_noc_ddr_scheduler_base->
@@ -504,7 +465,6 @@ const struct firewall_entry firewall_table[] = {
 	},
 	{
 		"mpu1",
-		SOCFPGA_SDR_FIREWALL_MPU_FPGA_ADDRESS +
 		SOCFPGA_SDR_FIREWALL_MPU_FPGA_ADDRESS_OFFSET(mpuregion1addr),
 		SOCFPGA_SDR_FIREWALL_MPU_FPGA_ADDRESS_OFFSET(enable),
 		ALT_NOC_FW_DDR_SCR_EN_MPUREG1EN_SET_MSK
@@ -697,9 +657,25 @@ static int of_sdram_firewall_setup(const void *blob)
 	return 0;
 }
 
+static void sdram_size_check(void)
+{
+	phys_size_t ram_check = 0;
+
+	debug("DDR: Running SDRAM size sanity check\n");
+
+	ram_check = get_ram_size((long *)gd->bd->bi_dram[0].start,
+				 gd->bd->bi_dram[0].size);
+	if (ram_check != gd->bd->bi_dram[0].size) {
+		puts("DDR: SDRAM size check failed!\n");
+		hang();
+	}
+
+	debug("DDR: SDRAM size check passed!\n");
+}
+
 int ddr_calibration_sequence(void)
 {
-	WATCHDOG_RESET();
+	schedule();
 
 	/* Check to see if SDRAM cal was success */
 	if (sdram_startup()) {
@@ -709,7 +685,7 @@ int ddr_calibration_sequence(void)
 
 	puts("DDRCAL: Success\n");
 
-	WATCHDOG_RESET();
+	schedule();
 
 	/* initialize the MMR register */
 	sdram_mmr_init();
@@ -732,11 +708,26 @@ int ddr_calibration_sequence(void)
 	/* setup the dram info within bd */
 	dram_init_banksize();
 
+	if (gd->ram_size != gd->bd->bi_dram[0].size) {
+		printf("DDR: Warning: DRAM size from device tree (%ld MiB)\n",
+		       gd->bd->bi_dram[0].size >> 20);
+		printf(" mismatch with hardware (%ld MiB).\n",
+		       gd->ram_size >> 20);
+	}
+
+	if (gd->bd->bi_dram[0].size > gd->ram_size) {
+		printf("DDR: Error: DRAM size from device tree is greater\n");
+		printf(" than hardware size.\n");
+		hang();
+	}
+
 	if (of_sdram_firewall_setup(gd->fdt_blob))
 		puts("FW: Error Configuring Firewall\n");
 
 	if (sdram_is_ecc_enabled())
-		sdram_init_ecc_bits(gd->ram_size);
+		sdram_init_ecc_bits();
+
+	sdram_size_check();
 
 	return 0;
 }

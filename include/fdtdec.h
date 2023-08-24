@@ -23,15 +23,24 @@
  */
 typedef phys_addr_t fdt_addr_t;
 typedef phys_size_t fdt_size_t;
+
+#define FDT_SIZE_T_NONE (-1U)
+
 #ifdef CONFIG_PHYS_64BIT
-#define FDT_ADDR_T_NONE (-1U)
+#define FDT_ADDR_T_NONE ((ulong)(-1))
+
 #define fdt_addr_to_cpu(reg) be64_to_cpu(reg)
 #define fdt_size_to_cpu(reg) be64_to_cpu(reg)
+#define cpu_to_fdt_addr(reg) cpu_to_be64(reg)
+#define cpu_to_fdt_size(reg) cpu_to_be64(reg)
 typedef fdt64_t fdt_val_t;
 #else
 #define FDT_ADDR_T_NONE (-1U)
+
 #define fdt_addr_to_cpu(reg) be32_to_cpu(reg)
 #define fdt_size_to_cpu(reg) be32_to_cpu(reg)
+#define cpu_to_fdt_addr(reg) cpu_to_be32(reg)
+#define cpu_to_fdt_size(reg) cpu_to_be32(reg)
 typedef fdt32_t fdt_val_t;
 #endif
 
@@ -43,15 +52,30 @@ struct fdt_memory {
 
 struct bd_info;
 
-#ifdef CONFIG_SPL_BUILD
-#define SPL_BUILD	1
-#else
-#define SPL_BUILD	0
-#endif
-
-#if CONFIG_IS_ENABLED(OF_PRIOR_STAGE)
-extern phys_addr_t prior_stage_fdt_address;
-#endif
+/**
+ * enum fdt_source_t - indicates where the devicetree came from
+ *
+ * These are listed in approximate order of desirability after FDTSRC_NONE
+ *
+ * @FDTSRC_SEPARATE: Appended to U-Boot. This is the normal approach if U-Boot
+ *	is the only firmware being booted
+ * @FDTSRC_FIT: Found in a multi-dtb FIT. This should be used when U-Boot must
+ *	select a devicetree from many options
+ * @FDTSRC_BOARD: Located by custom board code. This should only be used when
+ *	the prior stage does not support FDTSRC_PASSAGE
+ * @FDTSRC_EMBED: Embedded into U-Boot executable. This should onyl be used when
+ *	U-Boot is packaged as an ELF file, e.g. for debugging purposes
+ * @FDTSRC_ENV: Provided by the fdtcontroladdr environment variable. This should
+ *	be used for debugging/development only
+ * @FDTSRC_NONE: No devicetree at all
+ */
+enum fdt_source_t {
+	FDTSRC_SEPARATE,
+	FDTSRC_FIT,
+	FDTSRC_BOARD,
+	FDTSRC_EMBED,
+	FDTSRC_ENV,
+};
 
 /*
  * Information about a resource. start is the first address of the resource
@@ -106,11 +130,28 @@ struct fdt_pci_addr {
 	u32	phys_lo;
 };
 
+extern u8 __dtb_dt_begin[];	/* embedded device tree blob */
+extern u8 __dtb_dt_spl_begin[];	/* embedded device tree blob for SPL/TPL */
+
+/* Get a pointer to the embedded devicetree, if there is one, else NULL */
+static inline u8 *dtb_dt_embedded(void)
+{
+#ifdef CONFIG_OF_EMBED
+# ifdef CONFIG_SPL_BUILD
+	return __dtb_dt_spl_begin;
+# else
+	return __dtb_dt_begin;
+# endif
+#else
+	return NULL;
+#endif
+}
+
 /**
  * Compute the size of a resource.
  *
  * @param res	the resource to operate on
- * @return the size of the resource
+ * Return: the size of the resource
  */
 static inline fdt_size_t fdt_resource_size(const struct fdt_resource *res)
 {
@@ -131,8 +172,6 @@ enum fdt_compat_id {
 					/* Tegra124 XUSB pad controller */
 	COMPAT_NVIDIA_TEGRA210_XUSB_PADCTL,
 					/* Tegra210 XUSB pad controller */
-	COMPAT_SMSC_LAN9215,		/* SMSC 10/100 Ethernet LAN9215 */
-	COMPAT_SAMSUNG_EXYNOS5_SROMC,	/* Exynos5 SROMC */
 	COMPAT_SAMSUNG_EXYNOS_USB_PHY,	/* Exynos phy controller for usb2.0 */
 	COMPAT_SAMSUNG_EXYNOS5_USB3_PHY,/* Exynos phy controller for usb3.0 */
 	COMPAT_SAMSUNG_EXYNOS_TMU,	/* Exynos TMU */
@@ -205,7 +244,7 @@ struct fdtdec_phandle_args {
  * @cells_count: Cell count to use if @cells_name is NULL
  * @index:	index of a phandle to parse out
  * @out_args:	optional pointer to output arguments structure (will be filled)
- * @return 0 on success (with @out_args filled out if not NULL), -ENOENT if
+ * Return: 0 on success (with @out_args filled out if not NULL), -ENOENT if
  *	@list_name does not exist, a phandle was not found, @cells_name
  *	could not be found, the arguments were truncated or there were too
  *	many arguments.
@@ -232,7 +271,7 @@ int fdtdec_parse_phandle_with_args(const void *blob, int src_node,
  * @param blob		FDT blob to use
  * @param name		Root name of alias to search for
  * @param id		Compatible ID to look for
- * @return offset of next compatible node, or -FDT_ERR_NOTFOUND if no more
+ * Return: offset of next compatible node, or -FDT_ERR_NOTFOUND if no more
  */
 int fdtdec_next_alias(const void *blob, const char *name,
 		enum fdt_compat_id id, int *upto);
@@ -246,7 +285,7 @@ int fdtdec_next_alias(const void *blob, const char *name,
  *
  * @param blob		FDT blob to use
  * @param node		Node containing compatible string to find
- * @return compatible ID, or COMPAT_UNKNOWN if we cannot find a match
+ * Return: compatible ID, or COMPAT_UNKNOWN if we cannot find a match
  */
 enum fdt_compat_id fdtdec_lookup(const void *blob, int node);
 
@@ -260,7 +299,7 @@ enum fdt_compat_id fdtdec_lookup(const void *blob, int node);
  * @param blob		FDT blob to use
  * @param node		Start node for search
  * @param id		Compatible ID to look for (enum fdt_compat_id)
- * @return offset of next compatible node, or -FDT_ERR_NOTFOUND if no more
+ * Return: offset of next compatible node, or -FDT_ERR_NOTFOUND if no more
  */
 int fdtdec_next_compatible(const void *blob, int node,
 		enum fdt_compat_id id);
@@ -277,7 +316,7 @@ int fdtdec_next_compatible(const void *blob, int node,
  * @param node		Start node for search
  * @param id		Compatible ID to look for (enum fdt_compat_id)
  * @param depthp	Current depth (set to 0 before first call)
- * @return offset of next compatible node, or -FDT_ERR_NOTFOUND if no more
+ * Return: offset of next compatible node, or -FDT_ERR_NOTFOUND if no more
  */
 int fdtdec_next_compatible_subnode(const void *blob, int node,
 		enum fdt_compat_id id, int *depthp);
@@ -303,7 +342,7 @@ int fdtdec_next_compatible_subnode(const void *blob, int node,
  * @param sizep	a pointer to store the size into. Use NULL if not required
  * @param translate	Indicates whether to translate the returned value
  *			using the parent node's ranges property.
- * @return address, if found, or FDT_ADDR_T_NONE if not
+ * Return: address, if found, or FDT_ADDR_T_NONE if not
  */
 fdt_addr_t fdtdec_get_addr_size_fixed(const void *blob, int node,
 		const char *prop_name, int index, int na, int ns,
@@ -325,7 +364,7 @@ fdt_addr_t fdtdec_get_addr_size_fixed(const void *blob, int node,
  * @param sizep	a pointer to store the size into. Use NULL if not required
  * @param translate	Indicates whether to translate the returned value
  *			using the parent node's ranges property.
- * @return address, if found, or FDT_ADDR_T_NONE if not
+ * Return: address, if found, or FDT_ADDR_T_NONE if not
  */
 fdt_addr_t fdtdec_get_addr_size_auto_parent(const void *blob, int parent,
 		int node, const char *prop_name, int index, fdt_size_t *sizep,
@@ -351,7 +390,7 @@ fdt_addr_t fdtdec_get_addr_size_auto_parent(const void *blob, int parent,
  * @param sizep	a pointer to store the size into. Use NULL if not required
  * @param translate	Indicates whether to translate the returned value
  *			using the parent node's ranges property.
- * @return address, if found, or FDT_ADDR_T_NONE if not
+ * Return: address, if found, or FDT_ADDR_T_NONE if not
  */
 fdt_addr_t fdtdec_get_addr_size_auto_noparent(const void *blob, int node,
 		const char *prop_name, int index, fdt_size_t *sizep,
@@ -378,7 +417,7 @@ fdt_addr_t fdtdec_get_addr_size_auto_noparent(const void *blob, int node,
  * @param blob	FDT blob
  * @param node	node to examine
  * @param prop_name	name of property to find
- * @return address, if found, or FDT_ADDR_T_NONE if not
+ * Return: address, if found, or FDT_ADDR_T_NONE if not
  */
 fdt_addr_t fdtdec_get_addr(const void *blob, int node,
 		const char *prop_name);
@@ -406,27 +445,10 @@ fdt_addr_t fdtdec_get_addr(const void *blob, int node,
  * @param node	node to examine
  * @param prop_name	name of property to find
  * @param sizep	a pointer to store the size into. Use NULL if not required
- * @return address, if found, or FDT_ADDR_T_NONE if not
+ * Return: address, if found, or FDT_ADDR_T_NONE if not
  */
 fdt_addr_t fdtdec_get_addr_size(const void *blob, int node,
 		const char *prop_name, fdt_size_t *sizep);
-
-/**
- * Look at an address property in a node and return the pci address which
- * corresponds to the given type in the form of fdt_pci_addr.
- * The property must hold one fdt_pci_addr with a lengh.
- *
- * @param blob		FDT blob
- * @param node		node to examine
- * @param type		pci address type (FDT_PCI_SPACE_xxx)
- * @param prop_name	name of property to find
- * @param addr		returns pci address in the form of fdt_pci_addr
- * @return 0 if ok, -ENOENT if the property did not exist, -EINVAL if the
- *		format of the property was invalid, -ENXIO if the requested
- *		address type was not found
- */
-int fdtdec_get_pci_addr(const void *blob, int node, enum fdt_pci_space type,
-		const char *prop_name, struct fdt_pci_addr *addr);
 
 /**
  * Look at the compatible property of a device node that represents a PCI
@@ -436,7 +458,7 @@ int fdtdec_get_pci_addr(const void *blob, int node, enum fdt_pci_space type,
  * @param node		node to examine
  * @param vendor	vendor id of the pci device
  * @param device	device id of the pci device
- * @return 0 if ok, negative on error
+ * Return: 0 if ok, negative on error
  */
 int fdtdec_get_pci_vendev(const void *blob, int node,
 		u16 *vendor, u16 *device);
@@ -448,10 +470,23 @@ int fdtdec_get_pci_vendev(const void *blob, int node,
  * @param dev		device to examine
  * @param addr		pci address in the form of fdt_pci_addr
  * @param bar		returns base address of the pci device's registers
- * @return 0 if ok, negative on error
+ * Return: 0 if ok, negative on error
  */
-int fdtdec_get_pci_bar32(struct udevice *dev, struct fdt_pci_addr *addr,
+int fdtdec_get_pci_bar32(const struct udevice *dev, struct fdt_pci_addr *addr,
 			 u32 *bar);
+
+/**
+ * Look at the bus range property of a device node and return the pci bus
+ * range for this node.
+ * The property must hold one fdt_pci_addr with a length.
+ * @param blob		FDT blob
+ * @param node		node to examine
+ * @param res		the resource structure to return the bus range
+ * Return: 0 if ok, negative on error
+ */
+
+int fdtdec_get_pci_bus_range(const void *blob, int node,
+			     struct fdt_resource *res);
 
 /**
  * Look up a 32-bit integer property in a node and return it. The property
@@ -462,7 +497,7 @@ int fdtdec_get_pci_bar32(struct udevice *dev, struct fdt_pci_addr *addr,
  * @param node	node to examine
  * @param prop_name	name of property to find
  * @param default_val	default value to return if the property is not found
- * @return integer value, if found, or default_val if not
+ * Return: integer value, if found, or default_val if not
  */
 s32 fdtdec_get_int(const void *blob, int node, const char *prop_name,
 		s32 default_val);
@@ -475,7 +510,7 @@ s32 fdtdec_get_int(const void *blob, int node, const char *prop_name,
  * @param node	node to examine
  * @param prop_name	name of property to find
  * @param default_val	default value to return if the property is not found
- * @return unsigned integer value, if found, or default_val if not
+ * Return: unsigned integer value, if found, or default_val if not
  */
 unsigned int fdtdec_get_uint(const void *blob, int node, const char *prop_name,
 			unsigned int default_val);
@@ -487,7 +522,7 @@ unsigned int fdtdec_get_uint(const void *blob, int node, const char *prop_name,
  *
  * @param ptr	Pointer to property
  * @param cells	Number of cells containing the number
- * @return the value in the cells
+ * Return: the value in the cells
  */
 u64 fdtdec_get_number(const fdt32_t *ptr, unsigned int cells);
 
@@ -501,7 +536,7 @@ u64 fdtdec_get_number(const fdt32_t *ptr, unsigned int cells);
  * @param node	node to examine
  * @param prop_name	name of property to find
  * @param default_val	default value to return if the property is not found
- * @return integer value, if found, or default_val if not
+ * Return: integer value, if found, or default_val if not
  */
 uint64_t fdtdec_get_uint64(const void *blob, int node, const char *prop_name,
 		uint64_t default_val);
@@ -515,7 +550,7 @@ uint64_t fdtdec_get_uint64(const void *blob, int node, const char *prop_name,
  *
  * @param blob	FDT blob
  * @param node	node to examine
- * @return integer value 0 (not enabled) or 1 (enabled)
+ * Return: integer value 0 (not enabled) or 1 (enabled)
  */
 int fdtdec_get_is_enabled(const void *blob, int node);
 
@@ -524,7 +559,7 @@ int fdtdec_get_is_enabled(const void *blob, int node);
  *
  * If not, a message is printed to the console if the console is ready.
  *
- * @return 0 if all ok, -1 if not
+ * Return: 0 if all ok, -1 if not
  */
 int fdtdec_prepare_fdt(void);
 
@@ -572,7 +607,7 @@ int fdtdec_check_fdt(void);
  * @param id		Compatible ID to look for
  * @param node_list	Place to put list of found nodes
  * @param maxcount	Maximum number of nodes to find
- * @return number of nodes found on success, FDT_ERR_... on error
+ * Return: number of nodes found on success, FDT_ERR_... on error
  */
 int fdtdec_find_aliases_for_id(const void *blob, const char *name,
 			enum fdt_compat_id id, int *node_list, int maxcount);
@@ -613,7 +648,7 @@ int fdtdec_add_aliases_for_id(const void *blob, const char *name,
  * @param node		Node to look up
  * @param seqp		This is set to the sequence number if one is found,
  *			but otherwise the value is left alone
- * @return 0 if a sequence was found, -ve if not
+ * Return: 0 if a sequence was found, -ve if not
  */
 int fdtdec_get_alias_seq(const void *blob, const char *base, int node,
 			 int *seqp);
@@ -627,7 +662,7 @@ int fdtdec_get_alias_seq(const void *blob, const char *base, int node,
  * @param blob		Device tree blob (if NULL, then error is returned)
  * @param base		Base name for alias susbystem (before the number)
  *
- * @return 0 highest alias ID, -1 if not found
+ * Return: 0 highest alias ID, -1 if not found
  */
 int fdtdec_get_alias_highest_id(const void *blob, const char *base);
 
@@ -636,7 +671,7 @@ int fdtdec_get_alias_highest_id(const void *blob, const char *base);
  *
  * @param blob		Device tree blob (if NULL, then NULL is returned)
  * @param name		Property name to look up
- * @return Value of property, or NULL if it does not exist
+ * Return: Value of property, or NULL if it does not exist
  */
 const char *fdtdec_get_chosen_prop(const void *blob, const char *name);
 
@@ -648,7 +683,7 @@ const char *fdtdec_get_chosen_prop(const void *blob, const char *name);
  *
  * @param blob		Device tree blob (if NULL, then error is returned)
  * @param name		Property name, e.g. "stdout-path"
- * @return Node offset referred to by that chosen node, or -ve FDT_ERR_...
+ * Return: Node offset referred to by that chosen node, or -ve FDT_ERR_...
  */
 int fdtdec_get_chosen_node(const void *blob, const char *name);
 
@@ -656,7 +691,7 @@ int fdtdec_get_chosen_node(const void *blob, const char *name);
  * Get the name for a compatible ID
  *
  * @param id		Compatible ID to look for
- * @return compatible string for that id
+ * Return: compatible string for that id
  */
 const char *fdtdec_get_compatible(enum fdt_compat_id id);
 
@@ -666,7 +701,7 @@ const char *fdtdec_get_compatible(enum fdt_compat_id id);
  * @param blob		FDT blob
  * @param node		node to examine
  * @param prop_name	name of property to find
- * @return node offset if found, -ve error code on error
+ * Return: node offset if found, -ve error code on error
  */
 int fdtdec_lookup_phandle(const void *blob, int node, const char *prop_name);
 
@@ -680,7 +715,7 @@ int fdtdec_lookup_phandle(const void *blob, int node, const char *prop_name);
  * @param prop_name	name of property to find
  * @param array		array to fill with data
  * @param count		number of array elements
- * @return 0 if ok, or -FDT_ERR_NOTFOUND if the property is not found,
+ * Return: 0 if ok, or -FDT_ERR_NOTFOUND if the property is not found,
  *		or -FDT_ERR_BADLAYOUT if not enough data
  */
 int fdtdec_get_int_array(const void *blob, int node, const char *prop_name,
@@ -696,7 +731,7 @@ int fdtdec_get_int_array(const void *blob, int node, const char *prop_name,
  * @param prop_name	name of property to find
  * @param array		array to fill with data
  * @param count		number of array elements
- * @return number of array elements if ok, or -FDT_ERR_NOTFOUND if the
+ * Return: number of array elements if ok, or -FDT_ERR_NOTFOUND if the
  *		property is not found
  */
 int fdtdec_get_int_array_count(const void *blob, int node,
@@ -715,7 +750,7 @@ int fdtdec_get_int_array_count(const void *blob, int node,
  * @param node		node to examine
  * @param prop_name	name of property to find
  * @param count		number of array elements
- * @return pointer to array if found, or NULL if the property is not
+ * Return: pointer to array if found, or NULL if the property is not
  *		found or there is not enough data
  */
 const u32 *fdtdec_locate_array(const void *blob, int node,
@@ -730,7 +765,7 @@ const u32 *fdtdec_locate_array(const void *blob, int node,
  * @param blob	FDT blob
  * @param node	node to examine
  * @param prop_name	name of property to find
- * @return 1 if the properly is present; 0 if it isn't present
+ * Return: 1 if the properly is present; 0 if it isn't present
  */
 int fdtdec_get_bool(const void *blob, int node, const char *prop_name);
 
@@ -739,42 +774,9 @@ int fdtdec_get_bool(const void *blob, int node, const char *prop_name);
  *
  * @param blob	FDT blob
  * @param node	parent node
- * @return number of child node; 0 if there is not child node
+ * Return: number of child node; 0 if there is not child node
  */
 int fdtdec_get_child_count(const void *blob, int node);
-
-/**
- * Look in the FDT for a config item with the given name and return its value
- * as a 32-bit integer. The property must have at least 4 bytes of data. The
- * value of the first cell is returned.
- *
- * @param blob		FDT blob to use
- * @param prop_name	Node property name
- * @param default_val	default value to return if the property is not found
- * @return integer value, if found, or default_val if not
- */
-int fdtdec_get_config_int(const void *blob, const char *prop_name,
-		int default_val);
-
-/**
- * Look in the FDT for a config item with the given name
- * and return whether it exists.
- *
- * @param blob		FDT blob
- * @param prop_name	property name to look up
- * @return 1, if it exists, or 0 if not
- */
-int fdtdec_get_config_bool(const void *blob, const char *prop_name);
-
-/**
- * Look in the FDT for a config item with the given name and return its value
- * as a string.
- *
- * @param blob          FDT blob
- * @param prop_name     property name to look up
- * @returns property string, NULL on error.
- */
-char *fdtdec_get_config_string(const void *blob, const char *prop_name);
 
 /*
  * Look up a property in a node and return its contents in a byte
@@ -786,7 +788,7 @@ char *fdtdec_get_config_string(const void *blob, const char *prop_name);
  * @param prop_name	name of property to find
  * @param array		array to fill with data
  * @param count		number of array elements
- * @return 0 if ok, or -FDT_ERR_MISSING if the property is not found,
+ * Return: 0 if ok, or -FDT_ERR_MISSING if the property is not found,
  *		or -FDT_ERR_BADLAYOUT if not enough data
  */
 int fdtdec_get_byte_array(const void *blob, int node, const char *prop_name,
@@ -802,7 +804,7 @@ int fdtdec_get_byte_array(const void *blob, int node, const char *prop_name,
  * @param node		node to examine
  * @param prop_name	name of property to find
  * @param count		number of array elements
- * @return pointer to byte array if found, or NULL if the property is not
+ * Return: pointer to byte array if found, or NULL if the property is not
  *		found or there is not enough data
  */
 const u8 *fdtdec_locate_byte_array(const void *blob, int node,
@@ -816,7 +818,7 @@ const u8 *fdtdec_locate_byte_array(const void *blob, int node,
  * @param property	name of the property to parse
  * @param index		index of the resource to retrieve
  * @param res		returns the resource
- * @return 0 if ok, negative on error
+ * Return: 0 if ok, negative on error
  */
 int fdt_get_resource(const void *fdt, int node, const char *property,
 		     unsigned int index, struct fdt_resource *res);
@@ -912,7 +914,7 @@ struct display_timing {
  * @param node		'display-timing' node containing the timing subnodes
  * @param index		Index number to read (0=first timing subnode)
  * @param config	Place to put timings
- * @return 0 if OK, -FDT_ERR_NOTFOUND if not found
+ * Return: 0 if OK, -FDT_ERR_NOTFOUND if not found
  */
 int fdtdec_decode_display_timing(const void *blob, int node, int index,
 				 struct display_timing *config);
@@ -930,10 +932,27 @@ int fdtdec_decode_display_timing(const void *blob, int node, int index,
  * address instead of hard coding the value in the case where the memory size
  * and start address cannot be detected automatically.
  *
- * @return 0 if OK, -EINVAL if the /memory node or reg property is missing or
+ * Return: 0 if OK, -EINVAL if the /memory node or reg property is missing or
  * invalid
  */
 int fdtdec_setup_mem_size_base(void);
+
+/**
+ * fdtdec_setup_mem_size_base_lowest() - decode and setup gd->ram_size and
+ * gd->ram_start by lowest available memory base
+ *
+ * Decode the /memory 'reg' property to determine the lowest start of the memory
+ * bank bank and populate the global data with it.
+ *
+ * This function should be called from a boards dram_init(). This helper
+ * function allows for boards to query the device tree for DRAM size and start
+ * address instead of hard coding the value in the case where the memory size
+ * and start address cannot be detected automatically.
+ *
+ * Return: 0 if OK, -EINVAL if the /memory node or reg property is missing or
+ * invalid
+ */
+int fdtdec_setup_mem_size_base_lowest(void);
 
 /**
  * fdtdec_setup_memory_banksize() - decode and populate gd->bd->bi_dram
@@ -947,17 +966,209 @@ int fdtdec_setup_mem_size_base(void);
  * information instead of hard coding the information in cases where it cannot
  * be detected automatically.
  *
- * @return 0 if OK, -EINVAL if the /memory node or reg property is missing or
+ * Return: 0 if OK, -EINVAL if the /memory node or reg property is missing or
  * invalid
  */
 int fdtdec_setup_memory_banksize(void);
+
+/**
+ * fdtdec_set_ethernet_mac_address() - set MAC address for default interface
+ *
+ * Looks up the default interface via the "ethernet" alias (in the /aliases
+ * node) and stores the given MAC in its "local-mac-address" property. This
+ * is useful on platforms that store the MAC address in a custom location.
+ * Board code can call this in the late init stage to make sure that the
+ * interface device tree node has the right MAC address configured for the
+ * Ethernet uclass to pick it up.
+ *
+ * Typically the FDT passed into this function will be U-Boot's control DTB.
+ * Given that a lot of code may be holding offsets to various nodes in that
+ * tree, this code will only set the "local-mac-address" property in-place,
+ * which means that it needs to exist and have space for the 6-byte address.
+ * This ensures that the operation is non-destructive and does not invalidate
+ * offsets that other drivers may be using.
+ *
+ * @param fdt FDT blob
+ * @param mac buffer containing the MAC address to set
+ * @param size size of MAC address
+ * Return: 0 on success or a negative error code on failure
+ */
+int fdtdec_set_ethernet_mac_address(void *fdt, const u8 *mac, size_t size);
+
+/**
+ * fdtdec_set_phandle() - sets the phandle of a given node
+ *
+ * @param blob		FDT blob
+ * @param node		offset in the FDT blob of the node whose phandle is to
+ *			be set
+ * @param phandle	phandle to set for the given node
+ * Return: 0 on success or a negative error code on failure
+ */
+static inline int fdtdec_set_phandle(void *blob, int node, uint32_t phandle)
+{
+	return fdt_setprop_u32(blob, node, "phandle", phandle);
+}
+
+/* add "no-map" property */
+#define FDTDEC_RESERVED_MEMORY_NO_MAP (1 << 0)
+
+/**
+ * fdtdec_add_reserved_memory() - add or find a reserved-memory node
+ *
+ * If a reserved-memory node already exists for the given carveout, a phandle
+ * for that node will be returned. Otherwise a new node will be created and a
+ * phandle corresponding to it will be returned.
+ *
+ * See Documentation/devicetree/bindings/reserved-memory/reserved-memory.txt
+ * for details on how to use reserved memory regions.
+ *
+ * As an example, consider the following code snippet:
+ *
+ *     struct fdt_memory fb = {
+ *         .start = 0x92cb3000,
+ *         .end = 0x934b2fff,
+ *     };
+ *     uint32_t phandle;
+ *
+ *     fdtdec_add_reserved_memory(fdt, "framebuffer", &fb, NULL, 0, &phandle,
+ *                                0);
+ *
+ * This results in the following subnode being added to the top-level
+ * /reserved-memory node:
+ *
+ *     reserved-memory {
+ *         #address-cells = <0x00000002>;
+ *         #size-cells = <0x00000002>;
+ *         ranges;
+ *
+ *         framebuffer@92cb3000 {
+ *             reg = <0x00000000 0x92cb3000 0x00000000 0x00800000>;
+ *             phandle = <0x0000004d>;
+ *         };
+ *     };
+ *
+ * If the top-level /reserved-memory node does not exist, it will be created.
+ * The phandle returned from the function call can be used to reference this
+ * reserved memory region from other nodes.
+ *
+ * See fdtdec_set_carveout() for a more elaborate example.
+ *
+ * @param blob		FDT blob
+ * @param basename	base name of the node to create
+ * @param carveout	information about the carveout region
+ * @param compatibles	list of compatible strings for the carveout region
+ * @param count		number of compatible strings for the carveout region
+ * @param phandlep	return location for the phandle of the carveout region
+ *			can be NULL if no phandle should be added
+ * @param flags		bitmask of flags to set for the carveout region
+ * Return: 0 on success or a negative error code on failure
+ */
+int fdtdec_add_reserved_memory(void *blob, const char *basename,
+			       const struct fdt_memory *carveout,
+			       const char **compatibles, unsigned int count,
+			       uint32_t *phandlep, unsigned long flags);
+
+/**
+ * fdtdec_get_carveout() - reads a carveout from an FDT
+ *
+ * Reads information about a carveout region from an FDT. The carveout is a
+ * referenced by its phandle that is read from a given property in a given
+ * node.
+ *
+ * @param blob		FDT blob
+ * @param node		name of a node
+ * @param prop_name	name of the property in the given node that contains
+ *			the phandle for the carveout
+ * @param index		index of the phandle for which to read the carveout
+ * @param carveout	return location for the carveout information
+ * @param name		return location for the carveout name
+ * @param compatiblesp	return location for compatible strings
+ * @param countp	return location for the number of compatible strings
+ * @param flags		return location for the flags of the carveout
+ * Return: 0 on success or a negative error code on failure
+ */
+int fdtdec_get_carveout(const void *blob, const char *node,
+			const char *prop_name, unsigned int index,
+			struct fdt_memory *carveout, const char **name,
+			const char ***compatiblesp, unsigned int *countp,
+			unsigned long *flags);
+
+/**
+ * fdtdec_set_carveout() - sets a carveout region for a given node
+ *
+ * Sets a carveout region for a given node. If a reserved-memory node already
+ * exists for the carveout, the phandle for that node will be reused. If no
+ * such node exists, a new one will be created and a phandle to it stored in
+ * a specified property of the given node.
+ *
+ * As an example, consider the following code snippet:
+ *
+ *     const char *node = "/host1x@50000000/dc@54240000";
+ *     struct fdt_memory fb = {
+ *         .start = 0x92cb3000,
+ *         .end = 0x934b2fff,
+ *     };
+ *
+ *     fdtdec_set_carveout(fdt, node, "memory-region", 0, "framebuffer", NULL,
+ *                         0, &fb, 0);
+ *
+ * dc@54200000 is a display controller and was set up by the bootloader to
+ * scan out the framebuffer specified by "fb". This would cause the following
+ * reserved memory region to be added:
+ *
+ *     reserved-memory {
+ *         #address-cells = <0x00000002>;
+ *         #size-cells = <0x00000002>;
+ *         ranges;
+ *
+ *         framebuffer@92cb3000 {
+ *             reg = <0x00000000 0x92cb3000 0x00000000 0x00800000>;
+ *             phandle = <0x0000004d>;
+ *         };
+ *     };
+ *
+ * A "memory-region" property will also be added to the node referenced by the
+ * offset parameter.
+ *
+ *     host1x@50000000 {
+ *         ...
+ *
+ *         dc@54240000 {
+ *             ...
+ *             memory-region = <0x0000004d>;
+ *             ...
+ *         };
+ *
+ *         ...
+ *     };
+ *
+ * @param blob		FDT blob
+ * @param node		name of the node to add the carveout to
+ * @param prop_name	name of the property in which to store the phandle of
+ *			the carveout
+ * @param index		index of the phandle to store
+ * @param carveout	information about the carveout to add
+ * @param name		base name of the reserved-memory node to create
+ * @param compatibles	compatible strings to set for the carveout
+ * @param count		number of compatible strings
+ * @param flags		bitmask of flags to set for the carveout
+ * Return: 0 on success or a negative error code on failure
+ */
+int fdtdec_set_carveout(void *blob, const char *node, const char *prop_name,
+			unsigned int index, const struct fdt_memory *carveout,
+			const char *name, const char **compatibles,
+			unsigned int count, unsigned long flags);
 
 /**
  * Set up the device tree ready for use
  */
 int fdtdec_setup(void);
 
-#if CONFIG_IS_ENABLED(MULTI_DTB_FIT)
+/**
+ * Perform board-specific early DT adjustments
+ */
+int fdtdec_board_setup(const void *fdt_blob);
+
 /**
  * fdtdec_resetup()  - Set up the device tree again
  *
@@ -973,17 +1184,21 @@ int fdtdec_setup(void);
  * @param rescan Returns a flag indicating that fdt has changed and rescanning
  *               the fdt is required
  *
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int fdtdec_resetup(int *rescan);
-#endif
 
 /**
  * Board-specific FDT initialization. Returns the address to a device tree blob.
- * Called when CONFIG_OF_BOARD is defined, or if CONFIG_OF_SEPARATE is defined
- * and the board implements it.
+ *
+ * Called when CONFIG_OF_BOARD is defined.
+ *
+ * The existing devicetree is available at gd->fdt_blob
+ *
+ * @err internal error code if we fail to setup a DTB
+ * @returns new devicetree blob pointer
  */
-void *board_fdt_blob_setup(void);
+void *board_fdt_blob_setup(int *err);
 
 /*
  * Decode the size of memory
@@ -1014,10 +1229,17 @@ void *board_fdt_blob_setup(void);
  *			ignore)
  * @param sizep		Returns total memory size (NULL to ignore)
  * @param bd		Updated with the memory bank information (NULL to skip)
- * @return 0 if OK, -ve on error
+ * Return: 0 if OK, -ve on error
  */
 int fdtdec_decode_ram_size(const void *blob, const char *area, int board_id,
 			   phys_addr_t *basep, phys_size_t *sizep,
 			   struct bd_info *bd);
+
+/**
+ * fdtdec_get_srcname() - Get the name of where the devicetree comes from
+ *
+ * Return: source name
+ */
+const char *fdtdec_get_srcname(void);
 
 #endif

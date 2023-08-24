@@ -9,8 +9,12 @@
  */
 #include <common.h>
 #include <command.h>
+#include <env.h>
 #include <fpga.h>
 #include <fs.h>
+#include <gzip.h>
+#include <image.h>
+#include <log.h>
 #include <malloc.h>
 
 static long do_fpga_get_device(char *arg)
@@ -31,7 +35,8 @@ static long do_fpga_get_device(char *arg)
 }
 
 static int do_fpga_check_params(long *dev, long *fpga_data, size_t *data_size,
-				cmd_tbl_t *cmdtp, int argc, char *const argv[])
+				struct cmd_tbl *cmdtp, int argc,
+				char *const argv[])
 {
 	size_t local_data_size;
 	long local_fpga_data;
@@ -52,7 +57,7 @@ static int do_fpga_check_params(long *dev, long *fpga_data, size_t *data_size,
 	}
 	*fpga_data = local_fpga_data;
 
-	local_data_size = simple_strtoul(argv[2], NULL, 16);
+	local_data_size = hextoul(argv[2], NULL);
 	if (!local_data_size) {
 		debug("fpga: zero size\n");
 		return CMD_RET_USAGE;
@@ -63,7 +68,7 @@ static int do_fpga_check_params(long *dev, long *fpga_data, size_t *data_size,
 }
 
 #if defined(CONFIG_CMD_FPGA_LOAD_SECURE)
-int do_fpga_loads(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+int do_fpga_loads(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
 	size_t data_size = 0;
 	long fpga_data, dev;
@@ -90,8 +95,8 @@ int do_fpga_loads(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		 */
 		argc++;
 
-	fpga_sec_info.encflag = (u8)simple_strtoul(argv[4], NULL, 16);
-	fpga_sec_info.authflag = (u8)simple_strtoul(argv[3], NULL, 16);
+	fpga_sec_info.encflag = (u8)hextoul(argv[4], NULL);
+	fpga_sec_info.authflag = (u8)hextoul(argv[3], NULL);
 
 	if (fpga_sec_info.authflag >= FPGA_NO_ENC_OR_NO_AUTH &&
 	    fpga_sec_info.encflag >= FPGA_NO_ENC_OR_NO_AUTH) {
@@ -115,7 +120,7 @@ int do_fpga_loads(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 #endif
 
 #if defined(CONFIG_CMD_FPGA_LOADFS)
-static int do_fpga_loadfs(cmd_tbl_t *cmdtp, int flag, int argc,
+static int do_fpga_loadfs(struct cmd_tbl *cmdtp, int flag, int argc,
 			  char *const argv[])
 {
 	size_t data_size = 0;
@@ -129,7 +134,7 @@ static int do_fpga_loadfs(cmd_tbl_t *cmdtp, int flag, int argc,
 		return ret;
 
 	fpga_fsinfo.fstype = FS_TYPE_ANY;
-	fpga_fsinfo.blocksize = (unsigned int)simple_strtoul(argv[3], NULL, 16);
+	fpga_fsinfo.blocksize = (unsigned int)hextoul(argv[3], NULL);
 	fpga_fsinfo.interface = argv[4];
 	fpga_fsinfo.dev_part = argv[5];
 	fpga_fsinfo.filename = argv[6];
@@ -138,16 +143,16 @@ static int do_fpga_loadfs(cmd_tbl_t *cmdtp, int flag, int argc,
 }
 #endif
 
-static int do_fpga_info(cmd_tbl_t *cmdtp, int flag, int argc,
-			char * const argv[])
+static int do_fpga_info(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
 {
 	long dev = do_fpga_get_device(argv[0]);
 
 	return fpga_info(dev);
 }
 
-static int do_fpga_dump(cmd_tbl_t *cmdtp, int flag, int argc,
-			char * const argv[])
+static int do_fpga_dump(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
 {
 	size_t data_size = 0;
 	long fpga_data, dev;
@@ -161,8 +166,8 @@ static int do_fpga_dump(cmd_tbl_t *cmdtp, int flag, int argc,
 	return fpga_dump(dev, (void *)fpga_data, data_size);
 }
 
-static int do_fpga_load(cmd_tbl_t *cmdtp, int flag, int argc,
-			char * const argv[])
+static int do_fpga_load(struct cmd_tbl *cmdtp, int flag, int argc,
+			char *const argv[])
 {
 	size_t data_size = 0;
 	long fpga_data, dev;
@@ -173,11 +178,11 @@ static int do_fpga_load(cmd_tbl_t *cmdtp, int flag, int argc,
 	if (ret)
 		return ret;
 
-	return fpga_load(dev, (void *)fpga_data, data_size, BIT_FULL);
+	return fpga_load(dev, (void *)fpga_data, data_size, BIT_FULL, 0);
 }
 
-static int do_fpga_loadb(cmd_tbl_t *cmdtp, int flag, int argc,
-			 char * const argv[])
+static int do_fpga_loadb(struct cmd_tbl *cmdtp, int flag, int argc,
+			 char *const argv[])
 {
 	size_t data_size = 0;
 	long fpga_data, dev;
@@ -192,8 +197,8 @@ static int do_fpga_loadb(cmd_tbl_t *cmdtp, int flag, int argc,
 }
 
 #if defined(CONFIG_CMD_FPGA_LOADP)
-static int do_fpga_loadp(cmd_tbl_t *cmdtp, int flag, int argc,
-			 char * const argv[])
+static int do_fpga_loadp(struct cmd_tbl *cmdtp, int flag, int argc,
+			 char *const argv[])
 {
 	size_t data_size = 0;
 	long fpga_data, dev;
@@ -204,13 +209,13 @@ static int do_fpga_loadp(cmd_tbl_t *cmdtp, int flag, int argc,
 	if (ret)
 		return ret;
 
-	return fpga_load(dev, (void *)fpga_data, data_size, BIT_PARTIAL);
+	return fpga_load(dev, (void *)fpga_data, data_size, BIT_PARTIAL, 0);
 }
 #endif
 
 #if defined(CONFIG_CMD_FPGA_LOADBP)
-static int do_fpga_loadbp(cmd_tbl_t *cmdtp, int flag, int argc,
-			  char * const argv[])
+static int do_fpga_loadbp(struct cmd_tbl *cmdtp, int flag, int argc,
+			  char *const argv[])
 {
 	size_t data_size = 0;
 	long fpga_data, dev;
@@ -227,8 +232,8 @@ static int do_fpga_loadbp(cmd_tbl_t *cmdtp, int flag, int argc,
 #endif
 
 #if defined(CONFIG_CMD_FPGA_LOADMK)
-static int do_fpga_loadmk(cmd_tbl_t *cmdtp, int flag, int argc,
-			  char * const argv[])
+static int do_fpga_loadmk(struct cmd_tbl *cmdtp, int flag, int argc,
+			  char *const argv[])
 {
 	size_t data_size = 0;
 	void *fpga_data = NULL;
@@ -269,7 +274,7 @@ static int do_fpga_loadmk(cmd_tbl_t *cmdtp, int flag, int argc,
 	} else
 #endif
 	{
-		fpga_data = (void *)simple_strtoul(datastr, NULL, 16);
+		fpga_data = (void *)hextoul(datastr, NULL);
 		debug("*  fpga: cmdline image address = 0x%08lx\n",
 		      (ulong)fpga_data);
 	}
@@ -280,10 +285,10 @@ static int do_fpga_loadmk(cmd_tbl_t *cmdtp, int flag, int argc,
 	}
 
 	switch (genimg_get_format(fpga_data)) {
-#if defined(CONFIG_IMAGE_FORMAT_LEGACY)
+#if defined(CONFIG_LEGACY_IMAGE_FORMAT)
 	case IMAGE_FORMAT_LEGACY:
 	{
-		image_header_t *hdr = (image_header_t *)fpga_data;
+		struct legacy_img_hdr *hdr = (struct legacy_img_hdr *)fpga_data;
 		ulong data;
 		u8 comp;
 
@@ -310,14 +315,14 @@ static int do_fpga_loadmk(cmd_tbl_t *cmdtp, int flag, int argc,
 			data_size = image_get_data_size(hdr);
 		}
 		return fpga_load(dev, (void *)data, data_size,
-				  BIT_FULL);
+				  BIT_FULL, 0);
 	}
 #endif
 #if defined(CONFIG_FIT)
 	case IMAGE_FORMAT_FIT:
 	{
 		const void *fit_hdr = (const void *)fpga_data;
-		int noffset;
+		int err;
 		const void *fit_data;
 
 		if (!fit_uname) {
@@ -325,32 +330,20 @@ static int do_fpga_loadmk(cmd_tbl_t *cmdtp, int flag, int argc,
 			return CMD_RET_FAILURE;
 		}
 
-		if (!fit_check_format(fit_hdr)) {
+		if (fit_check_format(fit_hdr, IMAGE_SIZE_INVAL)) {
 			puts("Bad FIT image format\n");
 			return CMD_RET_FAILURE;
 		}
 
-		/* get fpga component image node offset */
-		noffset = fit_image_get_node(fit_hdr, fit_uname);
-		if (noffset < 0) {
-			printf("Can't find '%s' FIT subimage\n", fit_uname);
+		err = fit_get_data_node(fit_hdr, fit_uname, &fit_data,
+					&data_size);
+		if (err) {
+			printf("Could not load '%s' subimage (err %d)\n",
+			       fit_uname, err);
 			return CMD_RET_FAILURE;
 		}
 
-		/* verify integrity */
-		if (!fit_image_verify(fit_hdr, noffset)) {
-			puts("Bad Data Hash\n");
-			return CMD_RET_FAILURE;
-		}
-
-		/* get fpga subimage data address and length */
-		if (fit_image_get_data(fit_hdr, noffset, &fit_data,
-				       &data_size)) {
-			puts("Fpga subimage data not found\n");
-			return CMD_RET_FAILURE;
-		}
-
-		return fpga_load(dev, fit_data, data_size, BIT_FULL);
+		return fpga_load(dev, fit_data, data_size, BIT_FULL, 0);
 	}
 #endif
 	default:
@@ -360,7 +353,7 @@ static int do_fpga_loadmk(cmd_tbl_t *cmdtp, int flag, int argc,
 }
 #endif
 
-static cmd_tbl_t fpga_commands[] = {
+static struct cmd_tbl fpga_commands[] = {
 	U_BOOT_CMD_MKENT(info, 1, 1, do_fpga_info, "", ""),
 	U_BOOT_CMD_MKENT(dump, 3, 1, do_fpga_dump, "", ""),
 	U_BOOT_CMD_MKENT(load, 3, 1, do_fpga_load, "", ""),
@@ -382,10 +375,10 @@ static cmd_tbl_t fpga_commands[] = {
 #endif
 };
 
-static int do_fpga_wrapper(cmd_tbl_t *cmdtp, int flag, int argc,
+static int do_fpga_wrapper(struct cmd_tbl *cmdtp, int flag, int argc,
 			   char *const argv[])
 {
-	cmd_tbl_t *fpga_cmd;
+	struct cmd_tbl *fpga_cmd;
 	int ret;
 
 	if (argc < 2)
@@ -458,7 +451,7 @@ U_BOOT_CMD(fpga, 6, 1, do_fpga_wrapper,
 	   "0-device key, 1-user key, 2-no encryption.\n"
 	   "The optional Userkey address specifies from which address key\n"
 	   "has to be used for decryption if user key is selected.\n"
-	   "NOTE: the sceure bitstream has to be created using xilinx\n"
+	   "NOTE: the secure bitstream has to be created using Xilinx\n"
 	   "bootgen tool only.\n"
 #endif
 );

@@ -6,7 +6,6 @@
 
 #include <asm-offsets.h>
 #include <config.h>
-#include "version.h"
 #include <asm/cache.h>
 
 #define _START	_start
@@ -150,7 +149,7 @@ _start:
 /******************************************************************************/
 
 /*
- * void relocate_code (addr_sp, gd, addr_moni)
+ * void relocate_code(addr_sp, gd, addr_moni)
  *
  * This "function" does not return, instead it continues in RAM
  * after relocating the monitor code.
@@ -253,7 +252,4 @@ _int_handler:
 
 /******************************************************************************/
 
-.globl version_string
-version_string:
-.ascii U_BOOT_VERSION_STRING, "\0"
 .align 4

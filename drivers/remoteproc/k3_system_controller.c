@@ -8,9 +8,11 @@
 
 #include <common.h>
 #include <dm.h>
+#include <log.h>
 #include <remoteproc.h>
 #include <errno.h>
 #include <mailbox.h>
+#include <dm/device_compat.h>
 #include <linux/soc/ti/k3-sec-proxy.h>
 
 #define K3_MSG_R5_TO_M3_M3FW			0x8105
@@ -75,14 +77,18 @@ struct k3_sysctrler_desc {
  * struct k3_sysctrler_privdata - Structure representing System Controller data.
  * @chan_tx:	Transmit mailbox channel
  * @chan_rx:	Receive mailbox channel
+ * @chan_boot_notify:	Boot notification channel
  * @desc:	SoC description for this instance
  * @seq_nr:	Counter for number of messages sent.
+ * @has_boot_notify:	Has separate boot notification channel
  */
 struct k3_sysctrler_privdata {
 	struct mbox_chan chan_tx;
 	struct mbox_chan chan_rx;
+	struct mbox_chan chan_boot_notify;
 	struct k3_sysctrler_desc *desc;
 	u32 seq_nr;
+	bool has_boot_notify;
 };
 
 static inline
@@ -98,7 +104,7 @@ void k3_sysctrler_load_msg_setup(struct k3_sysctrler_load_msg *fw,
 	fw->buffer_size = size;
 }
 
-static int k3_sysctrler_load_response(u32 *buf)
+static int k3_sysctrler_load_response(struct udevice *dev, u32 *buf)
 {
 	struct k3_sysctrler_load_msg *fw;
 
@@ -127,7 +133,8 @@ static int k3_sysctrler_load_response(u32 *buf)
 	return 0;
 }
 
-static int k3_sysctrler_boot_notification_response(u32 *buf)
+static int k3_sysctrler_boot_notification_response(struct udevice *dev,
+						   u32 *buf)
 {
 	struct k3_sysctrler_boot_notification_msg *boot;
 
@@ -191,7 +198,7 @@ static int k3_sysctrler_load(struct udevice *dev, ulong addr, ulong size)
 	}
 
 	/* Process the response */
-	ret = k3_sysctrler_load_response(msg.buf);
+	ret = k3_sysctrler_load_response(dev, msg.buf);
 	if (ret)
 		return ret;
 
@@ -220,7 +227,8 @@ static int k3_sysctrler_start(struct udevice *dev)
 	debug("%s(dev=%p)\n", __func__, dev);
 
 	/* Receive the boot notification. Note that it is sent only once. */
-	ret = mbox_recv(&priv->chan_rx, &msg, priv->desc->max_rx_timeout_us);
+	ret = mbox_recv(priv->has_boot_notify ? &priv->chan_boot_notify :
+			&priv->chan_rx, &msg, priv->desc->max_rx_timeout_us);
 	if (ret) {
 		dev_err(dev, "%s: Boot Notification response failed. ret = %d\n",
 			__func__, ret);
@@ -228,7 +236,7 @@ static int k3_sysctrler_start(struct udevice *dev)
 	}
 
 	/* Process the response */
-	ret = k3_sysctrler_boot_notification_response(msg.buf);
+	ret = k3_sysctrler_boot_notification_response(dev, msg.buf);
 	if (ret)
 		return ret;
 
@@ -269,6 +277,19 @@ static int k3_of_to_priv(struct udevice *dev,
 		return ret;
 	}
 
+	/* Some SoCs may have a optional channel for boot notification. */
+	priv->has_boot_notify = 1;
+	ret = mbox_get_by_name(dev, "boot_notify", &priv->chan_boot_notify);
+	if (ret == -ENODATA) {
+		dev_dbg(dev, "%s: Acquiring optional Boot_notify failed. ret = %d. Using Rx\n",
+			__func__, ret);
+		priv->has_boot_notify = 0;
+	} else if (ret) {
+		dev_err(dev, "%s: Acquiring boot_notify channel failed. ret = %d\n",
+			__func__, ret);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -301,7 +322,7 @@ static int k3_sysctrler_probe(struct udevice *dev)
 
 static const struct k3_sysctrler_desc k3_sysctrler_am654_desc = {
 	.host_id = 4,				/* HOST_ID_R5_1 */
-	.max_rx_timeout_us = 400000,
+	.max_rx_timeout_us = 800000,
 	.max_msg_size = 60,
 };
 
@@ -319,5 +340,5 @@ U_BOOT_DRIVER(k3_sysctrler) = {
 	.id = UCLASS_REMOTEPROC,
 	.ops = &k3_sysctrler_ops,
 	.probe = k3_sysctrler_probe,
-	.priv_auto_alloc_size = sizeof(struct k3_sysctrler_privdata),
+	.priv_auto	= sizeof(struct k3_sysctrler_privdata),
 };

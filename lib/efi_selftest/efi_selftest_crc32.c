@@ -10,6 +10,7 @@
  */
 
 #include <efi_selftest.h>
+#include <u-boot/crc.h>
 
 const struct efi_system_table *st;
 efi_status_t (EFIAPI *bs_crc32)(const void *data, efi_uintn_t data_size,
@@ -67,7 +68,7 @@ static int check_table(const void *table)
  *
  * @handle:	handle of the loaded image
  * @systable:	system table
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int setup(const efi_handle_t handle,
 		 const struct efi_system_table *systable)
@@ -111,7 +112,7 @@ static int setup(const efi_handle_t handle,
  *
  * Check tables after ExitBootServices()
  *
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int execute(void)
 {

@@ -7,6 +7,7 @@
 #include <common.h>
 #include <dm.h>
 #include <i2s.h>
+#include <log.h>
 #include <sound.h>
 #include <asm/arch/clk.h>
 #include <asm/arch/pinmux.h>
@@ -125,7 +126,7 @@ static void i2s_fifo(struct i2s_reg *i2s_reg, unsigned int flush)
  * @param i2s_reg	i2s register address
  * @param dir		Clock direction
  *
- * @return		int value 0 for success, -1 in case of error
+ * Return:		int value 0 for success, -1 in case of error
  */
 static int i2s_set_sysclk_dir(struct i2s_reg *i2s_reg, int dir)
 {
@@ -147,7 +148,7 @@ static int i2s_set_sysclk_dir(struct i2s_reg *i2s_reg, int dir)
  * @param fmt		i2s clock properties
  * @param i2s_reg	i2s register address
  *
- * @return		int value 0 for success, -1 in case of error
+ * Return:		int value 0 for success, -1 in case of error
  */
 static int i2s_set_fmt(struct i2s_reg *i2s_reg, unsigned int fmt)
 {
@@ -224,7 +225,7 @@ static int i2s_set_fmt(struct i2s_reg *i2s_reg, unsigned int fmt)
  * @param blc		samplewidth (size of sample in bits)
  * @param i2s_reg	i2s register address
  *
- * @return		int value 0 for success, -1 in case of error
+ * Return:		int value 0 for success, -1 in case of error
  */
 static int i2s_set_samplesize(struct i2s_reg *i2s_reg, unsigned int blc)
 {
@@ -384,7 +385,7 @@ static int samsung_i2s_probe(struct udevice *dev)
 	return i2s_tx_init(priv);
 }
 
-static int samsung_i2s_ofdata_to_platdata(struct udevice *dev)
+static int samsung_i2s_of_to_plat(struct udevice *dev)
 {
 	struct i2s_uc_priv *priv = dev_get_uclass_priv(dev);
 	ulong base;
@@ -450,6 +451,6 @@ U_BOOT_DRIVER(samsung_i2s) = {
 	.id		= UCLASS_I2S,
 	.of_match	= samsung_i2s_ids,
 	.probe		= samsung_i2s_probe,
-	.ofdata_to_platdata	= samsung_i2s_ofdata_to_platdata,
+	.of_to_plat	= samsung_i2s_of_to_plat,
 	.ops		= &samsung_i2s_ops,
 };

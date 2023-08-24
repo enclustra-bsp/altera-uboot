@@ -1,13 +1,17 @@
 #include <common.h>
 #include <console.h>
+#include <dm.h>
+#include <malloc.h>
 #include <watchdog.h>
+#include <linux/delay.h>
+#include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/usb_urb_compat.h>
 
 #include <usb.h>
 #include "linux-compat.h"
-#include "usb-compat.h"
 #include "musb_core.h"
 #include "musb_host.h"
 #include "musb_gadget.h"
@@ -110,7 +114,7 @@ static int _musb_submit_bulk_msg(struct musb_host_data *host,
 
 static int _musb_submit_int_msg(struct musb_host_data *host,
 	struct usb_device *dev, unsigned long pipe,
-	void *buffer, int len, int interval)
+	void *buffer, int len, int interval, bool nonblock)
 {
 	construct_urb(&host->urb, &host->hep, dev, USB_ENDPOINT_XFER_INT, pipe,
 		      buffer, len, NULL, interval);
@@ -155,7 +159,7 @@ static struct int_queue *_musb_create_int_queue(struct musb_host_data *host,
 static int _musb_destroy_int_queue(struct musb_host_data *host,
 	struct usb_device *dev, struct int_queue *queue)
 {
-	int index = usb_pipein(queue->urb.pipe) * 16 + 
+	int index = usb_pipein(queue->urb.pipe) * 16 +
 		    usb_pipeendpoint(queue->urb.pipe);
 
 	if (queue->urb.status == -EINPROGRESS)
@@ -268,9 +272,10 @@ int submit_control_msg(struct usb_device *dev, unsigned long pipe,
 }
 
 int submit_int_msg(struct usb_device *dev, unsigned long pipe,
-		   void *buffer, int length, int interval)
+		   void *buffer, int length, int interval, bool nonblock)
 {
-	return _musb_submit_int_msg(&musb_host, dev, pipe, buffer, length, interval);
+	return _musb_submit_int_msg(&musb_host, dev, pipe, buffer, length,
+				    interval, nonblock);
 }
 
 struct int_queue *create_int_queue(struct usb_device *dev,
@@ -320,10 +325,11 @@ static int musb_submit_bulk_msg(struct udevice *dev, struct usb_device *udev,
 
 static int musb_submit_int_msg(struct udevice *dev, struct usb_device *udev,
 			       unsigned long pipe, void *buffer, int length,
-			       int interval)
+			       int interval, bool nonblock)
 {
 	struct musb_host_data *host = dev_get_priv(dev);
-	return _musb_submit_int_msg(host, udev, pipe, buffer, length, interval);
+	return _musb_submit_int_msg(host, udev, pipe, buffer, length, interval,
+				    nonblock);
 }
 
 static struct int_queue *musb_create_int_queue(struct udevice *dev,
@@ -372,7 +378,7 @@ static struct musb *gadget;
 
 int usb_gadget_handle_interrupts(int index)
 {
-	WATCHDOG_RESET();
+	schedule();
 	if (!gadget || !gadget->isr)
 		return -EINVAL;
 

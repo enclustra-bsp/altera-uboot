@@ -25,10 +25,13 @@
 
 #include <common.h>
 #include <command.h>
-#include <environment.h>
+#include <env.h>
+#include <env_internal.h>
+#include <asm/global_data.h>
 #include <linux/stddef.h>
 #include <search.h>
 #include <errno.h>
+#include <u-boot/crc.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -36,21 +39,7 @@ DECLARE_GLOBAL_DATA_PTR;
 extern void *nvram_read(void *dest, const long src, size_t count);
 extern void nvram_write(long dest, const void *src, size_t count);
 #else
-env_t *env_ptr = (env_t *)CONFIG_ENV_ADDR;
-#endif
-
-#ifdef CONFIG_SYS_NVRAM_ACCESS_ROUTINE
-/** Call this function from overridden env_get_char_spec() if you need
- * this functionality.
- */
-int env_nvram_get_char(int index)
-{
-	uchar c;
-
-	nvram_read(&c, CONFIG_ENV_ADDR + index, 1);
-
-	return c;
-}
+static env_t *env_ptr = (env_t *)CONFIG_ENV_ADDR;
 #endif
 
 static int env_nvram_load(void)
@@ -62,7 +51,7 @@ static int env_nvram_load(void)
 #else
 	memcpy(buf, (void *)CONFIG_ENV_ADDR, CONFIG_ENV_SIZE);
 #endif
-	return env_import(buf, 1);
+	return env_import(buf, 1, H_EXTERNAL);
 }
 
 static int env_nvram_save(void)
@@ -98,15 +87,14 @@ static int env_nvram_init(void)
 	nvram_read(data, CONFIG_ENV_ADDR + sizeof(ulong), ENV_SIZE);
 
 	if (crc32(0, data, ENV_SIZE) == crc) {
-		gd->env_addr	= (ulong)CONFIG_ENV_ADDR + sizeof(long);
+		gd->env_addr = (ulong)CONFIG_ENV_ADDR + sizeof(long);
 #else
 	if (crc32(0, env_ptr->data, ENV_SIZE) == env_ptr->crc) {
-		gd->env_addr	= (ulong)&env_ptr->data;
+		gd->env_addr = (ulong)&env_ptr->data;
 #endif
 		gd->env_valid = ENV_VALID;
 	} else {
-		gd->env_addr	= (ulong)&default_environment[0];
-		gd->env_valid	= ENV_INVALID;
+		gd->env_valid = ENV_INVALID;
 	}
 
 	return 0;

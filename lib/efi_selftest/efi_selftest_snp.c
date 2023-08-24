@@ -15,6 +15,7 @@
  */
 
 #include <efi_selftest.h>
+#include <net.h>
 
 /*
  * MAC address for broadcasts
@@ -66,7 +67,7 @@ struct dhcp {
 static struct efi_boot_services *boottime;
 static struct efi_simple_network *net;
 static struct efi_event *timer;
-static const efi_guid_t efi_net_guid = EFI_SIMPLE_NETWORK_GUID;
+static const efi_guid_t efi_net_guid = EFI_SIMPLE_NETWORK_PROTOCOL_GUID;
 /* IP packet ID */
 static unsigned int net_ip_id;
 
@@ -76,7 +77,7 @@ static unsigned int net_ip_id;
  *
  * @buf:	IP header
  * @len:	length of header in bytes
- * @return:	checksum
+ * Return:	checksum
  */
 static unsigned int efi_ip_checksum(const void *buf, size_t len)
 {
@@ -174,7 +175,7 @@ static efi_status_t send_dhcp_discover(void)
  *
  * @handle:	handle of the loaded image
  * @systable:	system table
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int setup(const efi_handle_t handle,
 		 const struct efi_system_table *systable)
@@ -228,6 +229,26 @@ static int setup(const efi_handle_t handle,
 		efi_st_error("WaitForPacket event missing\n");
 		return EFI_ST_FAILURE;
 	}
+	if (net->mode->state == EFI_NETWORK_INITIALIZED) {
+		/*
+		 * Shut down network adapter.
+		 */
+		ret = net->shutdown(net);
+		if (ret != EFI_SUCCESS) {
+			efi_st_error("Failed to shut down network adapter\n");
+			return EFI_ST_FAILURE;
+		}
+	}
+	if (net->mode->state == EFI_NETWORK_STARTED) {
+		/*
+		 * Stop network adapter.
+		 */
+		ret = net->stop(net);
+		if (ret != EFI_SUCCESS) {
+			efi_st_error("Failed to stop network adapter\n");
+			return EFI_ST_FAILURE;
+		}
+	}
 	/*
 	 * Start network adapter.
 	 */
@@ -236,11 +257,19 @@ static int setup(const efi_handle_t handle,
 		efi_st_error("Failed to start network adapter\n");
 		return EFI_ST_FAILURE;
 	}
+	if (net->mode->state != EFI_NETWORK_STARTED) {
+		efi_st_error("Failed to start network adapter\n");
+		return EFI_ST_FAILURE;
+	}
 	/*
 	 * Initialize network adapter.
 	 */
 	ret = net->initialize(net, 0, 0);
 	if (ret != EFI_SUCCESS) {
+		efi_st_error("Failed to initialize network adapter\n");
+		return EFI_ST_FAILURE;
+	}
+	if (net->mode->state != EFI_NETWORK_INITIALIZED) {
 		efi_st_error("Failed to initialize network adapter\n");
 		return EFI_ST_FAILURE;
 	}
@@ -253,7 +282,7 @@ static int setup(const efi_handle_t handle,
  * A DHCP discover message is sent. The test is successful if a
  * DHCP reply is received within 10 seconds.
  *
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int execute(void)
 {
@@ -268,6 +297,7 @@ static int execute(void)
 	struct efi_mac_address destaddr;
 	size_t buffer_size;
 	u8 *addr;
+
 	/*
 	 * The timeout is to occur after 10 s.
 	 */
@@ -276,6 +306,18 @@ static int execute(void)
 	/* Setup may have failed */
 	if (!net || !timer) {
 		efi_st_error("Cannot execute test after setup failure\n");
+		return EFI_ST_FAILURE;
+	}
+
+	/* Check media connected */
+	ret = net->get_status(net, NULL, NULL);
+	if (ret != EFI_SUCCESS) {
+		efi_st_error("Failed to get status");
+		return EFI_ST_FAILURE;
+	}
+	if (net->mode && net->mode->media_present_supported &&
+	    !net->mode->media_present) {
+		efi_st_error("Network media is not connected");
 		return EFI_ST_FAILURE;
 	}
 
@@ -320,47 +362,53 @@ static int execute(void)
 			continue;
 		}
 		/*
-		 * Receive packet
+		 * Receive packets until buffer is empty
 		 */
-		buffer_size = sizeof(buffer);
-		net->receive(net, NULL, &buffer_size, &buffer,
-			     &srcaddr, &destaddr, NULL);
-		if (ret != EFI_SUCCESS) {
-			efi_st_error("Failed to receive packet");
-			return EFI_ST_FAILURE;
-		}
-		/*
-		 * Check the packet is meant for this system.
-		 * Unfortunately QEMU ignores the broadcast flag.
-		 * So we have to check for broadcasts too.
-		 */
-		if (efi_st_memcmp(&destaddr, &net->mode->current_address,
-				  ARP_HLEN) &&
-		    efi_st_memcmp(&destaddr, BROADCAST_MAC, ARP_HLEN))
-			continue;
-		/*
-		 * Check this is a DHCP reply
-		 */
-		if (buffer.p.eth_hdr.et_protlen != ntohs(PROT_IP) ||
-		    buffer.p.ip_udp.ip_hl_v != 0x45 ||
-		    buffer.p.ip_udp.ip_p != IPPROTO_UDP ||
-		    buffer.p.ip_udp.udp_src != ntohs(67) ||
-		    buffer.p.ip_udp.udp_dst != ntohs(68) ||
-		    buffer.p.dhcp_hdr.op != BOOTREPLY)
-			continue;
-		/*
-		 * We successfully received a DHCP reply.
-		 */
-		break;
-	}
+		for (;;) {
+			buffer_size = sizeof(buffer);
+			ret = net->receive(net, NULL, &buffer_size, &buffer,
+					   &srcaddr, &destaddr, NULL);
+			if (ret == EFI_NOT_READY) {
+				/* The received buffer is empty. */
+				break;
+			}
 
+			if (ret != EFI_SUCCESS) {
+				efi_st_error("Failed to receive packet");
+				return EFI_ST_FAILURE;
+			}
+			/*
+			 * Check the packet is meant for this system.
+			 * Unfortunately QEMU ignores the broadcast flag.
+			 * So we have to check for broadcasts too.
+			 */
+			if (memcmp(&destaddr, &net->mode->current_address, ARP_HLEN) &&
+			    memcmp(&destaddr, BROADCAST_MAC, ARP_HLEN))
+				continue;
+			/*
+			 * Check this is a DHCP reply
+			 */
+			if (buffer.p.eth_hdr.et_protlen != ntohs(PROT_IP) ||
+			    buffer.p.ip_udp.ip_hl_v != 0x45 ||
+			    buffer.p.ip_udp.ip_p != IPPROTO_UDP ||
+			    buffer.p.ip_udp.udp_src != ntohs(67) ||
+			    buffer.p.ip_udp.udp_dst != ntohs(68) ||
+			    buffer.p.dhcp_hdr.op != BOOTREPLY)
+				continue;
+			/*
+			 * We successfully received a DHCP reply.
+			 */
+			goto received;
+		}
+	}
+received:
 	/*
 	 * Write a log message.
 	 */
 	addr = (u8 *)&buffer.p.ip_udp.ip_src;
 	efi_st_printf("DHCP reply received from %u.%u.%u.%u (%pm) ",
 		      addr[0], addr[1], addr[2], addr[3], &srcaddr);
-	if (!efi_st_memcmp(&destaddr, BROADCAST_MAC, ARP_HLEN))
+	if (!memcmp(&destaddr, BROADCAST_MAC, ARP_HLEN))
 		efi_st_printf("as broadcast message.\n");
 	else
 		efi_st_printf("as unicast message.\n");
@@ -374,7 +422,7 @@ static int execute(void)
  * Close the timer event created in setup.
  * Shut down the network adapter.
  *
- * @return:	EFI_ST_SUCCESS for success
+ * Return:	EFI_ST_SUCCESS for success
  */
 static int teardown(void)
 {
@@ -401,6 +449,18 @@ static int teardown(void)
 	}
 	if (net) {
 		/*
+		 * Shut down network adapter.
+		 */
+		ret = net->shutdown(net);
+		if (ret != EFI_SUCCESS) {
+			efi_st_error("Failed to shut down network adapter\n");
+			exit_status = EFI_ST_FAILURE;
+		}
+		if (net->mode->state != EFI_NETWORK_STARTED) {
+			efi_st_error("Failed to shutdown network adapter\n");
+			return EFI_ST_FAILURE;
+		}
+		/*
 		 * Stop network adapter.
 		 */
 		ret = net->stop(net);
@@ -408,13 +468,9 @@ static int teardown(void)
 			efi_st_error("Failed to stop network adapter\n");
 			exit_status = EFI_ST_FAILURE;
 		}
-		/*
-		 * Shut down network adapter.
-		 */
-		ret = net->shutdown(net);
-		if (ret != EFI_SUCCESS) {
-			efi_st_error("Failed to shut down network adapter\n");
-			exit_status = EFI_ST_FAILURE;
+		if (net->mode->state != EFI_NETWORK_STOPPED) {
+			efi_st_error("Failed to stop network adapter\n");
+			return EFI_ST_FAILURE;
 		}
 	}
 

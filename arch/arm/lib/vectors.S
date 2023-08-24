@@ -24,6 +24,7 @@
 #else
 	b	reset
 #endif
+#if !CONFIG_IS_ENABLED(SYS_NO_VECTOR_TABLE)
 	ldr	pc, _undefined_instruction
 	ldr	pc, _software_interrupt
 	ldr	pc, _prefetch_abort
@@ -31,6 +32,7 @@
 	ldr	pc, _not_used
 	ldr	pc, _irq
 	ldr	pc, _fiq
+#endif
 	.endm
 
 
@@ -68,7 +70,6 @@
  *   (2) inserts the vector table using ARM_VECTORS as appropriate
  */
 #include <asm/arch/boot0.h>
-
 #else
 
 /*
@@ -88,6 +89,7 @@ _start:
 	ARM_VECTORS
 #endif /* !defined(CONFIG_ENABLE_ARM_SOC_BOOT0_HOOK) */
 
+#if !CONFIG_IS_ENABLED(SYS_NO_VECTOR_TABLE)
 /*
  *************************************************************************
  *
@@ -119,6 +121,7 @@ _irq:			.word irq
 _fiq:			.word fiq
 
 	.balignl 16,0xdeadbeef
+#endif
 
 /*
  *************************************************************************
@@ -132,6 +135,7 @@ _fiq:			.word fiq
 
 #ifdef CONFIG_SPL_BUILD
 
+#if !CONFIG_IS_ENABLED(SYS_NO_VECTOR_TABLE)
 	.align	5
 undefined_instruction:
 software_interrupt:
@@ -142,6 +146,7 @@ irq:
 fiq:
 1:
 	b	1b			/* hang and never return */
+#endif
 
 #else	/* !CONFIG_SPL_BUILD */
 

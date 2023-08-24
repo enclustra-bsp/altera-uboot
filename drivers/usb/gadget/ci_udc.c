@@ -10,9 +10,12 @@
 #include <common.h>
 #include <command.h>
 #include <config.h>
+#include <cpu_func.h>
 #include <net.h>
 #include <malloc.h>
 #include <asm/byteorder.h>
+#include <asm/cache.h>
+#include <linux/delay.h>
 #include <linux/errno.h>
 #include <asm/io.h>
 #include <asm/unaligned.h>
@@ -91,11 +94,11 @@ static struct usb_request *
 ci_ep_alloc_request(struct usb_ep *ep, unsigned int gfp_flags);
 static void ci_ep_free_request(struct usb_ep *ep, struct usb_request *_req);
 
-static struct usb_gadget_ops ci_udc_ops = {
+static const struct usb_gadget_ops ci_udc_ops = {
 	.pullup = ci_pullup,
 };
 
-static struct usb_ep_ops ci_ep_ops = {
+static const struct usb_ep_ops ci_ep_ops = {
 	.enable         = ci_ep_enable,
 	.disable        = ci_ep_disable,
 	.queue          = ci_ep_queue,
@@ -142,6 +145,7 @@ static struct ci_drv controller = {
 		.name	= "ci_udc",
 		.ops	= &ci_udc_ops,
 		.is_dualspeed = 1,
+		.max_speed = USB_SPEED_HIGH,
 	},
 };
 
@@ -332,6 +336,7 @@ static int ci_ep_enable(struct usb_ep *ep,
 	num = desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK;
 	in = (desc->bEndpointAddress & USB_DIR_IN) != 0;
 	ci_ep->desc = desc;
+	ep->desc = desc;
 
 	if (num) {
 		int max = get_unaligned_le16(&desc->wMaxPacketSize);
@@ -354,6 +359,7 @@ static int ci_ep_disable(struct usb_ep *ep)
 	struct ci_ep *ci_ep = container_of(ep, struct ci_ep, ep);
 
 	ci_ep->desc = NULL;
+	ep->desc = NULL;
 	return 0;
 }
 
@@ -396,6 +402,9 @@ align:
 
 flush:
 	hwaddr = (unsigned long)ci_req->hw_buf;
+	if (!hwaddr)
+		return 0;
+
 	aligned_used_len = roundup(req->length, ARCH_DMA_MINALIGN);
 	flush_dcache_range(hwaddr, hwaddr + aligned_used_len);
 
@@ -409,7 +418,7 @@ static void ci_debounce(struct ci_req *ci_req, int in)
 	unsigned long hwaddr = (unsigned long)ci_req->hw_buf;
 	uint32_t aligned_used_len;
 
-	if (in)
+	if (in || !hwaddr)
 		return;
 
 	aligned_used_len = roundup(req->actual, ARCH_DMA_MINALIGN);
@@ -1012,8 +1021,6 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 		return -EINVAL;
 	if (!driver->bind || !driver->setup || !driver->disconnect)
 		return -EINVAL;
-	if (driver->speed != USB_SPEED_FULL && driver->speed != USB_SPEED_HIGH)
-		return -EINVAL;
 
 #if CONFIG_IS_ENABLED(DM_USB)
 	ret = usb_setup_ehci_gadget(&controller.ctrl);
@@ -1049,6 +1056,13 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	ci_ep_free_request(&controller.ep[0].ep, &controller.ep0_req->req);
 	free(controller.items_mem);
 	free(controller.epts);
+
+#if CONFIG_IS_ENABLED(DM_USB)
+	usb_remove_ehci_gadget(&controller.ctrl);
+#else
+	usb_lowlevel_stop(0);
+	controller.ctrl = NULL;
+#endif
 
 	return 0;
 }

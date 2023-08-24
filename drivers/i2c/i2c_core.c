@@ -9,6 +9,8 @@
  */
 #include <common.h>
 #include <i2c.h>
+#include <linker_lists.h>
+#include <asm/global_data.h>
 
 struct i2c_adapter *i2c_get_adapter(int index)
 {
@@ -185,11 +187,6 @@ static void i2c_init_bus(unsigned int bus_no, int speed, int slaveaddr)
 
 /* implement possible board specific board init */
 __weak void i2c_init_board(void)
-{
-}
-
-/* implement possible for i2c specific early i2c init */
-__weak void i2c_early_init_f(void)
 {
 }
 

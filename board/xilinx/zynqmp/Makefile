@@ -4,7 +4,6 @@
 # Michal Simek <michal.simek@xilinx.com>
 
 obj-y	:= zynqmp.o
-obj-y	+= ../common/board.o
 
 ifneq ($(CONFIG_XILINX_PS_INIT_FILE),"")
 PS_INIT_FILE := $(shell cd $(srctree); readlink -f $(CONFIG_XILINX_PS_INIT_FILE))
@@ -13,8 +12,13 @@ spl/board/xilinx/zynqmp/ps_init_gpl.o board/xilinx/zynqmp/ps_init_gpl.o: $(PS_IN
 	$(CC) $(c_flags) -I $(srctree)/$(src) -c -o $@ $^
 endif
 
+DEVICE_TREE ?= $(CONFIG_DEFAULT_DEVICE_TREE:"%"=%)
+ifeq ($(DEVICE_TREE),)
+DEVICE_TREE := unset
+endif
+
 ifeq ($(init-objs),)
-hw-platform-y :=$(shell echo $(CONFIG_DEFAULT_DEVICE_TREE))
+hw-platform-y :=$(shell echo $(DEVICE_TREE))
 init-objs := $(if $(wildcard $(srctree)/$(src)/$(hw-platform-y)/psu_init_gpl.c),\
 	$(hw-platform-y)/psu_init_gpl.o)
 endif
@@ -27,13 +31,14 @@ $(warning Put custom psu_init_gpl.c/h to board/xilinx/zynqmp/custom_hw_platform/
 endif
 endif
 
-ifdef_any_of = $(filter-out undefined,$(foreach v,$(1),$(origin $(v))))
+obj-$(CONFIG_$(SPL_)ZYNQMP_PSU_INIT_ENABLED) += $(init-objs)
 
-ifneq ($(call ifdef_any_of, CONFIG_ZYNQMP_PSU_INIT_ENABLED CONFIG_SPL_BUILD),)
-obj-y += $(init-objs)
+ifdef CONFIG_SPL_BUILD
+ifneq ($(CONFIG_ZYNQMP_SPL_PM_CFG_OBJ_FILE),"")
+obj-$(CONFIG_SPL_BUILD) += pm_cfg_obj.o
+$(obj)/pm_cfg_obj.o: $(shell cd $(srctree); readlink -f $(CONFIG_ZYNQMP_SPL_PM_CFG_OBJ_FILE)) FORCE
 endif
-
-obj-$(CONFIG_MMC_SDHCI_ZYNQ) += tap_delays.o
+endif
 
 ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_CMD_ZYNQMP) += cmds.o

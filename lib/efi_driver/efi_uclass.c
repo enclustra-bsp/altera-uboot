@@ -11,13 +11,17 @@
  * The uclass provides the bind, start, and stop entry points for the driver
  * binding protocol.
  *
- * In bind() and stop() it checks if the controller implements the protocol
+ * In supported() and bind() it checks if the controller implements the protocol
  * supported by the EFI driver. In the start() function it calls the bind()
  * function of the EFI driver. In the stop() function it destroys the child
  * controllers.
  */
 
+#include <common.h>
+#include <dm.h>
 #include <efi_driver.h>
+#include <log.h>
+#include <malloc.h>
 
 /**
  * check_node_type() - check node type
@@ -67,6 +71,15 @@ static efi_status_t EFIAPI efi_uc_supported(
 	EFI_ENTRY("%p, %p, %ls", this, controller_handle,
 		  efi_dp_str(remaining_device_path));
 
+	/*
+	 * U-Boot internal devices install protocols interfaces without calling
+	 * ConnectController(). Hence we should not bind an extra driver.
+	 */
+	if (controller_handle->dev) {
+		ret = EFI_UNSUPPORTED;
+		goto out;
+	}
+
 	ret = EFI_CALL(systab.boottime->open_protocol(
 			controller_handle, bp->ops->protocol,
 			&interface, this->driver_binding_handle,
@@ -84,10 +97,9 @@ static efi_status_t EFIAPI efi_uc_supported(
 
 	ret = check_node_type(controller_handle);
 
-	r = EFI_CALL(systab.boottime->close_protocol(
-				controller_handle, bp->ops->protocol,
-				this->driver_binding_handle,
-				controller_handle));
+	r = efi_close_protocol(controller_handle, bp->ops->protocol,
+			       this->driver_binding_handle,
+			       controller_handle);
 	if (r != EFI_SUCCESS)
 		ret = EFI_UNSUPPORTED;
 out:
@@ -112,7 +124,7 @@ static efi_status_t EFIAPI efi_uc_start(
 	struct efi_driver_binding_extended_protocol *bp =
 			(struct efi_driver_binding_extended_protocol *)this;
 
-	EFI_ENTRY("%p, %pUl, %ls", this, controller_handle,
+	EFI_ENTRY("%p, %p, %ls", this, controller_handle,
 		  efi_dp_str(remaining_device_path));
 
 	/* Attach driver to controller */
@@ -131,18 +143,18 @@ static efi_status_t EFIAPI efi_uc_start(
 		goto out;
 	}
 	ret = check_node_type(controller_handle);
-	if (ret != EFI_SUCCESS) {
-		r = EFI_CALL(systab.boottime->close_protocol(
-				controller_handle, bp->ops->protocol,
-				this->driver_binding_handle,
-				controller_handle));
-		if (r != EFI_SUCCESS)
-			EFI_PRINT("Failure to close handle\n");
+	if (ret != EFI_SUCCESS)
+		goto err;
+	ret = bp->ops->bind(bp, controller_handle, interface);
+	if (ret == EFI_SUCCESS)
 		goto out;
-	}
 
-	/* TODO: driver specific stuff */
-	bp->ops->bind(controller_handle, interface);
+err:
+	r = efi_close_protocol(controller_handle, bp->ops->protocol,
+			       this->driver_binding_handle,
+			       controller_handle);
+	if (r != EFI_SUCCESS)
+		EFI_PRINT("Failure to close handle\n");
 
 out:
 	return EFI_EXIT(ret);
@@ -163,9 +175,8 @@ static efi_status_t disconnect_child(efi_handle_t controller_handle,
 	efi_guid_t *guid_controller = NULL;
 	efi_guid_t *guid_child_controller = NULL;
 
-	ret = EFI_CALL(systab.boottime->close_protocol(
-				controller_handle, guid_controller,
-				child_handle, child_handle));
+	ret = efi_close_protocol(controller_handle, guid_controller,
+				 child_handle, child_handle);
 	if (ret != EFI_SUCCESS) {
 		EFI_PRINT("Cannot close protocol\n");
 		return ret;
@@ -197,9 +208,10 @@ static efi_status_t EFIAPI efi_uc_stop(
 	efi_status_t ret;
 	efi_uintn_t count;
 	struct efi_open_protocol_info_entry *entry_buffer;
-	efi_guid_t *guid_controller = NULL;
+	struct efi_driver_binding_extended_protocol *bp =
+			(struct efi_driver_binding_extended_protocol *)this;
 
-	EFI_ENTRY("%p, %pUl, %zu, %p", this, controller_handle,
+	EFI_ENTRY("%p, %p, %zu, %p", this, controller_handle,
 		  number_of_children, child_handle_buffer);
 
 	/* Destroy provided child controllers */
@@ -210,14 +222,15 @@ static efi_status_t EFIAPI efi_uc_stop(
 			ret = disconnect_child(controller_handle,
 					       child_handle_buffer[i]);
 			if (ret != EFI_SUCCESS)
-				return ret;
+				goto out;
 		}
-		return EFI_SUCCESS;
+		ret = EFI_SUCCESS;
+			goto out;
 	}
 
 	/* Destroy all children */
 	ret = EFI_CALL(systab.boottime->open_protocol_information(
-					controller_handle, guid_controller,
+					controller_handle, bp->ops->protocol,
 					&entry_buffer, &count));
 	if (ret != EFI_SUCCESS)
 		goto out;
@@ -231,14 +244,14 @@ static efi_status_t EFIAPI efi_uc_stop(
 				goto out;
 		}
 	}
-	ret = EFI_CALL(systab.boottime->free_pool(entry_buffer));
+	ret = efi_free_pool(entry_buffer);
 	if (ret != EFI_SUCCESS)
-		printf("%s: ERROR: Cannot free pool\n", __func__);
+		log_err("Cannot free EFI memory pool\n");
 
 	/* Detach driver from controller */
-	ret = EFI_CALL(systab.boottime->close_protocol(
-			controller_handle, guid_controller,
-			this->driver_binding_handle, controller_handle));
+	ret = efi_close_protocol(controller_handle, bp->ops->protocol,
+				 this->driver_binding_handle,
+				 controller_handle);
 out:
 	return EFI_EXIT(ret);
 }
@@ -255,10 +268,10 @@ static efi_status_t efi_add_driver(struct driver *drv)
 	const struct efi_driver_ops *ops = drv->ops;
 	struct efi_driver_binding_extended_protocol *bp;
 
-	debug("EFI: Adding driver '%s'\n", drv->name);
+	log_debug("Adding EFI driver '%s'\n", drv->name);
 	if (!ops->protocol) {
-		printf("EFI: ERROR: protocol GUID missing for driver '%s'\n",
-		       drv->name);
+		log_err("EFI protocol GUID missing for driver '%s'\n",
+			drv->name);
 		return EFI_INVALID_PARAMETER;
 	}
 	bp = calloc(1, sizeof(struct efi_driver_binding_extended_protocol));
@@ -269,7 +282,7 @@ static efi_status_t efi_add_driver(struct driver *drv)
 	bp->bp.start = efi_uc_start;
 	bp->bp.stop = efi_uc_stop;
 	bp->bp.version = 0xffffffff;
-	bp->ops = drv->ops;
+	bp->ops = ops;
 
 	ret = efi_create_handle(&bp->bp.driver_binding_handle);
 	if (ret != EFI_SUCCESS) {
@@ -279,12 +292,19 @@ static efi_status_t efi_add_driver(struct driver *drv)
 	bp->bp.image_handle = bp->bp.driver_binding_handle;
 	ret = efi_add_protocol(bp->bp.driver_binding_handle,
 			       &efi_guid_driver_binding_protocol, bp);
-	if (ret != EFI_SUCCESS) {
-		efi_delete_handle(bp->bp.driver_binding_handle);
-		free(bp);
-		goto out;
+	if (ret != EFI_SUCCESS)
+		goto err;
+	if (ops->init) {
+		ret = ops->init(bp);
+		if (ret != EFI_SUCCESS)
+			goto err;
 	}
 out:
+	return ret;
+
+err:
+	efi_delete_handle(bp->bp.driver_binding_handle);
+	free(bp);
 	return ret;
 }
 
@@ -300,17 +320,14 @@ efi_status_t efi_driver_init(void)
 	struct driver *drv;
 	efi_status_t ret = EFI_SUCCESS;
 
-	/* Save 'gd' pointer */
-	efi_save_gd();
-
-	debug("EFI: Initializing EFI driver framework\n");
+	log_debug("Initializing EFI driver framework\n");
 	for (drv = ll_entry_start(struct driver, driver);
 	     drv < ll_entry_end(struct driver, driver); ++drv) {
-		if (drv->id == UCLASS_EFI) {
+		if (drv->id == UCLASS_EFI_LOADER) {
 			ret = efi_add_driver(drv);
 			if (ret != EFI_SUCCESS) {
-				printf("EFI: ERROR: failed to add driver %s\n",
-				       drv->name);
+				log_err("Failed to add EFI driver %s\n",
+					drv->name);
 				break;
 			}
 		}
@@ -326,7 +343,7 @@ efi_status_t efi_driver_init(void)
  */
 static int efi_uc_init(struct uclass *class)
 {
-	printf("EFI: Initializing UCLASS_EFI\n");
+	log_debug("Initializing UCLASS_EFI_LOADER\n");
 	return 0;
 }
 
@@ -338,13 +355,13 @@ static int efi_uc_init(struct uclass *class)
  */
 static int efi_uc_destroy(struct uclass *class)
 {
-	printf("Destroying  UCLASS_EFI\n");
+	log_debug("Destroying UCLASS_EFI_LOADER\n");
 	return 0;
 }
 
 UCLASS_DRIVER(efi) = {
 	.name		= "efi",
-	.id		= UCLASS_EFI,
+	.id		= UCLASS_EFI_LOADER,
 	.init		= efi_uc_init,
 	.destroy	= efi_uc_destroy,
 };

@@ -6,7 +6,6 @@
 
 #include <asm-offsets.h>
 #include <config.h>
-#include "version.h"
 #include <asm/cache.h>
 
 #define _START	_start
@@ -36,8 +35,8 @@
  */
 _vectors:
 .long	0x00000000		/* Flash offset is 0 until we setup CS0 */
-#if defined(CONFIG_M5282) && (CONFIG_SYS_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
-.long	_start - CONFIG_SYS_TEXT_BASE
+#if defined(CONFIG_M5282) && (CONFIG_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
+.long	_start - CONFIG_TEXT_BASE
 #else
 .long	_START
 #endif
@@ -84,7 +83,7 @@ _vectors:
 
 #if defined(CONFIG_SYS_INT_FLASH_BASE) && \
     (defined(CONFIG_M5282) || defined(CONFIG_M5281))
-#if (CONFIG_SYS_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
+#if (CONFIG_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
 .long	0x55AA55AA,0xAA55AA55		/* CFM Backdoorkey */
 .long	0xFFFFFFFF			/* all sectors protected */
 .long	0x00000000			/* supervisor/User restriction */
@@ -131,7 +130,7 @@ _start:
 	movec	%d0, %RAMBAR1
 
 #if defined(CONFIG_M5282)
-#if (CONFIG_SYS_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
+#if (CONFIG_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
 	/*
 	 * Setup code in SRAM to initialize FLASHBAR,
 	 * if start from internal Flash
@@ -157,7 +156,7 @@ _after_flashbar_copy:
 	/* Setup code to initialize FLASHBAR, if start from external Memory */
 	move.l	#(CONFIG_SYS_INT_FLASH_BASE + CONFIG_SYS_INT_FLASH_ENABLE), %d0
 	movec	%d0, %FLASHBAR
-#endif /* (CONFIG_SYS_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE) */
+#endif /* (CONFIG_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE) */
 
 #endif
 #endif
@@ -166,7 +165,7 @@ _after_flashbar_copy:
 	 * therefore no VBR to set
 	 */
 #if !defined(CONFIG_MONITOR_IS_IN_RAM)
-#if defined(CONFIG_M5282) && (CONFIG_SYS_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
+#if defined(CONFIG_M5282) && (CONFIG_TEXT_BASE == CONFIG_SYS_INT_FLASH_BASE)
 	move.l	#CONFIG_SYS_INT_FLASH_BASE, %d0
 #else
 	move.l	#CONFIG_SYS_FLASH_BASE, %d0
@@ -229,7 +228,7 @@ _after_flashbar_copy:
 /******************************************************************************/
 
 /*
- * void relocate_code (addr_sp, gd, addr_moni)
+ * void relocate_code(addr_sp, gd, addr_moni)
  *
  * This "function" does not return, instead it continues in RAM
  * after relocating the monitor code.
@@ -304,10 +303,6 @@ clear_bss:
 	/* set parameters for board_init_r */
 	move.l	%a0,-(%sp)		/* dest_addr */
 	move.l	%d0,-(%sp)		/* gd */
-#if defined(DEBUG) && (CONFIG_SYS_TEXT_BASE != CONFIG_SYS_INT_FLASH_BASE) && \
-    defined(CONFIG_SYS_HALT_BEFOR_RAM_JUMP)
-	halt
-#endif
 	jsr	(%a1)
 
 /******************************************************************************/
@@ -335,7 +330,4 @@ _int_handler:
 
 /******************************************************************************/
 
-.globl version_string
-version_string:
-.ascii U_BOOT_VERSION_STRING, "\0"
 .align 4

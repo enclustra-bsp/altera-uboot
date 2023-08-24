@@ -34,7 +34,7 @@
 	mov	\divisor, \divisor, lsl \result
 	mov	\curbit, \curbit, lsl \result
 	mov	\result, #0
-	
+
 #else
 
 	@ Initially shift the divisor left 3 bits if possible,
@@ -48,7 +48,7 @@
 
 	@ Unless the divisor is very big, shift it up in multiples of
 	@ four bits, since this is the amount of unwinding in the main
-	@ division loop.  Continue shifting until the divisor is 
+	@ division loop.  Continue shifting until the divisor is
 	@ larger than the dividend.
 1:	cmp	\divisor, #0x10000000
 	cmplo	\divisor, \dividend
@@ -135,7 +135,7 @@
 
 	@ Unless the divisor is very big, shift it up in multiples of
 	@ four bits, since this is the amount of unwinding in the main
-	@ division loop.  Continue shifting until the divisor is 
+	@ division loop.  Continue shifting until the divisor is
 	@ larger than the dividend.
 1:	cmp	\divisor, #0x10000000
 	cmplo	\divisor, \dividend
@@ -377,7 +377,7 @@ ENTRY(__gnu_thumb1_case_sqi)
 	lsls	r1, r1, #1
 	add	lr, lr, r1
 	pop	{r1}
-	bx	lr
+	ret	lr
 ENDPROC(__gnu_thumb1_case_sqi)
 .popsection
 
@@ -391,7 +391,7 @@ ENTRY(__gnu_thumb1_case_uqi)
 	lsls	r1, r1, #1
 	add	lr, lr, r1
 	pop	{r1}
-	bx	lr
+	ret	lr
 ENDPROC(__gnu_thumb1_case_uqi)
 .popsection
 
@@ -406,7 +406,7 @@ ENTRY(__gnu_thumb1_case_shi)
 	lsls	r1, r1, #1
 	add	lr, lr, r1
 	pop	{r0, r1}
-	bx	lr
+	ret	lr
 ENDPROC(__gnu_thumb1_case_shi)
 .popsection
 
@@ -421,7 +421,7 @@ ENTRY(__gnu_thumb1_case_uhi)
 	lsls	r1, r1, #1
 	add	lr, lr, r1
 	pop	{r0, r1}
-	bx	lr
+	ret	lr
 ENDPROC(__gnu_thumb1_case_uhi)
 .popsection
 #endif

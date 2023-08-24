@@ -4,10 +4,13 @@
  * Przemyslaw Marczak <p.marczak@samsung.com>
  */
 
+#define LOG_CATEGORY UCLASS_PMIC
+
 #include <common.h>
 #include <fdtdec.h>
 #include <errno.h>
 #include <dm.h>
+#include <log.h>
 #include <vsprintf.h>
 #include <dm/lists.h>
 #include <dm/device-internal.h>
@@ -36,6 +39,10 @@ int pmic_bind_children(struct udevice *pmic, ofnode parent,
 		node_name = ofnode_get_name(node);
 
 		debug("* Found child node: '%s'\n", node_name);
+		if (!ofnode_is_enabled(node)) {
+			debug("  - ignoring disabled device\n");
+			continue;
+		}
 
 		child = NULL;
 		for (info = child_info; info->prefix && info->driver; info++) {
@@ -195,5 +202,5 @@ UCLASS_DRIVER(pmic) = {
 	.id		= UCLASS_PMIC,
 	.name		= "pmic",
 	.pre_probe	= pmic_pre_probe,
-	.per_device_auto_alloc_size = sizeof(struct uc_pmic_priv),
+	.per_device_auto	= sizeof(struct uc_pmic_priv),
 };

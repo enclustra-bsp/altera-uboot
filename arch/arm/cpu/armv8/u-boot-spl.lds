@@ -23,7 +23,7 @@ SECTIONS
 {
 	.text : {
 		. = ALIGN(8);
-		*(.__image_copy_start)
+		__image_copy_start = .;
 		CPUDIR/start.o (.text*)
 		*(.text*)
 	} >.sram
@@ -38,9 +38,17 @@ SECTIONS
 		*(.data*)
 	} >.sram
 
-	.u_boot_list : {
+#ifdef CONFIG_SPL_RECOVER_DATA_SECTION
+	.data_save : {
+		*(.__data_save_start)
+		. = SIZEOF(.data);
+		*(.__data_save_end)
+	} >.sram
+#endif
+
+	__u_boot_list : {
 		. = ALIGN(8);
-		KEEP(*(SORT(.u_boot_list*)));
+		KEEP(*(SORT(__u_boot_list*)));
 	} >.sram
 
 	.image_copy_end : {
@@ -69,10 +77,15 @@ SECTIONS
 		KEEP(*(.__bss_end));
 	} >.sdram
 
+	/DISCARD/ : { *(.rela*) }
 	/DISCARD/ : { *(.dynsym) }
 	/DISCARD/ : { *(.dynstr*) }
 	/DISCARD/ : { *(.dynamic*) }
 	/DISCARD/ : { *(.plt*) }
 	/DISCARD/ : { *(.interp*) }
 	/DISCARD/ : { *(.gnu*) }
+
+#ifdef CONFIG_LINUX_KERNEL_IMAGE_HEADER
+#include "linux-kernel-image-header-vars.h"
+#endif
 }

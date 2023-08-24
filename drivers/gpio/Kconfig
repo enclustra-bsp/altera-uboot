@@ -2,7 +2,19 @@
 # GPIO infrastructure and drivers
 #
 
-menu "GPIO Support"
+menuconfig GPIO
+	bool "GPIO support"
+	default y
+	help
+	  Enable support for GPIOs (General-purpose Input/Output) in U-Boot.
+	  GPIOs allow U-Boot to read the state of an input line (high or
+	  low) and set the state of an output line. This can be used to
+	  drive LEDs, control power to various system parts and read user
+	  input. GPIOs can be useful to enable a 'sign-of-life' LED,
+	  for example. Enable this option to build the drivers in
+	  drivers/gpio as part of an U-Boot build.
+
+if GPIO
 
 config DM_GPIO
 	bool "Enable Driver Model for GPIO drivers"
@@ -14,6 +26,77 @@ config DM_GPIO
 	  particular GPIOs that they provide. The uclass interface
 	  is defined in include/asm-generic/gpio.h.
 
+config SPL_DM_GPIO
+	bool "Enable Driver Model for GPIO drivers in SPL"
+	depends on DM_GPIO && SPL_DM && SPL_GPIO
+	default y
+	help
+	  Enable driver model for GPIO access in SPL. The standard GPIO
+	  interface (gpio_get_value(), etc.) is then implemented by
+	  the GPIO uclass. Drivers provide methods to query the
+	  particular GPIOs that they provide. The uclass interface
+	  is defined in include/asm-generic/gpio.h.
+
+config TPL_DM_GPIO
+	bool "Enable Driver Model for GPIO drivers in TPL"
+	depends on DM_GPIO && TPL_DM && TPL_GPIO
+	default y
+	help
+	  Enable driver model for GPIO access in TPL. The standard GPIO
+	  interface (gpio_get_value(), etc.) is then implemented by
+	  the GPIO uclass. Drivers provide methods to query the
+	  particular GPIOs that they provide. The uclass interface
+	  is defined in include/asm-generic/gpio.h.
+
+config VPL_DM_GPIO
+	bool "Enable Driver Model for GPIO drivers in VPL"
+	depends on DM_GPIO && VPL_DM && VPL_GPIO
+	default y
+	help
+	  Enable driver model for GPIO access in VPL. The standard GPIO
+	  interface (gpio_get_value(), etc.) is then implemented by
+	  the GPIO uclass. Drivers provide methods to query the
+	  particular GPIOs that they provide. The uclass interface
+	  is defined in include/asm-generic/gpio.h.
+
+config GPIO_HOG
+	bool "Enable GPIO hog support"
+	depends on DM_GPIO
+	help
+	  Enable gpio hog support
+	  The GPIO chip may contain GPIO hog definitions. GPIO hogging
+	  is a mechanism providing automatic GPIO request and config-
+	  uration as part of the gpio-controller's driver probe function.
+
+config SPL_GPIO_HOG
+	bool "Enable GPIO hog support in SPL"
+	depends on SPL_GPIO
+	help
+	  Enable gpio hog support in SPL
+	  The GPIO chip may contain GPIO hog definitions. GPIO hogging
+	  is a mechanism providing automatic GPIO request and config-
+	  uration as part of the gpio-controller's driver probe function.
+
+config DM_GPIO_LOOKUP_LABEL
+	bool "Enable searching for gpio labelnames"
+	depends on DM_GPIO
+	help
+	  This option enables searching for gpio names in
+	  the defined gpio labels, if the search for the
+	  gpio bank name failed. This makes sense if you use
+	  different gpios on different hardware versions
+	  for the same functionality in board code.
+
+config SPL_DM_GPIO_LOOKUP_LABEL
+	bool "Enable searching for gpio labelnames"
+	depends on SPL_DM_GPIO
+	help
+	  This option enables searching for gpio names in
+	  the defined gpio labels, if the search for the
+	  gpio bank name failed. This makes sense if you use
+	  different gpios on different hardware versions
+	  for the same functionality in board code.
+
 config ALTERA_PIO
 	bool "Altera PIO driver"
 	depends on DM_GPIO
@@ -21,23 +104,33 @@ config ALTERA_PIO
 	  Select this to enable PIO for Altera devices. Please find
 	  details on the "Embedded Peripherals IP User Guide" of Altera.
 
+config BCM2835_GPIO
+	bool "BCM2835 GPIO driver"
+	depends on DM_GPIO
+
 config BCM6345_GPIO
 	bool "BCM6345 GPIO driver"
-	depends on DM_GPIO && ARCH_BMIPS
+	depends on DM_GPIO && (ARCH_BMIPS || BCM6856 || \
+			       BCM6858 || BCM63158 || BCM6855)
 	help
 	  This driver supports the GPIO banks on BCM6345 SoCs.
+
+config CORTINA_GPIO
+	bool "Cortina-Access GPIO driver"
+	depends on DM_GPIO && CORTINA_PLATFORM
+	help
+	  Enable support for the GPIO controller in Cortina CAxxxx SoCs.
+	  This driver supports all CPU ISA variants supported by Cortina
+	  Access CAxxxx SoCs.
 
 config DWAPB_GPIO
 	bool "DWAPB GPIO driver"
 	depends on DM && DM_GPIO
-	default n
 	help
 	  Support for the Designware APB GPIO driver.
 
 config AT91_GPIO
 	bool "AT91 PIO GPIO driver"
-	depends on DM_GPIO
-	default n
 	help
 	  Say yes here to select AT91 PIO GPIO driver. AT91 PIO
 	  controller manages up to 32 fully programmable input/output
@@ -50,7 +143,6 @@ config AT91_GPIO
 config ATMEL_PIO4
 	bool "ATMEL PIO4 driver"
 	depends on DM_GPIO
-	default n
 	help
 	  Say yes here to support the Atmel PIO4 driver.
 	  The PIO4 is new version of Atmel PIO controller, which manages
@@ -58,10 +150,24 @@ config ATMEL_PIO4
 	  may be dedicated as a general purpose I/O or be assigned to
 	  a function of an embedded peripheral.
 
+config ASPEED_GPIO
+	bool "Aspeed GPIO Driver"
+	help
+	  Say yes here to support the Aspeed GPIO driver. The controller
+	  is found in the AST2400, AST2500 and AST2600 BMC SoCs and
+	  provides access to over 200 GPIOs on each chip.
+
 config DA8XX_GPIO
 	bool "DA8xx GPIO Driver"
 	help
 	  This driver supports the DA8xx GPIO controller
+
+config FXL6408_GPIO
+	bool "FXL6408 I2C GPIO expander driver"
+	depends on DM_GPIO && DM_I2C
+	help
+	  This driver supports the Fairchild FXL6408 device. FXL6408 is a
+	  fully configurable 8-bit I2C-controlled GPIO expander.
 
 config INTEL_BROADWELL_GPIO
 	bool "Intel Broadwell GPIO driver"
@@ -72,6 +178,15 @@ config INTEL_BROADWELL_GPIO
 	  driver from the common Intel ICH6 driver. It supports a total of
 	  95 GPIOs which can be configured from the device tree.
 
+config INTEL_GPIO
+	bool "Intel generic GPIO driver"
+	depends on DM_GPIO
+	help
+	  Say yes here to select Intel generic GPIO driver. This controller
+	  supports recent chips (e.g. Apollo Lake). It permits basic GPIO
+	  control including setting pins to input/output. It makes use of its
+	  parent pinctrl driver to actually effect changes.
+
 config INTEL_ICH6_GPIO
 	bool "Intel ICH6 compatible legacy GPIO driver"
 	depends on DM_GPIO
@@ -81,23 +196,53 @@ config INTEL_ICH6_GPIO
 config IMX_RGPIO2P
 	bool "i.MX7ULP RGPIO2P driver"
 	depends on DM
-	default n
 	help
 	  This driver supports i.MX7ULP Rapid GPIO2P controller.
+
+config IPROC_GPIO
+	bool "Broadcom iProc GPIO driver(without pinconf)"
+	help
+	  The Broadcom iProc based SoCs- Cygnus, NS2, NS3, NSP and Stingray,
+	  use the same GPIO Controller IP hence this driver could be used
+	  for all.
+
+	  The Broadcom iProc based SoCs have multiple GPIO controllers and only
+	  the always-ON GPIO controller (CRMU/AON) is supported by this driver.
 
 config HSDK_CREG_GPIO
 	bool "HSDK CREG GPIO griver"
 	depends on DM_GPIO
-	default n
 	help
 	  This driver supports CREG GPIOs on Synopsys HSDK SOC.
+
+config KIRKWOOD_GPIO
+	bool "Kirkwood GPIO driver"
+	help
+	  This drdiver supports GPIOs on Kirkwood platforms
 
 config LPC32XX_GPIO
 	bool "LPC32XX GPIO driver"
 	depends on DM
-	default n
 	help
 	  Support for the LPC32XX GPIO driver.
+
+config MAX7320_GPIO
+	bool "MAX7320 I2C GPIO Expander driver"
+	depends on DM_GPIO && DM_I2C
+	help
+	 Support for MAX7320 I2C 8/16-bit GPIO expander.
+	 original maxim device has 8 push/pull outputs,
+	 some clones offers 16bit.
+
+config MCP230XX_GPIO
+	bool "MCP230XX GPIO driver"
+	depends on DM
+	help
+	  Support for Microchip's MCP230XX I2C connected GPIO devices.
+	  The following chips are supported:
+	   - MCP23008
+	   - MCP23017
+	   - MCP23018
 
 config MSCC_SGPIO
 	bool "Microsemi Serial GPIO driver"
@@ -113,7 +258,6 @@ config MSCC_SGPIO
 config MSM_GPIO
 	bool "Qualcomm GPIO driver"
 	depends on DM_GPIO
-	default n
 	help
 	  Support GPIO controllers on Qualcomm Snapdragon family of SoCs.
 	  This controller have single bank (default name "soc"), every
@@ -128,6 +272,18 @@ config MXC_GPIO
 	bool "Freescale/NXP MXC GPIO driver"
 	help
 	  Support GPIO controllers on various i.MX platforms
+
+config MXS_GPIO
+	bool "Freescale/NXP MXS GPIO driver"
+	help
+	  Support GPIO controllers on i.MX23 and i.MX28 platforms
+
+config NPCM_GPIO
+	bool "Nuvoton NPCM GPIO driver"
+	depends on DM_GPIO
+	help
+	  Support GPIO controllers on Nuvovon NPCM SoCs.
+	  NPCM7xx/NPCM8xx contain 8 GPIO banks, each bank contains 32 pins.
 
 config OMAP_GPIO
 	bool "TI OMAP GPIO driver"
@@ -146,14 +302,14 @@ config CMD_PCA953X
 	  legacy GPIO interface. Several subcommands are provided which mirror
 	  the standard 'gpio' command. It should use that instead.
 
-config PM8916_GPIO
-	bool "Qualcomm PM8916 PMIC GPIO/keypad driver"
-	depends on DM_GPIO && PMIC_PM8916
+config QCOM_PMIC_GPIO
+	bool "Qualcomm generic PMIC GPIO/keypad driver"
+	depends on DM_GPIO && PMIC_QCOM
 	help
 	  Support for GPIO pins and power/reset buttons found on
-	  Qualcomm PM8916 PMIC.
+	  Qualcomm SoCs PMIC.
 	  Default name for GPIO bank is "pm8916".
-	  Power and reset buttons are placed in "pm8916_key" bank and
+	  Power and reset buttons are placed in "pwkey_qcom" bank and
           have gpio numbers 0 and 1 respectively.
 
 config PCF8575_GPIO
@@ -168,6 +324,12 @@ config RCAR_GPIO
 	depends on DM_GPIO && ARCH_RMOBILE
 	help
 	  This driver supports the GPIO banks on Renesas RCar SoCs.
+
+config RZA1_GPIO
+	bool "Renesas RZ/A1 GPIO driver"
+	depends on DM_GPIO && RZA1
+	help
+	  This driver supports the GPIO banks on Renesas RZ/A1 R7S72100 SoCs.
 
 config ROCKCHIP_GPIO
 	bool "Rockchip GPIO driver"
@@ -198,6 +360,13 @@ config SANDBOX_GPIO_COUNT
 	  are specified using the device tree. But you can also have a number
 	  of 'anonymous' GPIOs that do not belong to any device or bank.
 	  Select a suitable value depending on your needs.
+
+config SUNXI_GPIO
+	bool "Allwinner GPIO driver"
+	depends on ARCH_SUNXI
+	select SPL_STRTO if SPL
+	help
+	  Support the GPIO device in Allwinner SoCs.
 
 config XILINX_GPIO
 	bool "Xilinx GPIO driver"
@@ -238,7 +407,6 @@ config GPIO_UNIPHIER
 config VYBRID_GPIO
 	bool "Vybrid GPIO driver"
 	depends on DM
-	default n
 	help
 	  Say yes here to support Vybrid vf610 GPIOs.
 
@@ -249,26 +417,43 @@ config PIC32_GPIO
 	help
 	  Say yes here to support Microchip PIC32 GPIOs.
 
-config STM32F7_GPIO
+config OCTEON_GPIO
+	bool "Octeon II/III/TX/TX2 GPIO driver"
+	depends on DM_GPIO && PCI && (ARCH_OCTEON || ARCH_OCTEONTX || ARCH_OCTEONTX2)
+	default y
+	help
+	  Add support for the Marvell Octeon GPIO driver. This is used with
+	  various Octeon parts such as Octeon II/III and OcteonTX/TX2.
+	  Octeon II/III has 32 GPIOs (count defined via DT) and OcteonTX/TX2
+	  has 64 GPIOs (count defined via internal register).
+
+config STM32_GPIO
 	bool "ST STM32 GPIO driver"
-	depends on DM_GPIO && (STM32 || ARCH_STM32MP)
+	depends on DM_GPIO && (ARCH_STM32 || ARCH_STM32MP)
 	default y
 	help
 	  Device model driver support for STM32 GPIO controller. It should be
-	  usable on many stm32 families like stm32f4 & stm32H7.
+	  usable on many stm32 families like stm32f4/f7/h7 and stm32mp1.
 	  Tested on STM32F7.
+
+config SIFIVE_GPIO
+	bool "SiFive GPIO driver"
+	depends on DM_GPIO
+	help
+	  Device model driver for GPIO controller present in SiFive FU540 SoC. This
+	  driver enables GPIO interface on HiFive Unleashed A00 board.
 
 config MVEBU_GPIO
 	bool "Marvell MVEBU GPIO driver"
-	depends on DM_GPIO && ARCH_MVEBU
+	depends on DM_GPIO && (ARCH_MVEBU || ARCH_KIRKWOOD)
 	default y
 	help
 	  Say yes here to support Marvell MVEBU (Armada XP/38x) GPIOs.
 
 config ZYNQ_GPIO
 	bool "Zynq GPIO driver"
-	depends on DM_GPIO && (ARCH_ZYNQ || ARCH_ZYNQMP)
-	default y
+	depends on DM_GPIO
+	default y if ARCH_ZYNQ || ARCH_ZYNQMP || ARCH_VERSAL
 	help
 	  Supports GPIO access on Zynq SoC.
 
@@ -282,7 +467,7 @@ config DM_74X164
 
 config DM_PCA953X
 	bool "PCA95[357]x, PCA9698, TCA64xx, and MAX7310 I/O ports"
-	depends on DM_GPIO
+	depends on DM_GPIO && DM_I2C
 	help
 	  Say yes here to provide access to several register-oriented
 	  SMBus I/O expanders, made mostly by NXP or TI.  Compatible
@@ -305,7 +490,7 @@ config DM_PCA953X
 
 config SPL_DM_PCA953X
 	bool "PCA95[357]x, PCA9698, TCA64xx, and MAX7310 I/O ports in SPL"
-	depends on DM_GPIO
+	depends on SPL_DM_GPIO
 	help
 	  Say yes here to provide access to several register-oriented
 	  SMBus I/O expanders, made mostly by NXP or TI.  Compatible
@@ -349,11 +534,86 @@ config MPC8XXX_GPIO
 	  value setting, the open-drain feature, which can configure individual
 	  GPIOs to work as open-drain outputs, is supported.
 
+config MPC83XX_SPISEL_BOOT
+	bool "Freescale MPC83XX SPISEL_BOOT driver"
+	depends on DM_GPIO && ARCH_MPC830X
+	help
+	  GPIO driver to set/clear dedicated SPISEL_BOOT output on MPC83XX.
+
+	  This pin is typically used as spi chip select to a spi nor flash.
+
+config MT7620_GPIO
+	bool "MediaTek MT7620 GPIO driver"
+	depends on DM_GPIO && SOC_MT7620
+	default y
+	help
+	  Device model driver for GPIO controller present in MediaTek MT7620
+	  and earlier SoCs.
+
 config MT7621_GPIO
 	bool "MediaTek MT7621 GPIO driver"
-	depends on DM_GPIO && ARCH_MT7620
+	depends on DM_GPIO && (SOC_MT7621 || SOC_MT7628)
 	default y
 	help
 	  Say yes here to support MediaTek MT7621 compatible GPIOs.
 
-endmenu
+config NX_GPIO
+	bool "Nexell GPIO driver"
+	depends on DM_GPIO
+	help
+	  Support GPIO access on Nexell SoCs. The GPIOs are arranged into
+	  a number of banks (different for each SoC type) each with 32 GPIOs.
+	  The GPIOs for a device are defined in the device tree with one node
+	  for each bank.
+
+config NOMADIK_GPIO
+	bool "Nomadik GPIO driver"
+	depends on DM_GPIO
+	help
+	  Support GPIO access on ST-Ericsson Ux500 SoCs. The GPIOs are arranged
+	  into a number of banks each with 32 GPIOs. The GPIOs for a device are
+	  defined in the device tree with one node for each bank.
+
+config ZYNQMP_GPIO_MODEPIN
+	bool "ZynqMP gpio modepin"
+	depends on DM_GPIO
+	help
+	  This config enables the ZynqMP gpio modepin driver. ZynqMP modepin
+	  driver will set and get the status of PS_MODE pins. These modepins
+	  are accessed using xilinx firmware. In modepin register, [3:0] bits
+	  set direction, [7:4] bits read IO, [11:8] bits set/clear IO.
+
+config SL28CPLD_GPIO
+	bool "Kontron sl28cpld GPIO driver"
+	depends on DM_GPIO && SL28CPLD
+	help
+	  Support GPIO access on Kontron sl28cpld board management controllers.
+
+config SLG7XL45106_I2C_GPO
+	bool "slg7xl45106 i2c gpo expander"
+	depends on DM_GPIO
+	help
+	   Support for slg7xl45106 i2c gpo expander. It is an i2c based
+	   8-bit gpo expander, all gpo lines are controlled by writing
+	   value into data register.
+
+config TURRIS_OMNIA_MCU
+	bool "Turris Omnia MCU GPIO driver"
+	depends on DM_GPIO
+	default y if TARGET_TURRIS_OMNIA
+	help
+	   Support for GPIOs on MCU connected to Turris Omnia via i2c.
+
+config FTGPIO010
+	bool "Faraday Technology FTGPIO010 driver"
+	depends on DM_GPIO
+	help
+	   Support for GPIOs on Faraday Technology's FTGPIO010 controller.
+
+config ADP5585_GPIO
+	bool "ADP5585 GPIO driver"
+	depends on DM_GPIO && DM_I2C
+	help
+	  Support ADP5585 GPIO expander.
+
+endif

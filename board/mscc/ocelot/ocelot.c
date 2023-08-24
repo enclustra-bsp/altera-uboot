@@ -4,13 +4,18 @@
  */
 
 #include <common.h>
+#include <image.h>
+#include <init.h>
+#include <log.h>
+#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/addrspace.h>
 #include <asm/types.h>
-#include <environment.h>
 #include <spi.h>
 #include <led.h>
 #include <wait_bit.h>
+#include <miiphy.h>
+#include <linux/bitops.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -42,6 +47,20 @@ void mscc_switch_reset(bool enter)
 	mscc_gpio_set_alternate(19, 0);
 }
 
+int board_phy_config(struct phy_device *phydev)
+{
+	if (gd->board_type == BOARD_TYPE_PCB123)
+		return 0;
+
+	phy_write(phydev, 0, 31, 0x10);
+	phy_write(phydev, 0, 18, 0x80F0);
+	while (phy_read(phydev, 0, 18) & 0x8000)
+		;
+	phy_write(phydev, 0, 31, 0);
+
+	return 0;
+}
+
 void board_debug_uart_init(void)
 {
 	/* too early for the pinctrl driver, so configure the UART pins here */
@@ -59,10 +78,6 @@ int board_early_init_r(void)
 
 	/* Address of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE;
-
-	/* LED setup */
-	if (IS_ENABLED(CONFIG_LED))
-		led_default_state();
 
 	return 0;
 }

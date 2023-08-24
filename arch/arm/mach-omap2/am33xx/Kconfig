@@ -34,25 +34,26 @@ config TARGET_AM335X_EVM
 	select DM_GPIO
 	select DM_SERIAL
 	select TI_I2C_BOARD_DETECT
+	select SUPPORT_EXTENSION_SCAN
 	imply CMD_DM
 	imply SPL_DM
 	imply SPL_DM_SEQ_ALIAS
 	imply SPL_ENV_SUPPORT
 	imply SPL_FS_EXT4
 	imply SPL_FS_FAT
-	imply SPL_GPIO_SUPPORT
-	imply SPL_I2C_SUPPORT
+	imply SPL_GPIO
+	imply SPL_I2C
 	imply SPL_LIBCOMMON_SUPPORT
 	imply SPL_LIBDISK_SUPPORT
 	imply SPL_LIBGENERIC_SUPPORT
-	imply SPL_MMC_SUPPORT
+	imply SPL_MMC
 	imply SPL_NAND_SUPPORT
 	imply SPL_OF_LIBFDT
-	imply SPL_POWER_SUPPORT
+	imply SPL_POWER
 	imply SPL_SEPARATE_BSS
-	imply SPL_SERIAL_SUPPORT
+	imply SPL_SERIAL
 	imply SPL_SYS_MALLOC_SIMPLE
-	imply SPL_WATCHDOG_SUPPORT
+	imply SPL_WATCHDOG
 	imply SPL_YMODEM_SUPPORT
 	help
 	  This option specifies support for the AM335x
@@ -87,6 +88,15 @@ config TARGET_AM335X_SHC
 	imply CMD_DM
 	imply CMD_SPL
 
+config TARGET_AM335X_GUARDIAN
+	bool "Support am335x based guardian board from bosch"
+	select BOARD_LATE_INIT
+	select DM
+	select DM_SERIAL
+	select DM_GPIO
+	select VIDEO
+	select PANEL_HX8238D
+
 config TARGET_AM335X_SL50
 	bool "Support am335x_sl50"
 	select BOARD_LATE_INIT
@@ -95,23 +105,12 @@ config TARGET_AM335X_SL50
 	select DM_SERIAL
 	imply CMD_DM
 
-config TARGET_BAV335X
-	bool "Support bav335x"
-	select BOARD_LATE_INIT
-	select DM
-	select DM_SERIAL
-	imply CMD_DM
-	help
-	  The BAV335x OEM Network Processor integrates all the functions of an
-	  embedded network computer in a small, easy to use SODIMM module which
-	  incorporates the popular Texas Instruments Sitara 32bit ARM Coretex-A8
-	  processor, with fast DDR3 512MB SDRAM, 4GB of embedded MMC and a Gigabit
-	  ethernet with simple connection to external connectors.
-
-	  For more information, visit: http://birdland.com/oem
-
 config TARGET_BRXRE1
 	bool "Support BRXRE1"
+	select BOARD_LATE_INIT
+
+config TARGET_BRSMARC1
+	bool "Support BRSMARC1"
 	select BOARD_LATE_INIT
 
 config TARGET_BRPPT1
@@ -126,19 +125,13 @@ config TARGET_CHILIBOARD
 	select DM_SERIAL
 	imply CMD_DM
 
-config TARGET_CM_T335
-	bool "Support cm_t335"
-	select DM
-	select DM_GPIO
-	select DM_SERIAL
-	imply CMD_DM
-
 config TARGET_DRACO
 	bool "Support draco"
 	select BOARD_LATE_INIT
 	select DM
 	select DM_GPIO
 	select DM_SERIAL
+	select FACTORYSET
 	imply CMD_DM
 
 config TARGET_ETAMIN
@@ -147,6 +140,7 @@ config TARGET_ETAMIN
 	select DM
 	select DM_GPIO
 	select DM_SERIAL
+	select FACTORYSET
 	imply CMD_DM
 
 config TARGET_PCM051
@@ -156,15 +150,8 @@ config TARGET_PCM051
 	select DM_SERIAL
 	imply CMD_DM
 
-config TARGET_PENGWYN
-	bool "Support pengwyn"
-	select DM
-	select DM_GPIO
-	select DM_SERIAL
-	imply CMD_DM
-
-config TARGET_PEPPER
-	bool "Support pepper"
+config TARGET_PHYCORE_AM335X_R2
+	bool "Support phyCORE AM335X R2"
 	select DM
 	select DM_GPIO
 	select DM_SERIAL
@@ -176,6 +163,7 @@ config TARGET_PXM2
 	select DM
 	select DM_GPIO
 	select DM_SERIAL
+	select FACTORYSET
 	imply CMD_DM
 
 config TARGET_RASTABAN
@@ -184,6 +172,7 @@ config TARGET_RASTABAN
 	select DM
 	select DM_GPIO
 	select DM_SERIAL
+	select FACTORYSET
 	imply CMD_DM
 
 config TARGET_RUT
@@ -192,6 +181,7 @@ config TARGET_RUT
 	select DM
 	select DM_GPIO
 	select DM_SERIAL
+	select FACTORYSET
 	imply CMD_DM
 
 config TARGET_THUBAN
@@ -200,6 +190,7 @@ config TARGET_THUBAN
 	select DM
 	select DM_GPIO
 	select DM_SERIAL
+	select FACTORYSET
 	imply CMD_DM
 
 config TARGET_PDU001
@@ -214,6 +205,19 @@ config TARGET_PDU001
 	  the Computing-Module m2 from bytes at work AG.
 
 endchoice
+
+config CLOCK_SYNTHESIZER
+	bool "CDCE913 and CDCEL913 clock synthesizer support"
+	help
+	  The CDCE913 and CDCEL913 devices are modular PLL-based, low cost,
+	  high performance , programmable clock synthesizers. They generate
+	  up to 3 output clocks from a single input frequency. Each output can
+	  be programmed for any clock-frequency.
+
+config CLK_SYNTHESIZER_I2C_ADDR
+	hex "Clock synthesizer i2c bus address"
+	depends on CLOCK_SYNTHESIZER
+	default 0x65
 
 endif
 
@@ -233,16 +237,16 @@ config TARGET_AM43XX_EVM
 	imply SPL_ENV_SUPPORT
 	imply SPL_FS_EXT4
 	imply SPL_FS_FAT
-	imply SPL_GPIO_SUPPORT
-	imply SPL_I2C_SUPPORT
+	imply SPL_GPIO
+	imply SPL_I2C
 	imply SPL_LIBCOMMON_SUPPORT
 	imply SPL_LIBDISK_SUPPORT
 	imply SPL_LIBGENERIC_SUPPORT
-	imply SPL_MMC_SUPPORT
+	imply SPL_MMC
 	imply SPL_NAND_SUPPORT
-	imply SPL_POWER_SUPPORT
-	imply SPL_SERIAL_SUPPORT
-	imply SPL_WATCHDOG_SUPPORT
+	imply SPL_POWER
+	imply SPL_SERIAL
+	imply SPL_WATCHDOG
 	imply SPL_YMODEM_SUPPORT
 	help
 	  This option specifies support for the AM43xx
@@ -288,3 +292,35 @@ config PUB_ROM_DATA_SIZE
 	  image, this area is no longer used, and can be reclaimed
 	  for run time use by the boot image.
 endif
+
+config AM335X_USB0
+	bool "Static mode configuration for USB0 in SPL"
+	depends on AM33XX && SPL_MUSB_NEW && !SPL_OF_CONTROL
+
+choice
+	prompt "USB0 port configuration"
+	depends on AM335X_USB0
+
+config AM335X_USB0_HOST
+	bool "Port is used in host mode"
+
+config AM335X_USB0_PERIPHERAL
+	bool "Port is used in peripheral mode"
+
+endchoice
+
+config AM335X_USB1
+	bool "Static mode configuration for USB1 in SPL"
+	depends on AM33XX && SPL_MUSB_NEW && !SPL_OF_CONTROL
+
+choice
+	prompt "USB1 port configuration"
+	depends on AM335X_USB1
+
+config AM335X_USB1_HOST
+	bool "Port is used in host mode"
+
+config AM335X_USB1_PERIPHERAL
+	bool "Port is used in peripheral mode"
+
+endchoice

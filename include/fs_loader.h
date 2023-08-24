@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2018 Intel Corporation <www.intel.com>
+ * Copyright (C) 2022 Intel Corporation <www.intel.com>
  *
  * SPDX-License-Identifier:    GPL-2.0
  */
 #ifndef _FS_LOADER_H_
 #define _FS_LOADER_H_
 
-#include <dm.h>
+struct udevice;
 
 /**
  * struct phandle_part - A place for storing phandle of node and its partition
@@ -23,6 +23,45 @@ struct phandle_part {
 };
 
 /**
+ * struct sf_config - A place for storing serial flash configuration
+ *
+ * This holds information about bus, chip-select, and speed and mode of a serial
+ * flash configuration.
+ *
+ * @bus: SPI bus number.
+ * @cs: SPI chip selection.
+ */
+struct sf_config {
+	u32 bus;
+	u32 cs;
+};
+
+/**
+ * enum data_flags - Flag to indicate data as RAW or as filesystem
+ *
+ * DATA_RAW: Data stored as RAW.
+ * DATA_FS: DATA stored as filesystem.
+ */
+enum data_flags {
+	DATA_RAW, /* Stored in raw */
+	DATA_FS,  /* Stored within a file system */
+};
+
+/**
+ * enum storage_types - Storage type to indicate block device, SPI device
+ *			and NAND device.
+ *
+ * BLOCK_DEV: BLock device.
+ * SPI_DEV: SPI/NOR flash.
+ * NAND_DEV: NAND flash.
+ */
+enum storage_types {
+	BLOCK_DEV, /* BLock device such as SDMMC */
+	SPI_DEV,  /* SPI/NOR flash */
+	NAND_DEV,  /* NAND flash */
+};
+
+/**
  * struct phandle_part - A place for storing all supported storage devices
  *
  * This holds information about all supported storage devices for driver use.
@@ -30,11 +69,18 @@ struct phandle_part {
  * @phandlepart: Attribute data for block device.
  * @mtdpart: MTD partition for ubi partition.
  * @ubivol: UBI volume-name for ubifsmount.
+ * @enum data_flags: Data type (RAW or filesystem).
+ * @struct sf_config: Serial flash configuration.
+ * @struct spi_flash: Information about a SPI flash.
  */
-struct device_platdata {
+struct device_plat {
 	struct phandle_part phandlepart;
 	char *mtdpart;
 	char *ubivol;
+	enum data_flags data_type;
+	enum storage_types storage_type;
+	struct sf_config sfconfig;
+	struct udevice *flash;
 };
 
 /**

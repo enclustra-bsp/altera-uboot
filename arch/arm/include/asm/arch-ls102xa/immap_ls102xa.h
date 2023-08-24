@@ -42,24 +42,6 @@
 
 #define DCFG_DCSR_PORCR1		0
 
-/*
- * Define default values for some CCSR macros to make header files cleaner
- *
- * To completely disable CCSR relocation in a board header file, define
- * CONFIG_SYS_CCSR_DO_NOT_RELOCATE.  This will force CONFIG_SYS_CCSRBAR_PHYS
- * to a value that is the same as CONFIG_SYS_CCSRBAR.
- */
-
-#ifdef CONFIG_SYS_CCSRBAR_PHYS
-#error "Do not define CONFIG_SYS_CCSRBAR_PHYS directly."
-#endif
-
-#ifdef CONFIG_SYS_CCSR_DO_NOT_RELOCATE
-#undef CONFIG_SYS_CCSRBAR_PHYS_HIGH
-#undef CONFIG_SYS_CCSRBAR_PHYS_LOW
-#define CONFIG_SYS_CCSRBAR_PHYS_HIGH	0
-#endif
-
 #ifndef CONFIG_SYS_CCSRBAR
 #define CONFIG_SYS_CCSRBAR		CONFIG_SYS_IMMR
 #endif
@@ -155,7 +137,7 @@ struct ccsr_gur {
 #define SCFG_ETSECCMCR_GE0_CLK125	0x00000000
 #define SCFG_ETSECCMCR_GE1_CLK125	0x08000000
 #define SCFG_PIXCLKCR_PXCKEN		0x80000000
-#define SCFG_QSPI_CLKSEL		0xc0100000
+#define SCFG_QSPI_CLKSEL		0x50100000
 #define SCFG_SNPCNFGCR_SEC_RD_WR	0xc0000000
 #define SCFG_SNPCNFGCR_DCU_RD_WR	0x03000000
 #define SCFG_SNPCNFGCR_SATA_RD_WR	0x00c00000

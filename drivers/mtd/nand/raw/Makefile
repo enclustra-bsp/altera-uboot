@@ -3,7 +3,17 @@
 # (C) Copyright 2006
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 
+nand-framework-objs := nand.o nand_bbt.o nand_ids.o nand_util.o \
+		       nand_ecc.o nand_base.o nand_timings.o nand_amd.o \
+		       nand_hynix.o nand_macronix.o nand_micron.o \
+		       nand_samsung.o nand_toshiba.o
+
 ifdef CONFIG_SPL_BUILD
+
+ifdef CONFIG_SPL_NAND_FRAMEWORK
+obj-y += $(nand-framework-objs)
+NORMAL_DRIVERS=y
+endif
 
 ifdef CONFIG_SPL_NAND_DRIVERS
 NORMAL_DRIVERS=y
@@ -16,7 +26,7 @@ obj-$(CONFIG_SPL_NAND_LOAD) += nand_spl_load.o
 obj-$(CONFIG_SPL_NAND_ECC) += nand_ecc.o
 obj-$(CONFIG_SPL_NAND_BASE) += nand_base.o
 obj-$(CONFIG_SPL_NAND_IDENT) += nand_ids.o nand_timings.o
-obj-$(CONFIG_SPL_NAND_INIT) += nand.o
+obj-$(CONFIG_TPL_NAND_INIT) += nand.o
 ifeq ($(CONFIG_SPL_ENV_SUPPORT),y)
 obj-$(CONFIG_ENV_IS_IN_NAND) += nand_util.o
 endif
@@ -25,13 +35,7 @@ else # not spl
 
 NORMAL_DRIVERS=y
 
-obj-y += nand.o
-obj-y += nand_bbt.o
-obj-y += nand_ids.o
-obj-y += nand_util.o
-obj-y += nand_ecc.o
-obj-y += nand_base.o
-obj-y += nand_timings.o
+obj-y += $(nand-framework-objs)
 
 endif # not spl
 
@@ -41,6 +45,7 @@ obj-$(CONFIG_NAND_ECC_BCH) += nand_bch.o
 
 obj-$(CONFIG_NAND_ATMEL) += atmel_nand.o
 obj-$(CONFIG_NAND_ARASAN) += arasan_nfc.o
+obj-$(CONFIG_NAND_BRCMNAND) += brcmnand/
 obj-$(CONFIG_NAND_DAVINCI) += davinci_nand.o
 obj-$(CONFIG_NAND_DENALI) += denali.o
 obj-$(CONFIG_NAND_DENALI_DT) += denali_dt.o
@@ -57,6 +62,8 @@ obj-$(CONFIG_NAND_VF610_NFC) += vf610_nfc.o
 obj-$(CONFIG_NAND_MXC) += mxc_nand.o
 obj-$(CONFIG_NAND_MXS) += mxs_nand.o
 obj-$(CONFIG_NAND_MXS_DT) += mxs_nand_dt.o
+obj-$(CONFIG_NAND_OCTEONTX) += octeontx_nand.o
+obj-$(CONFIG_NAND_OCTEONTX_HW_ECC) += octeontx_bch.o
 obj-$(CONFIG_NAND_PXA3XX) += pxa3xx_nand.o
 obj-$(CONFIG_NAND_SPEAR) += spr_nand.o
 obj-$(CONFIG_TEGRA_NAND) += tegra_nand.o
@@ -64,7 +71,12 @@ obj-$(CONFIG_NAND_OMAP_GPMC) += omap_gpmc.o
 obj-$(CONFIG_NAND_OMAP_ELM) += omap_elm.o
 obj-$(CONFIG_NAND_PLAT) += nand_plat.o
 obj-$(CONFIG_NAND_SUNXI) += sunxi_nand.o
+obj-$(CONFIG_NAND_MXIC) += mxic_nand.o
 obj-$(CONFIG_NAND_ZYNQ) += zynq_nand.o
+obj-$(CONFIG_NAND_STM32_FMC2) += stm32_fmc2_nand.o
+obj-$(CONFIG_CORTINA_NAND) += cortina_nand.o
+obj-$(CONFIG_ROCKCHIP_NAND) += rockchip_nfc.o
+obj-$(CONFIG_NAND_MT7621) += mt7621_nand.o
 
 else  # minimal SPL drivers
 
@@ -73,5 +85,6 @@ obj-$(CONFIG_NAND_FSL_IFC) += fsl_ifc_spl.o
 obj-$(CONFIG_NAND_MXC) += mxc_nand_spl.o
 obj-$(CONFIG_NAND_MXS) += mxs_nand_spl.o mxs_nand.o
 obj-$(CONFIG_NAND_SUNXI) += sunxi_nand_spl.o
+obj-$(CONFIG_NAND_MT7621) += mt7621_nand_spl.o mt7621_nand.o
 
 endif # drivers

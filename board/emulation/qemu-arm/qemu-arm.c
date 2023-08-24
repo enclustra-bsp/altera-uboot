@@ -4,13 +4,44 @@
  */
 
 #include <common.h>
+#include <cpu_func.h>
 #include <dm.h>
+#include <efi.h>
+#include <efi_loader.h>
 #include <fdtdec.h>
+#include <init.h>
+#include <log.h>
 #include <virtio_types.h>
 #include <virtio.h>
 
+#include <linux/kernel.h>
+
 #ifdef CONFIG_ARM64
 #include <asm/armv8/mmu.h>
+
+#if CONFIG_IS_ENABLED(EFI_HAVE_CAPSULE_SUPPORT)
+struct efi_fw_image fw_images[] = {
+#if defined(CONFIG_TARGET_QEMU_ARM_32BIT)
+	{
+		.image_type_id = QEMU_ARM_UBOOT_IMAGE_GUID,
+		.fw_name = u"Qemu-Arm-UBOOT",
+		.image_index = 1,
+	},
+#elif defined(CONFIG_TARGET_QEMU_ARM_64BIT)
+	{
+		.image_type_id = QEMU_ARM64_UBOOT_IMAGE_GUID,
+		.fw_name = u"Qemu-Arm-UBOOT",
+		.image_index = 1,
+	},
+#endif
+};
+
+struct efi_capsule_update_info update_info = {
+	.images = fw_images,
+};
+
+u8 num_image_type_guids = ARRAY_SIZE(fw_images);
+#endif /* EFI_HAVE_CAPSULE_SUPPORT */
 
 static struct mm_region qemu_arm64_mem_map[] = {
 	{
@@ -62,6 +93,11 @@ struct mm_region *mem_map = qemu_arm64_mem_map;
 
 int board_init(void)
 {
+	return 0;
+}
+
+int board_late_init(void)
+{
 	/*
 	 * Make sure virtio bus is enumerated so that peripherals
 	 * on the virtio bus can be discovered by their drivers
@@ -86,8 +122,60 @@ int dram_init_banksize(void)
 	return 0;
 }
 
-void *board_fdt_blob_setup(void)
+void *board_fdt_blob_setup(int *err)
 {
+	*err = 0;
 	/* QEMU loads a generated DTB for us at the start of RAM. */
 	return (void *)CONFIG_SYS_SDRAM_BASE;
+}
+
+void enable_caches(void)
+{
+	 icache_enable();
+	 dcache_enable();
+}
+
+#ifdef CONFIG_ARM64
+#define __W	"w"
+#else
+#define __W
+#endif
+
+u8 flash_read8(void *addr)
+{
+	u8 ret;
+
+	asm("ldrb %" __W "0, %1" : "=r"(ret) : "m"(*(u8 *)addr));
+	return ret;
+}
+
+u16 flash_read16(void *addr)
+{
+	u16 ret;
+
+	asm("ldrh %" __W "0, %1" : "=r"(ret) : "m"(*(u16 *)addr));
+	return ret;
+}
+
+u32 flash_read32(void *addr)
+{
+	u32 ret;
+
+	asm("ldr %" __W "0, %1" : "=r"(ret) : "m"(*(u32 *)addr));
+	return ret;
+}
+
+void flash_write8(u8 value, void *addr)
+{
+	asm("strb %" __W "1, %0" : "=m"(*(u8 *)addr) : "r"(value));
+}
+
+void flash_write16(u16 value, void *addr)
+{
+	asm("strh %" __W "1, %0" : "=m"(*(u16 *)addr) : "r"(value));
+}
+
+void flash_write32(u32 value, void *addr)
+{
+	asm("str %" __W "1, %0" : "=m"(*(u32 *)addr) : "r"(value));
 }

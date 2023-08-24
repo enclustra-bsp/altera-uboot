@@ -7,13 +7,13 @@
 #define _ASM_SYSCON_H
 
 /*
- * System controllers in a RISC-V system
- *
- * So far only SiFive's Core Local Interruptor (CLINT) is defined.
+ * System controllers in a RISC-V system. These should only be used for
+ * identifying IPI controllers. Other devices should use DM to probe.
  */
 enum {
 	RISCV_NONE,
 	RISCV_SYSCON_CLINT,	/* Core Local Interruptor (CLINT) */
+	RISCV_SYSCON_PLICSW,	/* Andes PLICSW */
 };
 
 #endif /* _ASM_SYSCON_H */

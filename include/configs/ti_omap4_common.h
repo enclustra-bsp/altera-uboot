@@ -12,7 +12,6 @@
 #define __CONFIG_TI_OMAP4_COMMON_H
 
 #ifndef CONFIG_SYS_L2CACHE_OFF
-#define CONFIG_SYS_L2_PL310		1
 #define CONFIG_SYS_PL310_BASE	0x48242000
 #endif
 
@@ -22,22 +21,6 @@
 
 /* Use General purpose timer 1 */
 #define CONFIG_SYS_TIMERBASE		GPT2_BASE
-
-/*
- * Total Size Environment - 128k
- */
-#define CONFIG_ENV_SIZE			(128 << 10)
-
-/*
- * For the DDR timing information we can either dynamically determine
- * the timings to use or use pre-determined timings (based on using the
- * dynamic method.  Default to the static timing infomation.
- */
-#define CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
-#ifndef CONFIG_SYS_EMIF_PRECALCULATED_TIMING_REGS
-#define CONFIG_SYS_AUTOMATIC_SDRAM_DETECTION
-#define CONFIG_SYS_DEFAULT_LPDDR2_TIMINGS
-#endif
 
 #include <configs/ti_armv7_omap.h>
 
@@ -52,15 +35,7 @@
 #endif
 
 /* TWL6030 */
-#ifndef CONFIG_SPL_BUILD
 #define CONFIG_TWL6030_POWER		1
-#endif
-
-/* USB */
-
-/* USB device configuration */
-#define CONFIG_USB_DEVICE		1
-#define CONFIG_USB_TTY			1
 
 /*
  * Environment setup
@@ -124,13 +99,9 @@
  * SPL is overlapped with public stack and breaking non HS devices to boot.
  * So moving TEXT_BASE down to non-HS limit.
  */
-#define CONFIG_SPL_TEXT_BASE		0x40300000
-#define CONFIG_SYS_SPL_ARGS_ADDR	(CONFIG_SYS_SDRAM_BASE + \
-					 (128 << 20))
 
 #ifdef CONFIG_SPL_BUILD
 /* No need for i2c in SPL mode as we will use SRI2C for PMIC access on OMAP4 */
-#undef CONFIG_SYS_I2C
 #endif
 
 #endif /* __CONFIG_TI_OMAP4_COMMON_H */

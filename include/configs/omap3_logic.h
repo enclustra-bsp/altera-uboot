@@ -14,34 +14,9 @@
 
 #include <configs/ti_omap3_common.h>
 
-/*
- * We are only ever GP parts and will utilize all of the "downloaded image"
- * area in SRAM which starts at 0x40200000 and ends at 0x4020FFFF (64KB) in
- * order to allow for BCH8 to fit in.
- */
-#undef CONFIG_SPL_TEXT_BASE
-#define CONFIG_SPL_TEXT_BASE		0x40200000
-
-#define CONFIG_CMDLINE_TAG		/* enable passing of ATAGs */
-#define CONFIG_SETUP_MEMORY_TAGS
-#define CONFIG_INITRD_TAG
-#define CONFIG_REVISION_TAG
-
-/* Hardware drivers */
-
-/* I2C */
-#define CONFIG_SYS_I2C_EEPROM_ADDR	0x50	/* EEPROM AT24C64      */
-
 /* Board NAND Info. */
-#ifdef CONFIG_NAND
-#define CONFIG_SYS_MAX_NAND_DEVICE	1	  /* Max number of */
+#ifdef CONFIG_MTD_RAW_NAND
 						  /* NAND devices */
-#define CONFIG_SYS_NAND_5_ADDR_CYCLE
-#define CONFIG_SYS_NAND_PAGE_COUNT	64
-#define CONFIG_SYS_NAND_PAGE_SIZE	2048
-#define CONFIG_SYS_NAND_OOBSIZE		64
-#define CONFIG_SYS_NAND_BLOCK_SIZE	(128 * 1024)
-#define CONFIG_SYS_NAND_BAD_BLOCK_POS	NAND_LARGE_BADBLOCK_POS
 #define CONFIG_SYS_NAND_ECCPOS		{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, \
 					 13, 14, 16, 17, 18, 19, 20, 21, 22, \
 					 23, 24, 25, 26, 27, 28, 30, 31, 32, \
@@ -51,23 +26,16 @@
 
 #define CONFIG_SYS_NAND_ECCSIZE		512
 #define CONFIG_SYS_NAND_ECCBYTES	13
-#define CONFIG_NAND_OMAP_ECCSCHEME	OMAP_ECC_BCH8_CODE_HW_DETECTION_SW
 #define CONFIG_SYS_NAND_MAX_OOBFREE	2
 #define CONFIG_SYS_NAND_MAX_ECCPOS	56
 #endif
 
 /* Environment information */
 
-#define CONFIG_PREBOOT \
-	"setenv preboot;"						\
-	"saveenv;"
-
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	DEFAULT_LINUX_BOOT_ENV \
-	"mtdids=" CONFIG_MTDIDS_DEFAULT "\0"	\
-	"mtdparts=" CONFIG_MTDPARTS_DEFAULT "\0" \
 	"mmcdev=0\0" \
-	"mmcroot=/dev/mmcblk0p2 rw\0" \
+	"finduuid=part uuid mmc ${mmcdev}:2 uuid\0" \
 	"mmcrootfstype=ext4 rootwait\0" \
 	"nandroot=ubi0:rootfs rw ubi.mtd=fs noinitrd\0" \
 	"nandrootfstype=ubifs rootwait\0" \
@@ -106,7 +74,8 @@
 	"ramargs=setenv bootargs "\
 		"root=/dev/ram rw ramdisk_size=${ramdisksize}\0" \
 	"mmcargs=setenv bootargs "\
-		"root=${mmcroot} rootfstype=${mmcrootfstype}\0" \
+		"root=PARTUUID=${uuid} " \
+		"rootfstype=${mmcrootfstype} rw\0" \
 	"nandargs=setenv bootargs "\
 		"root=${nandroot} " \
 		"rootfstype=${nandrootfstype}\0" \
@@ -115,11 +84,11 @@
 		"nfsroot=${nfsrootpath} " \
 		"ip=${ipaddr}:${tftpserver}:${gatewayip}:${netmask}::eth0:off\0" \
 	"nfsrootpath=/opt/nfs-exports/omap\0" \
-	"autoload=no\0" \
 	"fdtimage=" CONFIG_DEFAULT_DEVICE_TREE ".dtb\0" \
 	"loadfdt=mmc rescan; " \
 		"load mmc ${mmcdev} ${fdtaddr} ${fdtimage}\0" \
 	"mmcbootcommon=echo Booting with DT from mmc${mmcdev} ...; " \
+		"run finduuid; "\
 		"run mmcargs; " \
 		"run common_bootargs; " \
 		"run dump_bootargs; " \
@@ -169,15 +138,9 @@
 	"nandboot=run nandbootcommon; "\
 		"bootm ${loadaddr} - ${fdtaddr}\0"\
 
-#define CONFIG_BOOTCOMMAND \
-	"run autoboot"
-
 /* Miscellaneous configurable options */
 
 /* memtest works on */
-#define CONFIG_SYS_MEMTEST_START	(OMAP34XX_SDRC_CS0)
-#define CONFIG_SYS_MEMTEST_END		(OMAP34XX_SDRC_CS0 + \
-					0x01F00000) /* 31MB */
 
 /* FLASH and environment organization */
 
@@ -186,25 +149,6 @@
 #define CONFIG_SYS_FLASH_BASE		0x10000000
 #endif
 
-#define CONFIG_SYS_MAX_FLASH_SECT	256
-#define CONFIG_SYS_MAX_FLASH_BANKS	1
-#define CONFIG_SYS_FLASH_CFI_WIDTH	FLASH_CFI_16BIT
 #define CONFIG_SYS_FLASH_SIZE		0x4000000
-
-/* Monitor at start of flash */
-#define CONFIG_SYS_MONITOR_BASE		CONFIG_SYS_FLASH_BASE
-
-#define CONFIG_ENV_SIZE			(128 << 10)	/* 128 KiB */
-
-#define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB */
-#define CONFIG_ENV_OFFSET		0x260000
-#define CONFIG_ENV_ADDR			0x260000
-
-/* Defines for SPL */
-
-/* NAND: SPL falcon mode configs */
-#ifdef CONFIG_SPL_OS_BOOT
-#define CONFIG_SYS_NAND_SPL_KERNEL_OFFS	0x280000
-#endif
 
 #endif /* __CONFIG_H */

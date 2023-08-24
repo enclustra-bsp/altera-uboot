@@ -4,17 +4,20 @@
  */
 #include <errno.h>
 #include <common.h>
+#include <net.h>
 #include <asm/io.h>
 #include <fdt_support.h>
 #include <fsl_mdio.h>
 #ifdef CONFIG_FSL_LAYERSCAPE
 #include <asm/arch/fsl_serdes.h>
+#include <linux/libfdt.h>
 #else
 #include <asm/fsl_serdes.h>
 #endif
 
 #include "fm.h"
 
+#ifndef CONFIG_DM_ETH
 struct fm_eth_info fm_info[] = {
 #if (CONFIG_SYS_NUM_FM1_DTSEC >= 1)
 	FM_DTSEC_INFO_INITIALIZER(1, 1),
@@ -84,12 +87,12 @@ struct fm_eth_info fm_info[] = {
 #endif
 };
 
-int fm_standard_init(bd_t *bis)
+int fm_standard_init(struct bd_info *bis)
 {
 	int i;
 	struct ccsr_fman *reg;
 
-	reg = (void *)CONFIG_SYS_FSL_FM1_ADDR;
+	reg = (void *)CFG_SYS_FSL_FM1_ADDR;
 	if (fm_init_common(0, reg))
 		return 0;
 
@@ -99,7 +102,7 @@ int fm_standard_init(bd_t *bis)
 	}
 
 #if (CONFIG_SYS_NUM_FMAN == 2)
-	reg = (void *)CONFIG_SYS_FSL_FM2_ADDR;
+	reg = (void *)CFG_SYS_FSL_FM2_ADDR;
 	if (fm_init_common(1, reg))
 		return 0;
 
@@ -127,7 +130,7 @@ static int fm_port_to_index(enum fm_port port)
 
 /*
  * Determine if an interface is actually active based on HW config
- * we expect fman_port_enet_if() to report PHY_INTERFACE_MODE_NONE if
+ * we expect fman_port_enet_if() to report PHY_INTERFACE_MODE_NA if
  * the interface is not active based on HW cfg of the SoC
  */
 void fman_enet_init(void)
@@ -138,7 +141,7 @@ void fman_enet_init(void)
 		phy_interface_t enet_if;
 
 		enet_if = fman_port_enet_if(fm_info[i].port);
-		if (enet_if != PHY_INTERFACE_MODE_NONE) {
+		if (enet_if != PHY_INTERFACE_MODE_NA) {
 			fm_info[i].enabled = 1;
 			fm_info[i].enet_if = enet_if;
 		} else {
@@ -146,7 +149,7 @@ void fman_enet_init(void)
 		}
 	}
 
-	return ;
+	return;
 }
 
 void fm_disable_port(enum fm_port port)
@@ -218,19 +221,19 @@ phy_interface_t fm_info_get_enet_if(enum fm_port port)
 	int i = fm_port_to_index(port);
 
 	if (i == -1)
-		return PHY_INTERFACE_MODE_NONE;
+		return PHY_INTERFACE_MODE_NA;
 
 	if (fm_info[i].enabled)
 		return fm_info[i].enet_if;
 
-	return PHY_INTERFACE_MODE_NONE;
+	return PHY_INTERFACE_MODE_NA;
 }
 
 static void
 __def_board_ft_fman_fixup_port(void *blob, char * prop, phys_addr_t pa,
 				enum fm_port port, int offset)
 {
-	return ;
+	return;
 }
 
 void board_ft_fman_fixup_port(void *blob, char * prop, phys_addr_t pa,
@@ -244,7 +247,7 @@ int ft_fixup_port(void *blob, struct fm_eth_info *info, char *prop)
 	phys_addr_t paddr = CONFIG_SYS_CCSRBAR_PHYS + info->compat_offset;
 #ifndef CONFIG_SYS_FMAN_V3
 	u64 dtsec1_addr = (u64)CONFIG_SYS_CCSRBAR_PHYS +
-				CONFIG_SYS_FSL_FM1_DTSEC1_OFFSET;
+				CFG_SYS_FSL_FM1_DTSEC1_OFFSET;
 #endif
 
 	off = fdt_node_offset_by_compat_reg(blob, prop, paddr);
@@ -380,3 +383,4 @@ int is_qsgmii_riser_card(struct mii_dev *bus, int phy_base_addr,
 
 	return 0;
 }
+#endif /* CONFIG_DM_ETH */

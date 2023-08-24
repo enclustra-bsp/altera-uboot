@@ -8,9 +8,13 @@
  */
 
 #include <common.h>
+#include <init.h>
+#include <net.h>
+#include <asm/global_data.h>
 #include <asm/immap.h>
 #include <netdev.h>
 #include <asm/io.h>
+#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -89,11 +93,6 @@ int testdram(void)
 
 #ifdef CONFIG_IDE
 #include <ata.h>
-int ide_preinit(void)
-{
-	return (0);
-}
-
 void ide_set_reset(int idereset)
 {
 	atac_t *ata = (atac_t *) CONFIG_SYS_ATA_BASE_ADDR;
@@ -136,7 +135,7 @@ void ide_set_reset(int idereset)
 
 
 #ifdef CONFIG_DRIVER_DM9000
-int board_eth_init(bd_t *bis)
+int board_eth_init(struct bd_info *bis)
 {
 	return dm9000_initialize(bis);
 }

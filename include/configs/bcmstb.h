@@ -10,11 +10,11 @@
 #ifndef __BCMSTB_H
 #define __BCMSTB_H
 
-#include "version.h"
 #include <linux/sizes.h>
 
 #ifndef __ASSEMBLY__
 
+#include <linux/stringify.h>
 #include <linux/types.h>
 
 struct bcmstb_boot_parameters {
@@ -35,7 +35,6 @@ extern phys_addr_t prior_stage_fdt_address;
 /*
  * CPU configuration.
  */
-#define CONFIG_SKIP_LOWLEVEL_INIT
 
 /*
  * Memory configuration.
@@ -66,7 +65,7 @@ extern phys_addr_t prior_stage_fdt_address;
  *	       :	[~500 KiB in size, stripped]
  *	 0xc000 0000	Top of RAM
  *
- * Setting gd->relocaddr to CONFIG_SYS_TEXT_BASE in dram_init_banksize
+ * Setting gd->relocaddr to CONFIG_TEXT_BASE in dram_init_banksize
  * prevents U-Boot from relocating itself when it is run as an ELF
  * program by the prior stage bootloader.
  *
@@ -84,29 +83,20 @@ extern phys_addr_t prior_stage_fdt_address;
  */
 #define CONFIG_SYS_SDRAM_BASE		0x00000000
 #define CONFIG_SYS_INIT_RAM_SIZE	0x100000
-#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_INIT_RAM_ADDR +	\
-					 CONFIG_SYS_INIT_RAM_SIZE -	\
-					 GENERATED_GBL_DATA_SIZE)
-#define CONFIG_SYS_LOAD_ADDR		0x2000000
 
 /*
  * CONFIG_SYS_LOAD_ADDR - 1 MiB.
  */
-#define CONFIG_SYS_FDT_SAVE_ADDRESS	0x1f00000
-#define CONFIG_SYS_CBSIZE		512
-#define CONFIG_SYS_MAXARGS		32
 
 /*
  * Large kernel image bootm configuration.
  */
-#define CONFIG_SYS_BOOTM_LEN		SZ_64M
 
 /*
  * NS16550 configuration.
  */
 #define V_NS16550_CLK			81000000
 
-#define CONFIG_SYS_NS16550
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE	(-4)
 #define CONFIG_SYS_NS16550_CLK		V_NS16550_CLK
@@ -114,53 +104,32 @@ extern phys_addr_t prior_stage_fdt_address;
 /*
  * Serial console configuration.
  */
-#define CONFIG_BAUDRATE			115200
 #define CONFIG_SYS_BAUDRATE_TABLE	{4800, 9600, 19200, 38400, 57600, \
 					 115200}
 
 /*
  * Informational display configuration.
  */
-#define CONFIG_REVISION_TAG
 
 /*
  * Command configuration.
  */
-#define CONFIG_CMD_ASKENV
-#define CONFIG_CMD_CACHE
-#define CONFIG_CMD_EXT2
-#define CONFIG_CMD_MMC
 
 /*
  * Flash configuration.
  */
-#define CONFIG_ST_SMI
-#define CONFIG_SPI_FLASH_STMICRO
-#define CONFIG_SPI_FLASH_MACRONIX
 
 /*
  * Filesystem configuration.
  */
-#define CONFIG_DOS_PARTITION
-#define CONFIG_CMD_EXT4
-#define CONFIG_FS_EXT4
-#define CONFIG_CMD_FS_GENERIC
 
 /*
  * Environment configuration.
  */
-#define CONFIG_SYS_REDUNDAND_ENVIRONMENT
-#define CONFIG_ENV_SIZE			(64 << 10) /* 64 KiB */
-#define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + CONFIG_ENV_SIZE)
-#define CONFIG_ENV_OVERWRITE
 
 /*
  * Save the prior stage provided DTB.
  */
-#define CONFIG_PREBOOT					\
-	"fdt addr ${fdtcontroladdr};"			\
-	"fdt move ${fdtcontroladdr} ${fdtsaveaddr};"	\
-	"fdt addr ${fdtsaveaddr};"
 /*
  * Enable in-place RFS with this initrd_high setting.
  */
@@ -173,6 +142,5 @@ extern phys_addr_t prior_stage_fdt_address;
  * Set fdtaddr to prior stage-provided DTB in board_late_init, when
  * writeable environment is available.
  */
-#define CONFIG_BOARD_LATE_INIT
 
 #endif /* __BCMSTB_H */

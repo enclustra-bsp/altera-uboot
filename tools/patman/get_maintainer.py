@@ -2,19 +2,19 @@
 # Copyright (c) 2012 The Chromium OS Authors.
 #
 
-import command
-import gitutil
 import os
 
-def FindGetMaintainer():
+from patman import command
+
+def find_get_maintainer(try_list):
     """Look for the get_maintainer.pl script.
+
+    Args:
+        try_list: List of directories to try for the get_maintainer.pl script
 
     Returns:
         If the script is found we'll return a path to it; else None.
     """
-    try_list = [
-        os.path.join(gitutil.GetTopLevel(), 'scripts'),
-        ]
     # Look in the list
     for path in try_list:
         fname = os.path.join(path, 'get_maintainer.pl')
@@ -23,7 +23,7 @@ def FindGetMaintainer():
 
     return None
 
-def GetMaintainer(fname, verbose=False):
+def get_maintainer(dir_list, fname, verbose=False):
     """Run get_maintainer.pl on a file if we find it.
 
     We look for get_maintainer.pl in the 'scripts' directory at the top of
@@ -31,17 +31,18 @@ def GetMaintainer(fname, verbose=False):
     then we fail silently.
 
     Args:
+        dir_list: List of directories to try for the get_maintainer.pl script
         fname: Path to the patch file to run get_maintainer.pl on.
 
     Returns:
         A list of email addresses to CC to.
     """
-    get_maintainer = FindGetMaintainer()
+    get_maintainer = find_get_maintainer(dir_list)
     if not get_maintainer:
         if verbose:
             print("WARNING: Couldn't find get_maintainer.pl")
         return []
 
-    stdout = command.Output(get_maintainer, '--norolestats', fname)
+    stdout = command.output(get_maintainer, '--norolestats', fname)
     lines = stdout.splitlines()
     return [ x.replace('"', '') for x in lines ]

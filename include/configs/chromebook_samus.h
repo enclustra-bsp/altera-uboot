@@ -20,7 +20,4 @@
 					"stdout=vidconsole,serial\0" \
 					"stderr=vidconsole,serial\0"
 
-#define CONFIG_ENV_SECT_SIZE		0x1000
-#define CONFIG_ENV_OFFSET		0x003f8000
-
 #endif	/* __CONFIG_H */

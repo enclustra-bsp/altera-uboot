@@ -13,17 +13,21 @@
 
 #include <common.h>
 #include <command.h>
+#include <env.h>
 #include <exports.h>
+#include <malloc.h>
 #include <memalign.h>
 #include <mtd.h>
 #include <nand.h>
 #include <onenand_uboot.h>
+#include <dm/devres.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
 #include <linux/err.h>
 #include <ubi_uboot.h>
 #include <linux/errno.h>
 #include <jffs2/load_kernel.h>
+#include <linux/log2.h>
 
 #undef ubi_msg
 #define ubi_msg(fmt, ...) printf("UBI: " fmt "\n", ##__VA_ARGS__)
@@ -77,6 +81,70 @@ static int ubi_info(int layout)
 		display_volume_info(ubi);
 	else
 		display_ubi_info(ubi);
+
+	return 0;
+}
+
+static int ubi_list(const char *var, int numeric)
+{
+	size_t namelen, len, size;
+	char *str, *str2;
+	int i;
+
+	if (!var) {
+		for (i = 0; i < (ubi->vtbl_slots + 1); i++) {
+			if (!ubi->volumes[i])
+				continue;
+			if (ubi->volumes[i]->vol_id >= UBI_INTERNAL_VOL_START)
+				continue;
+			printf("%d: %s\n",
+			       ubi->volumes[i]->vol_id,
+			       ubi->volumes[i]->name);
+		}
+		return 0;
+	}
+
+	len = 0;
+	size = 16;
+	str = malloc(size);
+	if (!str)
+		return 1;
+
+	for (i = 0; i < (ubi->vtbl_slots + 1); i++) {
+		if (!ubi->volumes[i])
+			continue;
+		if (ubi->volumes[i]->vol_id >= UBI_INTERNAL_VOL_START)
+			continue;
+
+		if (numeric)
+			namelen = 10; /* strlen(stringify(INT_MAX)) */
+		else
+			namelen = strlen(ubi->volumes[i]->name);
+
+		if (len + namelen + 1 > size) {
+			size = roundup_pow_of_two(len + namelen + 1) * 2;
+			str2 = realloc(str, size);
+			if (!str2) {
+				free(str);
+				return 1;
+			}
+			str = str2;
+		}
+
+		if (len)
+			str[len++] = ' ';
+
+		if (numeric) {
+			len += sprintf(str + len, "%d", ubi->volumes[i]->vol_id) + 1;
+		} else {
+			memcpy(str + len, ubi->volumes[i]->name, namelen);
+			len += namelen;
+			str[len] = 0;
+		}
+	}
+
+	env_set(var, str);
+	free(str);
 
 	return 0;
 }
@@ -145,7 +213,8 @@ bad:
 	return err;
 }
 
-static int ubi_create_vol(char *volume, int64_t size, int dynamic, int vol_id)
+static int ubi_create_vol(char *volume, int64_t size, int dynamic, int vol_id,
+			  bool skipcheck)
 {
 	struct ubi_mkvol_req req;
 	int err;
@@ -162,7 +231,10 @@ static int ubi_create_vol(char *volume, int64_t size, int dynamic, int vol_id)
 	strcpy(req.name, volume);
 	req.name_len = strlen(volume);
 	req.name[req.name_len] = '\0';
-	req.padding1 = 0;
+	req.flags = 0;
+	if (skipcheck)
+		req.flags |= UBI_VOL_SKIP_CRC_CHECK_FLG;
+
 	/* It's duplicated at drivers/mtd/ubi/cdev.c */
 	err = verify_mkvol_req(ubi, &req);
 	if (err) {
@@ -242,6 +314,44 @@ out_err:
 	if (err < 0)
 		err = -err;
 	return err;
+}
+
+static int ubi_rename_vol(char *oldname, char *newname)
+{
+	struct ubi_volume *vol;
+	struct ubi_rename_entry rename;
+	struct ubi_volume_desc desc;
+	struct list_head list;
+
+	vol = ubi_find_volume(oldname);
+	if (!vol) {
+		printf("%s: volume %s doesn't exist\n", __func__, oldname);
+		return ENODEV;
+	}
+
+	if (!ubi_check(newname)) {
+		printf("%s: volume %s already exist\n", __func__, newname);
+		return EINVAL;
+	}
+
+	printf("Rename UBI volume %s to %s\n", oldname, newname);
+
+	if (ubi->ro_mode) {
+		printf("%s: ubi device is in read-only mode\n", __func__);
+		return EROFS;
+	}
+
+	rename.new_name_len = strlen(newname);
+	strcpy(rename.new_name, newname);
+	rename.remove = 0;
+	desc.vol = vol;
+	desc.mode = 0;
+	rename.desc = &desc;
+	INIT_LIST_HEAD(&rename.list);
+	INIT_LIST_HEAD(&list);
+	list_add(&rename.list, &list);
+
+	return ubi_rename_volumes(ubi, &list);
 }
 
 static int ubi_volume_continue_write(char *volume, void *buf, size_t size)
@@ -414,6 +524,30 @@ static int ubi_dev_scan(struct mtd_info *info, const char *vid_header_offset)
 	return 0;
 }
 
+static int ubi_set_skip_check(char *volume, bool skip_check)
+{
+	struct ubi_vtbl_record vtbl_rec;
+	struct ubi_volume *vol;
+
+	vol = ubi_find_volume(volume);
+	if (!vol)
+		return ENODEV;
+
+	printf("%sing skip_check on volume %s\n",
+	       skip_check ? "Sett" : "Clear", volume);
+
+	vtbl_rec = ubi->vtbl[vol->vol_id];
+	if (skip_check) {
+		vtbl_rec.flags |= UBI_VTBL_SKIP_CRC_CHECK_FLG;
+		vol->skip_check = 1;
+	} else {
+		vtbl_rec.flags &= ~UBI_VTBL_SKIP_CRC_CHECK_FLG;
+		vol->skip_check = 0;
+	}
+
+	return ubi_change_vtbl_record(ubi, vol->vol_id, &vtbl_rec);
+}
+
 static int ubi_detach(void)
 {
 #ifdef CONFIG_CMD_UBIFS
@@ -442,6 +576,11 @@ int ubi_part(char *part_name, const char *vid_header_offset)
 	struct mtd_info *mtd;
 	int err = 0;
 
+	if (ubi && ubi->mtd && !strcmp(ubi->mtd->name, part_name)) {
+		printf("UBI partition '%s' already selected\n", part_name);
+		return 0;
+	}
+
 	ubi_detach();
 
 	mtd_probe_devices();
@@ -464,10 +603,11 @@ int ubi_part(char *part_name, const char *vid_header_offset)
 	return 0;
 }
 
-static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_ubi(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
 	int64_t size = 0;
 	ulong addr = 0;
+	bool skipcheck = false;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;
@@ -511,6 +651,21 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return ubi_info(layout);
 	}
 
+	if (strcmp(argv[1], "list") == 0) {
+		int numeric = 0;
+		if (argc >= 2 && argv[2][0] == '-') {
+			if (strcmp(argv[2], "-numeric") == 0)
+				numeric = 1;
+			else
+				return CMD_RET_USAGE;
+		}
+		if (!numeric && argc != 2 && argc != 3)
+			return CMD_RET_USAGE;
+		if (numeric && argc != 3 && argc != 4)
+			return CMD_RET_USAGE;
+		return ubi_list(argv[numeric ? 3 : 2], numeric);
+	}
+
 	if (strcmp(argv[1], "check") == 0) {
 		if (argc > 2)
 			return ubi_check(argv[2]);
@@ -525,6 +680,12 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 		/* Use maximum available size */
 		size = 0;
+
+		/* E.g., create volume with "skipcheck" bit set */
+		if (argc == 7) {
+			skipcheck = strncmp(argv[6], "--skipcheck", 11) == 0;
+			argc--;
+		}
 
 		/* E.g., create volume size type vol_id */
 		if (argc == 6) {
@@ -554,14 +715,27 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			printf("No size specified -> Using max size (%lld)\n", size);
 		}
 		/* E.g., create volume */
-		if (argc == 3)
-			return ubi_create_vol(argv[2], size, dynamic, id);
+		if (argc == 3) {
+			return ubi_create_vol(argv[2], size, dynamic, id,
+					      skipcheck);
+		}
 	}
 
 	if (strncmp(argv[1], "remove", 6) == 0) {
 		/* E.g., remove volume */
 		if (argc == 3)
 			return ubi_remove_vol(argv[2]);
+	}
+
+	if (IS_ENABLED(CONFIG_CMD_UBI_RENAME) && !strncmp(argv[1], "rename", 6))
+		return ubi_rename_vol(argv[2], argv[3]);
+
+	if (strncmp(argv[1], "skipcheck", 9) == 0) {
+		/* E.g., change skip_check flag */
+		if (argc == 4) {
+			skipcheck = strncmp(argv[3], "on", 2) == 0;
+			return ubi_set_skip_check(argv[2], skipcheck);
+		}
 	}
 
 	if (strncmp(argv[1], "write", 5) == 0) {
@@ -572,8 +746,8 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 			return 1;
 		}
 
-		addr = simple_strtoul(argv[2], NULL, 16);
-		size = simple_strtoul(argv[4], NULL, 16);
+		addr = hextoul(argv[2], NULL);
+		size = hextoul(argv[4], NULL);
 
 		if (strlen(argv[1]) == 10 &&
 		    strncmp(argv[1] + 5, ".part", 5) == 0) {
@@ -582,7 +756,7 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 						(void *)addr, size);
 			} else {
 				size_t full_size;
-				full_size = simple_strtoul(argv[5], NULL, 16);
+				full_size = hextoul(argv[5], NULL);
 				ret = ubi_volume_begin_write(argv[3],
 						(void *)addr, size, full_size);
 			}
@@ -602,13 +776,13 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 
 		/* E.g., read volume size */
 		if (argc == 5) {
-			size = simple_strtoul(argv[4], NULL, 16);
+			size = hextoul(argv[4], NULL);
 			argc--;
 		}
 
 		/* E.g., read volume */
 		if (argc == 4) {
-			addr = simple_strtoul(argv[2], NULL, 16);
+			addr = hextoul(argv[2], NULL);
 			argc--;
 		}
 
@@ -622,7 +796,7 @@ static int do_ubi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 }
 
 U_BOOT_CMD(
-	ubi, 6, 1, do_ubi,
+	ubi, 7, 1, do_ubi,
 	"ubi commands",
 	"detach"
 		" - detach ubi from a mtd partition\n"
@@ -631,9 +805,14 @@ U_BOOT_CMD(
 		" header offset)\n"
 	"ubi info [l[ayout]]"
 		" - Display volume and ubi layout information\n"
+	"ubi list [flags]"
+		" - print the list of volumes\n"
+	"ubi list [flags] <varname>"
+		" - set environment variable to the list of volumes"
+		" (flags can be -numeric)\n"
 	"ubi check volumename"
 		" - check if volumename exists\n"
-	"ubi create[vol] volume [size] [type] [id]\n"
+	"ubi create[vol] volume [size] [type] [id] [--skipcheck]\n"
 		" - create volume name with size ('-' for maximum"
 		" available size)\n"
 	"ubi write[vol] address volume size"
@@ -644,6 +823,10 @@ U_BOOT_CMD(
 		" - Read volume to address with size\n"
 	"ubi remove[vol] volume"
 		" - Remove volume\n"
+#if IS_ENABLED(CONFIG_CMD_UBI_RENAME)
+	"ubi rename oldname newname\n"
+#endif
+	"ubi skipcheck volume on/off - Set or clear skip_check flag in volume header\n"
 	"[Legends]\n"
 	" volume: character name\n"
 	" size: specified in bytes\n"

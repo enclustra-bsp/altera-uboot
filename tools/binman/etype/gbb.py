@@ -8,11 +8,11 @@
 
 from collections import OrderedDict
 
-import command
-from entry import Entry, EntryArg
+from patman import command
+from binman.entry import Entry, EntryArg
 
-import fdt_util
-import tools
+from dtoc import fdt_util
+from patman import tools
 
 # Build GBB flags.
 # (src/platform/vboot_reference/firmware/include/gbb_header.h)
@@ -54,7 +54,7 @@ class Entry_gbb(Entry):
     README.chromium for how to obtain the required keys and tools.
     """
     def __init__(self, section, etype, node):
-        Entry.__init__(self, section, etype, node)
+        super().__init__(section, etype, node)
         self.hardware_id, self.keydir, self.bmpblk = self.GetEntryArgsOrProps(
             [EntryArg('hardware-id', str),
              EntryArg('keydir', str),
@@ -64,33 +64,41 @@ class Entry_gbb(Entry):
         self.gbb_flags = 0
         flags_node = node.FindNode('flags')
         if flags_node:
-            for flag, value in gbb_flag_properties.iteritems():
+            for flag, value in gbb_flag_properties.items():
                 if fdt_util.GetBool(flags_node, flag):
                     self.gbb_flags |= value
 
     def ObtainContents(self):
         gbb = 'gbb.bin'
-        fname = tools.GetOutputFilename(gbb)
+        fname = tools.get_output_filename(gbb)
         if not self.size:
             self.Raise('GBB must have a fixed size')
         gbb_size = self.size
         bmpfv_size = gbb_size - 0x2180
         if bmpfv_size < 0:
             self.Raise('GBB is too small (minimum 0x2180 bytes)')
-        sizes = [0x100, 0x1000, bmpfv_size, 0x1000]
-        sizes = ['%#x' % size for size in sizes]
-        keydir = tools.GetInputFilename(self.keydir)
-        gbb_set_command = [
-            'gbb_utility', '-s',
-            '--hwid=%s' % self.hardware_id,
-            '--rootkey=%s/root_key.vbpubk' % keydir,
-            '--recoverykey=%s/recovery_key.vbpubk' % keydir,
-            '--flags=%d' % self.gbb_flags,
-            '--bmpfv=%s' % tools.GetInputFilename(self.bmpblk),
-            fname]
+        keydir = tools.get_input_filename(self.keydir)
 
-        tools.Run('futility', 'gbb_utility', '-c', ','.join(sizes), fname)
-        tools.Run('futility', *gbb_set_command)
+        stdout = self.futility.gbb_create(
+            fname, [0x100, 0x1000, bmpfv_size, 0x1000])
+        if stdout is not None:
+            stdout = self.futility.gbb_set(
+                fname,
+                hwid=self.hardware_id,
+                rootkey='%s/root_key.vbpubk' % keydir,
+                recoverykey='%s/recovery_key.vbpubk' % keydir,
+                flags=self.gbb_flags,
+                bmpfv=tools.get_input_filename(self.bmpblk))
 
-        self.SetContents(tools.ReadFile(fname))
+        if stdout is not None:
+            self.SetContents(tools.read_file(fname))
+        else:
+            # Bintool is missing; just use the required amount of zero data
+            self.record_missing_bintool(self.futility)
+            self.SetContents(tools.get_bytes(0, gbb_size))
+
         return True
+
+    def AddBintools(self, btools):
+        super().AddBintools(btools)
+        self.futility = self.AddBintool(btools, 'futility')
