@@ -75,6 +75,20 @@ config ATSHA204A
 	   CryptoAuthentication module found for example on the Turris Omnia
 	   board.
 
+config ENCLUSTRA_EEPROM_MAC
+	bool "Configure Enclustra MAC address"
+	depends on MISC
+	select ATSHA204A
+	help
+	  Reads the MAC address out of the EEPROM and configures the MAC
+	  Addresses in the environment.
+
+config SI5338_CONFIGURATION
+        bool "Configure SI5338"
+	depends on MISC
+        help
+          Configure SI5338 clock generator device
+
 config GATEWORKS_SC
 	bool "Gateworks System Controller Support"
 	depends on MISC
