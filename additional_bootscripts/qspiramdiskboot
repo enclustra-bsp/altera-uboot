@@ -1,1 +1,0 @@
-run qspiramdiskargs; sf read ${kernel_loadaddr} ${qspi_kernel_offset} ${kernel_size} && sf read ${devicetree_loadaddr} ${qspi_devicetree_offset} ${devicetree_size} && sf read ${rootfs_loadaddr} ${qspi_ramdisk_offset} ${ramdisk_size} && bootm ${kernel_loadaddr} ${rootfs_loadaddr} ${devicetree_loadaddr}
