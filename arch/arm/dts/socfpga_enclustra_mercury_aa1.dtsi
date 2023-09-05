@@ -10,16 +10,10 @@
 	chosen {
 		stdout-path = "serial0:115200n8";
 	};
+};
 
-	soc {
-		clkmgr@ffd04000 {
-			clocks {
-				osc1 {
-					clock-frequency = <33330000>;
-				};
-			};
-		};
-	};
+&osc1 {
+	clock-frequency = <33330000>;
 };
 
 &l4_main_clk {
@@ -55,6 +49,14 @@
 	/* Max value set according to HW spec */
 	i2c-scl-falling-time-ns = <300>;
 	status = "okay";
+
+	clock-frequency = <100000>;
+
+	atsha204a: atsha204a@64 {
+		status = "okay";
+		compatible = "atmel,atsha204a";
+		reg = <0x64>;
+	};
 };
 
 &mmc {
@@ -104,3 +106,36 @@
 	u-boot,dm-pre-reloc;
 	status = "disabled";
 };
+
+&gmac0 {
+	status = "okay";
+	/delete-property/ mac-address;
+	phy-mode = "rgmii";
+	phy-addr = <3>;
+	phy-handle = <&phy3>;
+
+	mdio0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "snps,dwmac-mdio";
+
+		phy3: ethernet-phy@3 {
+			reg = <3>;
+			rxd0-skew-ps = <420>;
+			rxd1-skew-ps = <420>;
+			rxd2-skew-ps = <420>;
+			rxd3-skew-ps = <420>;
+			rxdv-skew-ps = <420>;
+
+			txd0-skew-ps = <420>;
+			txd1-skew-ps = <420>;
+			txd2-skew-ps = <420>;
+			txd3-skew-ps = <420>;
+			txen-skew-ps = <420>;
+
+			rxc-skew-ps = <1680>;
+			txc-skew-ps = <900>;
+		};
+	};
+};
+
