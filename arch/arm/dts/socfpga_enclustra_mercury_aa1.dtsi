@@ -45,6 +45,14 @@
 	status = "okay";
 };
 
+&gpio1 {
+	status = "okay";
+};
+
+&gpio2 {
+	status = "okay";
+};
+
 &i2c1 {
 	/* Max value set according to HW spec */
 	i2c-scl-falling-time-ns = <300>;
@@ -89,7 +97,7 @@
 		#size-cells = <1>;
 		compatible = "spansion,s25fl512s", "jedec,spi-nor";
 		reg = <0>;
-		spi-max-frequency = <25000000>;
+		spi-max-frequency = <10000000>;
 
 		page-size = <256>;
 		block-size = <16>; /* 2^16, 64KB */
