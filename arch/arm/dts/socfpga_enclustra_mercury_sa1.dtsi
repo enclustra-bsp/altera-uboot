@@ -38,7 +38,7 @@
 		#size-cells = <1>;
 		compatible = "spansion,s25fl512s", "jedec,spi-nor";
 		reg = <0>;
-		spi-max-frequency = <25000000>;
+		spi-max-frequency = <10000000>;
 
 		page-size = <256>;
 		block-size = <16>; /* 2^16, 64KB */
@@ -61,3 +61,40 @@
 	};
 };
 
+&gpio0 {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
+
+&gpio1 {
+	u-boot,dm-pre-reloc;
+	status = "okay";
+};
+
+&gmac1 {
+	status = "okay";
+	phy-mode = "rgmii";
+
+	rxd0-skew-ps = <420>;
+	rxd1-skew-ps = <420>;
+	rxd2-skew-ps = <420>;
+	rxd3-skew-ps = <420>;
+	rxdv-skew-ps = <420>;
+	txd0-skew-ps = <420>;
+	txd1-skew-ps = <420>;
+	txd2-skew-ps = <420>;
+	txd3-skew-ps = <420>;
+	txen-skew-ps = <420>;
+	rxc-skew-ps = <900>;
+	txc-skew-ps = <900>;
+
+	phy-handle = <&phy3>;
+	mdio0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "snps,dwmac-mdio";
+		phy3: ethernet-phy@3 {
+			reg = <3>;
+		};
+	};
+};

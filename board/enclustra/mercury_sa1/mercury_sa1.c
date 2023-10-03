@@ -6,6 +6,7 @@
 
 #include <common.h>
 #include <command.h>
+#include <linux/delay.h>
 #include <env.h>
 #include <init.h>
 #include <dm/uclass.h>
@@ -97,13 +98,50 @@ int configure_mac(void)
 	return 0;
 }
 
+void release_eth_reset(void)
+{
+	const unsigned int gpio_nr_eth_reset_n = 44;
+
+	if (gpio_request(gpio_nr_eth_reset_n, "eth_reset_n"))
+	{
+		printf("ERROR: ETH reset GPIO request failed\n");
+		return;
+	}
+
+	gpio_direction_output(gpio_nr_eth_reset_n, 1);
+}
+
+void release_usb_reset(void)
+{
+	const unsigned int gpio_nr_usb_reset_n = 0;
+
+	if (gpio_request(gpio_nr_usb_reset_n, "usb_reset_n"))
+	{
+		printf("ERROR: USB reset GPIO request failed\n");
+		return;
+	}
+
+	gpio_direction_output(gpio_nr_usb_reset_n, 1);
+}
+
+int board_early_init_r(void)
+{
+	release_eth_reset();
+	release_usb_reset();
+	udelay(100);
+
+	return 0;
+}
+
 int board_late_init(void)
 {
 #ifdef CONFIG_SI5338_CONFIGURATION
 	si5338_init();
 #endif
+
 	int ret;
 	ret = configure_mac();
+
 	return ret;
 }
 
