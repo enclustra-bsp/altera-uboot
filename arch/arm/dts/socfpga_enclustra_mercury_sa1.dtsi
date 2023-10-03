@@ -1,3 +1,4 @@
+/ {
 	compatible = "altr,socfpga-cyclone5", "altr,socfpga";
 
 	chosen {
