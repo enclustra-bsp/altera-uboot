@@ -17,7 +17,7 @@ class IOCSRGrokker(object):
     """ Decode the .hiof file and produce some C source code
     """
     IOCSR_ROOT_FILENAME = 'iocsr_config'
-    IOCSR_SENTINEL = '__SOCFPGA_IOCSR_CONFIG_H__'
+    IOCSR_SENTINEL = '__SOCFPGA_IOCSR_CFG_H__'
     IOCSR_FILE_EXTENSION_MAX_LEN = 6
     PTAG_HPS_IOCSR_INFO = 39
     PTAG_HPS_IOCSR = 40
@@ -157,13 +157,13 @@ class IOCSRGrokker(object):
         if 8 != programmerTag:
             print ("I didn't find the end of the .hiof file when I expected to!")
 
-        self.iocsrHeaderStream.write('#define CONFIG_HPS_IOCSR_SCANCHAIN0_LENGTH\t' +\
+        self.iocsrHeaderStream.write('#define CFG_HPS_IOCSR_SCANCHAIN0_LENGTH\t' +\
                        str(self.HPSIOCSRDataLength1) + '\n')
-        self.iocsrHeaderStream.write('#define CONFIG_HPS_IOCSR_SCANCHAIN1_LENGTH\t' +\
+        self.iocsrHeaderStream.write('#define CFG_HPS_IOCSR_SCANCHAIN1_LENGTH\t' +\
                        str(self.HPSIOCSRDataLength2) + '\n')
-        self.iocsrHeaderStream.write('#define CONFIG_HPS_IOCSR_SCANCHAIN2_LENGTH\t' +\
+        self.iocsrHeaderStream.write('#define CFG_HPS_IOCSR_SCANCHAIN2_LENGTH\t' +\
                        str(self.HPSIOCSRDataLength3) + '\n')
-        self.iocsrHeaderStream.write('#define CONFIG_HPS_IOCSR_SCANCHAIN3_LENGTH\t' +\
+        self.iocsrHeaderStream.write('#define CFG_HPS_IOCSR_SCANCHAIN3_LENGTH\t' +\
                        str(self.HPSIOCSRDataLength4) + '\n')
 
         self.iocsrHeaderStream.write("\n")
