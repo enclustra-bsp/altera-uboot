@@ -16,11 +16,26 @@
 #include <enclustra/si5338_config.h>
 
 /* Enclustra vendor ID */
-#define ENCLUSTRA_MAC               0xF7B020
+#define ENCLUSTRA_MAC 0xF7B020
 
 /* Default MAC address */
 #define ENCLUSTRA_ETHADDR_DEFAULT "20:B0:F7:01:02:03"
 #define ENCLUSTRA_ETH1ADDR_DEFAULT "20:B0:F7:01:02:04"
+
+/* Pin muxing */
+#if !defined(CONFIG_SPL_BUILD)
+
+#define GPIO_NR_USB_RESET_N 0
+#define GPIO_NR_ETH_RESET_N 44
+#define GPIO_NR_EMMC_EN_N 53
+
+#define ALTERA_NONE 0
+#define ALTERA_MMC 1
+#define ALTERA_EMMC 2
+
+static int altera_current_storage = ALTERA_NONE;
+
+#endif
 
 static struct eeprom_mem eeproms[] = {
 	{ .mac_reader = atsha204_get_mac },
@@ -98,37 +113,46 @@ int configure_mac(void)
 	return 0;
 }
 
+#if !defined(CONFIG_SPL_BUILD)
+
 void release_eth_reset(void)
 {
-	const unsigned int gpio_nr_eth_reset_n = 44;
-
-	if (gpio_request(gpio_nr_eth_reset_n, "eth_reset_n"))
-	{
-		printf("ERROR: ETH reset GPIO request failed\n");
-		return;
-	}
-
-	gpio_direction_output(gpio_nr_eth_reset_n, 1);
+	gpio_direction_output(GPIO_NR_ETH_RESET_N, 1);
 }
 
 void release_usb_reset(void)
 {
-	const unsigned int gpio_nr_usb_reset_n = 0;
-
-	if (gpio_request(gpio_nr_usb_reset_n, "usb_reset_n"))
-	{
-		printf("ERROR: USB reset GPIO request failed\n");
-		return;
-	}
-
-	gpio_direction_output(gpio_nr_usb_reset_n, 1);
+	gpio_direction_output(GPIO_NR_USB_RESET_N, 1);
 }
+
+#endif
 
 int board_early_init_r(void)
 {
+#if !defined(CONFIG_SPL_BUILD)
+	if (gpio_request(GPIO_NR_EMMC_EN_N, "emmc_en_n"))
+	{
+		printf("ERROR: EMMC enable GPIO request failed\n");
+		return -1;
+	}
+
+	if (gpio_request(GPIO_NR_ETH_RESET_N, "eth_reset_n"))
+	{
+		printf("ERROR: ETH reset GPIO request failed\n");
+		return -1;
+	}
+
+	if (gpio_request(GPIO_NR_USB_RESET_N, "usb_reset_n"))
+	{
+		printf("ERROR: USB reset GPIO request failed\n");
+		return -1;
+	}
+
 	release_eth_reset();
 	release_usb_reset();
 	udelay(100);
+
+#endif
 
 	return 0;
 }
@@ -145,3 +169,42 @@ int board_late_init(void)
 	return ret;
 }
 
+#if !defined(CONFIG_SPL_BUILD)
+
+void altera_set_storage (int store)
+{
+	if (store == altera_current_storage)
+		return;
+
+	switch (store)
+	{
+		case ALTERA_MMC:
+			gpio_direction_output(GPIO_NR_EMMC_EN_N, 1);
+			altera_current_storage = ALTERA_MMC;
+			break;
+		case ALTERA_EMMC:
+			gpio_direction_output(GPIO_NR_EMMC_EN_N, 0);
+			altera_current_storage = ALTERA_EMMC;
+			break;
+		default:
+			altera_current_storage = ALTERA_NONE;
+			break;
+	}
+}
+
+int altera_set_storage_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
+{
+	if(argc != 2)
+		return CMD_RET_USAGE;
+	if(!strcmp(argv[1], "MMC"))
+		altera_set_storage(ALTERA_MMC);
+	else if (!strcmp(argv[1], "EMMC"))
+		altera_set_storage(ALTERA_EMMC);
+	else return CMD_RET_USAGE;
+
+	return CMD_RET_SUCCESS;
+}
+
+U_BOOT_CMD(altera_set_storage, 2, 0, altera_set_storage_cmd, "Set non volatile memory access", "<MMC|EMMC> - Set access for the selected memory device");
+
+#endif
