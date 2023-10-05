@@ -36,9 +36,8 @@
     "ram_addr_devicetree=0x10000000\0" \
     "ram_addr_boot-script=0x10800000\0" \
     "bootm_size=0x0a000000\0" \
-    "bootargs-mmc=earlycon console=ttyS0,115200 rw root=/dev/mmcblk0p2\0" \
     "bootargs-qspi=earlycon console=ttyS0,115200 rw root=/dev/ram0\0" \
-    "bootargs=${bootargs-mmc}\0" \
+    "bootargs=earlycon console=ttyS0,115200 rw root=/dev/mmcblk0p3\0" \
     "qspiload=setenv bootargs ${bootargs-qspi}; sf probe; sf read ${ram_addr_boot-script} ${qspi_offset_addr_boot-script} ${size_boot-script}\0" \
     "qspiboot=source ${ram_addr_boot-script}\0"
 
