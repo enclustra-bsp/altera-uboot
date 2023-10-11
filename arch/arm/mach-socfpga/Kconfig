@@ -278,6 +278,10 @@ config TARGET_SOCFPGA_ENCLUSTRA_SA1
 	bool "Enclustra Mercury SA1"
 	select TARGET_SOCFPGA_CYCLONE5
 
+config TARGET_SOCFPGA_ENCLUSTRA_SA2
+	bool "Enclustra Mercury SA2"
+	select TARGET_SOCFPGA_CYCLONE5
+
 endchoice
 
 config SYS_BOARD
@@ -305,6 +309,7 @@ config SYS_BOARD
 	default "vining_fpga" if TARGET_SOCFPGA_SOFTING_VINING_FPGA
 	default "mercury_aa1" if TARGET_SOCFPGA_ENCLUSTRA_AA1
 	default "mercury_sa1" if TARGET_SOCFPGA_ENCLUSTRA_SA1
+	default "mercury_sa2" if TARGET_SOCFPGA_ENCLUSTRA_SA2
 
 config SYS_VENDOR
 	default "intel" if TARGET_SOCFPGA_AGILEX5_SOCDK
@@ -328,6 +333,7 @@ config SYS_VENDOR
 	default "terasic" if TARGET_SOCFPGA_TERASIC_SOCKIT
 	default "enclustra" if TARGET_SOCFPGA_ENCLUSTRA_AA1
 	default "enclustra" if TARGET_SOCFPGA_ENCLUSTRA_SA1
+	default "enclustra" if TARGET_SOCFPGA_ENCLUSTRA_SA2
 
 config SYS_SOC
 	default "socfpga"
@@ -357,5 +363,6 @@ config SYS_CONFIG_NAME
 	default "socfpga_vining_fpga" if TARGET_SOCFPGA_SOFTING_VINING_FPGA
 	default "socfpga_mercury_aa1" if TARGET_SOCFPGA_ENCLUSTRA_AA1
 	default "socfpga_mercury_sa1" if TARGET_SOCFPGA_ENCLUSTRA_SA1
+	default "socfpga_mercury_sa2" if TARGET_SOCFPGA_ENCLUSTRA_SA2
 
 endif
