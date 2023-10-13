@@ -31,7 +31,7 @@
 #endif
 
 static struct eeprom_mem eeproms[] = {
-	{ .mac_reader = ds28_get_mac },
+	{ .mac_reader = atsha204_get_mac },
 };
 
 int configure_mac(void)
