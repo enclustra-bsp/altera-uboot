@@ -64,6 +64,8 @@ int atsha204_get_mac(u8 *buffer)
 		return -ENODEV;
 
 #ifdef CONFIG_ATSHA204A
+	/* We put the device to sleep first, to make sure it is in a defined state */
+	atsha204a_sleep(dev);
 	ret = atsha204a_wakeup(dev);
 
 	if (ret)
