@@ -94,7 +94,7 @@ static int atsha204a_recv_resp(struct udevice *dev,
 
 int atsha204a_wakeup(struct udevice *dev)
 {
-	u8 req[4];
+	u8 buf = 0;
 	struct atsha204a_resp resp;
 	int try, res;
 
@@ -106,10 +106,13 @@ int atsha204a_wakeup(struct udevice *dev)
 		/*
 		 * The device ignores any levels or transitions on the SCL pin
 		 * when the device is idle, asleep or during waking up.
-		 * Don't check for error when waking up the device.
 		 */
-		memset(req, 0, 4);
-		atsha204a_send(dev, req, 4);
+		struct i2c_msg msg;
+		msg.addr = 0;
+		msg.flags = I2C_M_NOSTART, I2C_M_IGNORE_NAK;
+		msg.len = 1;
+		msg.buf = buf;
+		dm_i2c_xfer(dev, &msg, 1);
 
 		udelay(ATSHA204A_TWLO_US + ATSHA204A_TWHI_US);
 
