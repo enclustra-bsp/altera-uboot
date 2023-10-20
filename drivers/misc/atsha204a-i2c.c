@@ -109,9 +109,9 @@ int atsha204a_wakeup(struct udevice *dev)
 		 */
 		struct i2c_msg msg;
 		msg.addr = 0;
-		msg.flags = I2C_M_NOSTART, I2C_M_IGNORE_NAK;
+		msg.flags = I2C_M_NOSTART | I2C_M_IGNORE_NAK;
 		msg.len = 1;
-		msg.buf = buf;
+		msg.buf = &buf;
 		dm_i2c_xfer(dev, &msg, 1);
 
 		udelay(ATSHA204A_TWLO_US + ATSHA204A_TWHI_US);
