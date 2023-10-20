@@ -22,6 +22,8 @@
 #define ENCLUSTRA_ETH1ADDR_DEFAULT "20:B0:F7:01:02:04"
 
 /* Pin muxing */
+#if !defined(CONFIG_SPL_BUILD)
+
 #define ALTERA_NONE 0
 #define ALTERA_MMC 1
 #define ALTERA_QSPI 2
@@ -32,6 +34,8 @@
 #define ALTERA_CLKMGR_MAINPLL_CNTR6CLK_BASE 0xFFD04078
 
 static int altera_current_storage = ALTERA_NONE;
+
+#endif
 
 static struct eeprom_mem eeproms[] = {
 	{ .mac_reader = atsha204_get_mac },
