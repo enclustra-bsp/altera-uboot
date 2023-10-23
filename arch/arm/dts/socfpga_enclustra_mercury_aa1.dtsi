@@ -81,9 +81,9 @@
 		reg = <0xff8c2c00 0x400>;
 		altr,ecc-parent = <&mmc>;
 		interrupts = <15 IRQ_TYPE_LEVEL_HIGH>,
-			     <47 IRQ_TYPE_LEVEL_HIGH>,
-			     <16 IRQ_TYPE_LEVEL_HIGH>,
-			     <48 IRQ_TYPE_LEVEL_HIGH>;
+					 <47 IRQ_TYPE_LEVEL_HIGH>,
+					 <16 IRQ_TYPE_LEVEL_HIGH>,
+					 <48 IRQ_TYPE_LEVEL_HIGH>;
 	};
 };
 
@@ -129,25 +129,28 @@
 
 		phy3: ethernet-phy@3 {
 			reg = <3>;
+
+			/* Add 2ns RX clock delay (1.2ns + 0.78ns)*/
+			rxc-skew-ps = <1680>;
 			rxd0-skew-ps = <420>;
 			rxd1-skew-ps = <420>;
 			rxd2-skew-ps = <420>;
 			rxd3-skew-ps = <420>;
 			rxdv-skew-ps = <420>;
 
-			txd0-skew-ps = <420>;
-			txd1-skew-ps = <420>;
-			txd2-skew-ps = <420>;
-			txd3-skew-ps = <420>;
-			txen-skew-ps = <420>;
-
-			rxc-skew-ps = <1680>;
-			txc-skew-ps = <900>;
+			/* Add 1.38ns TX clock delay (0.96ns + 0.42ns)*/
+			txc-skew-ps = <1860>;
+			txd0-skew-ps = <0>;
+			txd1-skew-ps = <0>;
+			txd2-skew-ps = <0>;
+			txd3-skew-ps = <0>;
+			txen-skew-ps = <0>;
 		};
 	};
 };
 
 &usb0 {
 	status = "okay";
+	dr_mode = "host";
 };
 
