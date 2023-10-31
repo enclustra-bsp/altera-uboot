@@ -55,8 +55,9 @@
 };
 
 &i2c0 {
-	status = "okay";
+	i2c-sda-hold-time-ns = <300>;
 	clock-frequency = <100000>;
+	status = "okay";
 };
 
 &gpio0 {
