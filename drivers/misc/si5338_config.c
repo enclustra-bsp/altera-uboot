@@ -49,11 +49,6 @@ int si5338_init(void)
                 return -1;
         }
 
-        if (dm_i2c_set_bus_speed(dev, 100000) != 0) {
-                printf("SI5338 I2C set speed failed\n");
-                return -1;
-        }
-
         // set page to 0
         if (i2c_write_simple(dev, 255, 0x00)) {
                 return -1;
