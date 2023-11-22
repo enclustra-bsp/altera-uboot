@@ -7,7 +7,7 @@
 	images {
 		fpga-periph-1 {
 			description = "FPGA peripheral bitstream";
-			data = /incbin/("bitstream-periph.rbf");
+			data = /incbin/("bitstream.periph.rbf");
 			type = "fpga";
 			arch = "arm";
 			compression = "none";
@@ -15,7 +15,7 @@
 
 		fpga-core-1 {
 			description = "FPGA core bitstream";
-			data = /incbin/("bitstream-core.rbf");
+			data = /incbin/("bitstream.core.rbf");
 			type = "fpga";
 			arch = "arm";
 			compression = "none";
