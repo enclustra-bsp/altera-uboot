@@ -83,6 +83,12 @@ config ENCLUSTRA_EEPROM_MAC
 	  Reads the MAC address out of the EEPROM and configures the MAC
 	  Addresses in the environment.
 
+config SI5338_CONFIGURATION
+        bool "Configure SI5338"
+	depends on MISC
+        help
+          Configure SI5338 clock generator device
+
 config GATEWORKS_SC
 	bool "Gateworks System Controller Support"
 	depends on MISC

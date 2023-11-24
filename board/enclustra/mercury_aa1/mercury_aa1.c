@@ -12,6 +12,7 @@
 #include <asm-generic/gpio.h>
 #include <asm/io.h>
 #include <enclustra/eeprom-mac.h>
+#include <enclustra/si5338_config.h>
 
 /* Enclustra vendor ID */
 #define ENCLUSTRA_MAC               0xF7B020
@@ -114,6 +115,9 @@ int configure_mac(void)
 
 int board_late_init(void)
 {
+#ifdef CONFIG_SI5338_CONFIGURATION
+	si5338_init();
+#endif
 	int ret;
 	ret = configure_mac();
 	return ret;

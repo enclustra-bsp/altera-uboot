@@ -36,6 +36,7 @@ obj-$(CONFIG_ATSHA204A) += atsha204a-i2c.o
 obj-$(CONFIG_CBMEM_CONSOLE) += cbmem_console.o
 obj-$(CONFIG_DS4510)  += ds4510.o
 obj-$(CONFIG_ENCLUSTRA_EEPROM_MAC) += eeprom-mac.o
+obj-$(CONFIG_SI5338_CONFIGURATION) += si5338_config.o
 obj-$(CONFIG_FSL_DEVICE_DISABLE) += fsl_devdis.o
 obj-$(CONFIG_FSL_IFC) += fsl_ifc.o
 obj-$(CONFIG_FSL_IIM) += fsl_iim.o
