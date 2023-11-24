@@ -1,0 +1,15 @@
+if TARGET_SOCFPGA_ENCLUSTRA_SA1
+
+config SYS_CPU
+	default "armv7"
+
+config SYS_BOARD
+	default "mercury_sa2"
+
+config SYS_VENDOR
+	default "enclustra"
+
+config SYS_CONFIG_NAME
+	default "socfpga_mercury_sa2"
+
+endif
