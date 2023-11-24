@@ -1,0 +1,5 @@
+Enclustra Mercury SA1
+M:	<info@enclustra.com>
+S:	Maintained
+F:	board/enclustra/mercury_sa1/
+F:	include/configs/socfpga_mercury_sa1.h
