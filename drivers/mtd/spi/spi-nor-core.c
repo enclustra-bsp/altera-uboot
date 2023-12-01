@@ -3880,6 +3880,40 @@ void spi_nor_set_fixups(struct spi_nor *nor)
 #endif /* SPI_FLASH_MACRONIX */
 }
 
+int spi_nor_clear_protection(struct spi_nor *nor)
+{
+	u8 sr_cr[2];
+	u8 sr = 0;
+	u8 cr = 0;
+
+	sr_cr[0] = read_sr(nor);
+	sr = sr_cr[0];
+	sr_cr[1] = read_cr(nor);
+	cr = sr_cr[1];
+
+	if (sr_cr[0] & 0x1c)
+	{
+		sr_cr[0] &= ~0x1c; // clear block protection
+		sr_cr[1] &= ~0xc0; // clear latency code bits
+
+		int ret = write_sr_cr(nor, sr_cr);
+		if (ret < 0)
+			return ret;
+
+		// read the written registers again to verify the content
+		sr_cr[0] = read_sr(nor);
+		sr_cr[1] = read_cr(nor);
+
+		printf("---------------- WARNING ---------------\n");
+		printf("QSPI flash block protection bits cleared\n");
+		printf("SR1 = %02x -> %02x\n", sr, sr_cr[0]);
+		printf("CR1 = %02x -> %02x\n", cr, sr_cr[1]);
+		printf("----------------------------------------\n");
+	}
+
+	return 0;
+}
+
 int spi_nor_scan(struct spi_nor *nor)
 {
 	struct spi_nor_flash_parameter params;
@@ -3935,6 +3969,15 @@ int spi_nor_scan(struct spi_nor *nor)
 	if (IS_ERR_OR_NULL(info))
 		return -ENOENT;
 	nor->info = info;
+
+	/* clear protection flags for s25fl512 devices */
+	u8 id_s25fl512s[3] = {0x01, 0x02, 0x20};
+	if ((strncmp(nor->info->id, id_s25fl512s, 3) == 0) && (nor->info->id_len >= 3))
+	{
+		ret = spi_nor_clear_protection(nor);
+		if (ret)
+			return ret;
+	}
 
 	spi_nor_set_fixups(nor);
 
