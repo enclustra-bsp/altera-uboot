@@ -1,5 +1,4 @@
-bridge enable HPS-to-FPGA
-bridge enable FPGA-to-HPS
+bridge enable
 sf probe
 sf read ${ram_addr_kernel} ${qspi_offset_addr_kernel} ${size_kernel}
 sf read ${ram_addr_devicetree} ${qspi_offset_addr_devicetree} ${size_devicetree}
