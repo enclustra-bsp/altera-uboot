@@ -123,6 +123,24 @@ void spl_board_init(void)
 
 	arch_early_init_r();
 
+	// release reset for GPIO 2
+	u32 per1modrst = readl(0xFFD05028);
+	writel(per1modrst & ~0x04000000, 0xFFD05028);
+
+	// configure flash_sel pin as input
+	u32 gpio2_swporta_ddr = readl(0xFFC02B04);
+	writel(gpio2_swporta_ddr & ~0x40, 0xFFC02B04);
+
+	// read value of flash_sel signal
+	u32 gpio2_ext_porta = readl(0xFFC02B50);
+
+	// write value of flash_sel signal to output register
+	writel(gpio2_ext_porta & 0x40, 0xFFC02B00);
+	u32 gpio2_swporta_dr = readl(0xFFC02B00);
+
+	// configure flash_sel gpio to output
+	writel(gpio2_swporta_ddr | 0x40, 0xFFC02B04);
+
 	/* If the full FPGA is already loaded, ie.from EPCQ, config fpga pins */
 	if (is_fpgamgr_user_mode()) {
 		ret = config_pins(gd->fdt_blob, "shared");
