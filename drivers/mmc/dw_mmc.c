@@ -527,6 +527,8 @@ static int dwmci_init(struct mmc *mmc)
 {
 	struct dwmci_host *host = mmc->priv;
 
+	udelay(1000);
+
 	if (host->board_init)
 		host->board_init(host);
 
