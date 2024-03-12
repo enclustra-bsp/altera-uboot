@@ -180,9 +180,7 @@ static uint mmc_mode2freq(struct mmc *mmc, enum bus_mode mode)
 	      [MMC_HS_400_ES]	= 200000000,
 	};
 
-	if (mode == MMC_LEGACY)
-		return mmc->legacy_speed;
-	else if (mode >= MMC_MODES_END)
+	if (mode >= MMC_MODES_END)
 		return 0;
 	else
 		return freqs[mode];
